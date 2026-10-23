@@ -25,6 +25,7 @@ import {
   zoomAt,
   zoomTo,
 } from '../store';
+import type { Artboard } from '../types';
 import { exportPdf, exportPng, exportSvg } from './exporter';
 import { importSvgFile, openDoc, saveDoc } from '../fileio';
 import { openRasterOp } from '../raster/dialog';
@@ -47,6 +48,11 @@ const zoomBy = (f: number) => {
   const { viewport } = getState();
   zoomAt(f, viewport.w / 2, viewport.h / 2);
 };
+const runPdf = (boards: Artboard[], name: string) =>
+  exportPdf(getState().shapes, boards, name).then((r) => {
+    if (r.raster.length) alert(`Exported. ${r.vector} page(s) are vector; the rest were saved as images because they use features PDF export cannot draw as vectors yet:\n\n${r.raster.join('\n')}`);
+  });
+
 export const doExport = (kind: 'png' | 'svg', all = false) => {
   const st = getState();
   const boards = all ? st.artboards : [activeBoard(st)];
@@ -181,8 +187,8 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
     { label: 'Save As…', shortcut: 'Ctrl+Shift+S', action: () => saveDoc(true) },
     { label: 'Export artboard as SVG…', action: () => doExport('svg') },
     { label: 'Export artboard as PNG…', action: () => doExport('png') },
-    { label: 'Export artboard as PDF…', action: () => void exportPdf(getState().shapes, [activeBoard()], activeBoard().name) },
-    { label: 'Export all artboards as PDF…', action: () => void exportPdf(getState().shapes, getState().artboards, 'document') },
+    { label: 'Export artboard as PDF…', action: () => void runPdf([activeBoard()], activeBoard().name) },
+    { label: 'Export all artboards as PDF…', action: () => void runPdf(getState().artboards, 'document') },
     { label: 'Export all artboards as PNG…', action: () => doExport('png', true) },
     { label: 'Export all artboards as SVG…', action: () => doExport('svg', true) },
     { label: 'Edit', head: true },

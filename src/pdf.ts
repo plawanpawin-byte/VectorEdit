@@ -1,6 +1,6 @@
 /** A minimal PDF writer: one page per image, each page sized in CSS pixels (72/96 points per pixel). */
 
-export interface PdfPage {
+export interface PdfImagePage {
   /** page size in CSS pixels */
   width: number;
   height: number;
@@ -9,6 +9,18 @@ export interface PdfPage {
   pxWidth: number;
   pxHeight: number;
 }
+
+/** A page drawn with vector operators; `alphas` lists the opacity values the content refers to as /GS0, /GS1… */
+export interface PdfVectorPage {
+  width: number;
+  height: number;
+  content: string;
+  alphas: number[];
+}
+
+export type PdfPage = PdfImagePage | PdfVectorPage;
+
+const isVector = (p: PdfPage): p is PdfVectorPage => 'content' in p;
 
 const enc = new TextEncoder();
 const PT = 0.75;
@@ -38,6 +50,13 @@ export function buildPdf(pages: PdfPage[], title = 'VectorEdit export'): Uint8Ar
     const page = 4 + i * 3;
     const w = +(p.width * PT).toFixed(2);
     const h = +(p.height * PT).toFixed(2);
+    if (isVector(p)) {
+      const gs = p.alphas.map((a, k) => `/GS${k} << /ca ${a} /CA ${a} >>`).join(' ');
+      obj(page, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /ExtGState << ${gs} >> >> /Contents ${page + 1} 0 R >>`);
+      obj(page + 1, `<< /Length ${enc.encode(p.content).length} >>\nstream\n${p.content}\nendstream`);
+      obj(page + 2, '<< >>'); // unused slot keeps object numbering uniform
+      return;
+    }
     obj(page, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /XObject << /Im0 ${page + 2} 0 R >> >> /Contents ${page + 1} 0 R >>`);
     const content = `q ${w} 0 0 ${h} 0 0 cm /Im0 Do Q`;
     obj(page + 1, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);

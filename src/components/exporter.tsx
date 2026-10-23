@@ -82,11 +82,23 @@ export function renderBoardPixels(shapes: Shape[], board: Artboard, maxSize = 48
   });
 }
 
-/** One PDF with a page per artboard (raster pages at 2×, JPEG-compressed). */
-export async function exportPdf(shapes: Shape[], boards: Artboard[], name = 'document') {
+/**
+ * One PDF with a page per artboard. A page made only of plain shapes is written as vector artwork;
+ * anything needing effects, gradients, text or images makes that page a 2× JPEG instead.
+ * Returns how many pages were vector and why the others were rasterised.
+ */
+export async function exportPdf(shapes: Shape[], boards: Artboard[], name = 'document'): Promise<{ vector: number; raster: string[] }> {
   const { buildPdf } = await import('../pdf');
-  const pages = [];
+  const { vectorPage } = await import('../pdfvector');
+  const pages: import('../pdf').PdfPage[] = [];
+  const raster: string[] = [];
   for (const board of boards) {
+    const v = vectorPage(shapes, board);
+    if ('page' in v) {
+      pages.push(v.page);
+      continue;
+    }
+    raster.push(`${board.name}: ${v.reason}`);
     const scale = 2;
     const img = await renderBoardPixels(shapes, board, Math.max(board.w, board.h) * scale);
     const c = document.createElement('canvas');
@@ -97,6 +109,6 @@ export async function exportPdf(shapes: Shape[], boards: Artboard[], name = 'doc
     if (!blob) continue;
     pages.push({ width: board.w, height: board.h, jpeg: new Uint8Array(await blob.arrayBuffer()), pxWidth: img.width, pxHeight: img.height });
   }
-  if (!pages.length) return;
-  download(new Blob([buildPdf(pages, name).buffer as ArrayBuffer], { type: 'application/pdf' }), `${name.replace(/[^\w.-]+/g, '_') || 'document'}.pdf`);
+  if (pages.length) download(new Blob([buildPdf(pages, name).buffer as ArrayBuffer], { type: 'application/pdf' }), `${name.replace(/[^\w.-]+/g, '_') || 'document'}.pdf`);
+  return { vector: pages.length - raster.length, raster };
 }

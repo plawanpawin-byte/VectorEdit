@@ -87,5 +87,5 @@ Triangle, diamond, trapezoid, parallelogram, polygon, star, double star, square 
 ## Document
 Multiple pages, master pages, guides, snapshots, history panel, autosave and recovery, `.vedit` format, SVG/PNG export, slices, Electron desktop build — ✅.
 SVG import (shapes, paths with all commands, groups, transforms, solid colours; File → Import SVG) — 🟡: no gradients, text, images or filters.
-PDF export (one page per artboard; pages are JPEG images, not vector) — 🟡.
-Import of other editors' file formats, vector PDF, colour profiles (CMYK/ICC), bleed and print marks — ❌.
+PDF export, one page per artboard — 🟡: pages made of plain shapes (fills, strokes, dashes, opacity, holes) are true vector; pages with text, images, gradients, effects, blend modes or masks fall back to a 2× JPEG and the app says why.
+Import of other editors' file formats, colour profiles (CMYK/ICC), bleed and print marks — ❌.
