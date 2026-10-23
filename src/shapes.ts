@@ -526,6 +526,59 @@ export const SHAPES: ShapeDef[] = [
     },
   },
   {
+    id: 'calloutellipse',
+    name: 'Callout (Ellipse)',
+    params: [
+      { key: 'tailX', label: 'Tail position', min: 0.05, max: 0.95, step: 0.01, def: 0.3 },
+      { key: 'tailLen', label: 'Tail length', min: 0.05, max: 0.6, step: 0.01, def: 0.25 },
+    ],
+    build: (w, h, p) => {
+      const bodyH = h * (1 - p.tailLen);
+      const rx = w / 2;
+      const ry = bodyH / 2;
+      const cx = w / 2;
+      const cy = ry;
+      const tipX = w * p.tailX;
+      const tailAngle = Math.atan2(1, (tipX - cx) / rx); // angle on the ellipse where the tail attaches (bottom half)
+      const gap = 0.22;
+      const verts: { x: number; y: number }[] = [];
+      const steps = 48;
+      const start = tailAngle + gap;
+      const end = tailAngle - gap + Math.PI * 2;
+      for (let i = 0; i <= steps; i++) {
+        const a = start + ((end - start) * i) / steps;
+        verts.push(V(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry));
+      }
+      verts.push(V(tipX, h));
+      return { closed: true, pts: polygonPath(verts, 0) };
+    },
+  },
+  {
+    id: 'cat',
+    name: 'Cat',
+    params: [
+      { key: 'ears', label: 'Ear height', min: 0.1, max: 0.6, step: 0.01, def: 0.3 },
+      { key: 'spread', label: 'Ear spread', min: 0.3, max: 0.9, step: 0.01, def: 0.62 },
+    ],
+    build: (w, h, p) => {
+      // a cat's head: a wide ellipse with two pointed ears (angles measured clockwise on screen, 3π/2 is the top)
+      const cx = w / 2;
+      const rx = w / 2;
+      const ry = (h * (1 - p.ears)) / 2;
+      const cy = h - ry;
+      const on = (a: number) => V(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry);
+      const top = Math.PI * 1.5;
+      const outer = 0.45;
+      const inner = 0.25;
+      const verts = [on(Math.PI + outer), V(cx - rx * p.spread, 0), on(top - inner), on(top + inner), V(cx + rx * p.spread, 0), on(Math.PI * 2 - outer)];
+      const steps = 36;
+      const from = -outer;
+      const to = Math.PI + outer;
+      for (let i = 1; i < steps; i++) verts.push(on(from + ((to - from) * i) / steps));
+      return { closed: true, pts: polygonPath(verts, 0) };
+    },
+  },
+  {
     id: 'spiral',
     name: 'Spiral',
     open: true,

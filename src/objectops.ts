@@ -171,3 +171,27 @@ export function traceMask(w: number, h: number, mask: (x: number, y: number) => 
   }
   return out;
 }
+
+const inRing = (ring: [number, number][], x: number, y: number) => {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+};
+
+/** True when (x, y) lies inside a multipolygon (outer rings minus their holes). */
+export function regionContains(mp: MultiPolygon, x: number, y: number): boolean {
+  return mp.some((poly) => inRing(poly[0], x, y) && !poly.slice(1).some((h) => inRing(h, x, y)));
+}
+
+/** Union of several regions into one multipolygon. */
+export function unionRegions(list: MultiPolygon[]): MultiPolygon {
+  return list.length ? polygonClipping.union(list[0], ...list.slice(1)) : [];
+}
+
+/** SVG path data for a multipolygon (even-odd). */
+export const multiPolygonD = (mp: MultiPolygon) =>
+  mp.map((poly) => poly.map((ring) => 'M' + ring.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join('L') + 'Z').join('')).join('');

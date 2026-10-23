@@ -51,3 +51,19 @@ describe('object ops', () => {
     expect(areas[1]).toBeCloseTo(4);
   });
 });
+
+import { multiPolygonD, regionContains, unionRegions } from '../src/objectops';
+describe('region helpers', () => {
+  const square = (x: number, y: number, s: number): [number, number][] => [[x, y], [x + s, y], [x + s, y + s], [x, y + s], [x, y]];
+  it('respects holes', () => {
+    const mp: any = [[square(0, 0, 10), square(3, 3, 4)]];
+    expect(regionContains(mp, 1, 1)).toBe(true);
+    expect(regionContains(mp, 5, 5)).toBe(false);
+    expect(regionContains(mp, 20, 5)).toBe(false);
+  });
+  it('unions touching regions and writes path data', () => {
+    const u = unionRegions([[[square(0, 0, 5)]], [[square(5, 0, 5)]]] as any);
+    expect(u).toHaveLength(1);
+    expect(multiPolygonD(u)).toMatch(/^M.*Z$/);
+  });
+});

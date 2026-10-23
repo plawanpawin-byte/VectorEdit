@@ -46,6 +46,10 @@ export const toolIcon: Record<string, ReactNode> = {
   contour: svg(<><rect x="6" y="6" width="8" height="8" /><rect x="3.5" y="3.5" width="13" height="13" opacity=".55" /><rect x="1.5" y="1.5" width="17" height="17" opacity=".3" /></>),
   perspective: svg(<><path d="M6 4h8l3.5 12h-15z" /><path d="M4.3 10h11.4" opacity=".45" /></>),
   warp: svg(<><path d="M2.5 6c3-3 5 3 7.5 0s4.500-3 7.500 0M2.500 14c3-3 5 3 7.500 0s4.500-3 7.500 0" /><path d="M2.500 6v8M17.500 6v8" opacity=".45" /></>),
+  blend: svg(<><rect x="2" y="6" width="5" height="8" /><rect x="8" y="6.500" width="4" height="7" opacity=".6" /><circle cx="15.500" cy="10" r="2.500" /></>),
+  shapebuilder: svg(<><circle cx="7.500" cy="10" r="5" /><circle cx="12.500" cy="10" r="5" opacity=".6" /></>),
+  vflood: svg(<><path d="M4 9l5-5 7 7-5 5z" /><path d="M16.500 13.500c0 1.300-.8 2-1.500 2s-1.500-.7-1.500-2l1.500-2z" /></>),
+  areameasure: svg(<><path d="M3.500 14l3-9 8 2 2 7z" /><path d="M3.500 17.500h13" opacity=".5" /></>),
   slice: svg(<><path d="M2.5 6.5h15M2.5 13.5h15M6.5 2.5v15M13.5 2.5v15" opacity=".45" /><rect x="6.5" y="6.5" width="7" height="7" /></>),
   artboard: svg(
     <>
