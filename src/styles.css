@@ -1,14 +1,14 @@
 :root {
-  --ui-0: #171717; /* inputs */
-  --ui-1: #222222; /* canvas surround */
-  --ui-2: #2c2c2c; /* panels */
-  --ui-3: #363636; /* bars, hover */
-  --ui-4: #474747;
-  --line: #141414;
-  --line-soft: #3a3a3a;
-  --text: #e2e2e2;
-  --text-dim: #a8a8a8;
-  --text-faint: #767676;
+  --ui-0: #141414; /* inputs */
+  --ui-1: #1b1b1b; /* canvas surround */
+  --ui-2: #262626; /* panels */
+  --ui-3: #303030; /* bars, hover */
+  --ui-4: #404040;
+  --line: #0c0c0c;
+  --line-soft: #383838;
+  --text: #f0f0f0;
+  --text-dim: #bdbdbd;
+  --text-faint: #8a8a8a;
   --brand: #17b3a3;
   --brand-hi: #2fd3bd;
   --sel: #2d8cf0;
@@ -528,3 +528,21 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; background: #ec
 .script-panel .row { display: flex; gap: 6px; }
 .script-out { margin: 0 8px 8px; padding: 8px; background: #0d0d0f; border-radius: 6px; font: 11px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; color: #9fd6a2; }
 .script-out.err { color: #ff8a80; }
+
+/* ---------- crisp, dense polish ---------- */
+body { font-size: 11.5px; text-rendering: optimizeLegibility; }
+.ibtn { border-radius: 3px; }
+.ibtn.on { box-shadow: inset 0 0 0 1px rgba(47, 211, 189, 0.55); }
+.dock-tabs { height: 26px; border-bottom: 1px solid var(--line); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04); }
+.dock-tabs button { border-radius: 3px; font-size: 11px; letter-spacing: 0.01em; }
+.dock-tabs button.on { background: var(--ui-0); box-shadow: inset 0 -2px 0 var(--brand); border-radius: 3px 3px 0 0; }
+.dock-group { border-bottom: 1px solid var(--line); }
+.dock { border-left: 1px solid var(--line); }
+input[type='text'], input[type='number'], input:not([type]), select, textarea { border-radius: 2px; border: 1px solid #000; outline: none; background: var(--ui-0); }
+input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow: 0 0 0 1px var(--sel); }
+.row { gap: 6px; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 0; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: #666; background-clip: content-box; }
+.hint { color: var(--text-faint); font-size: 11px; padding: 8px 10px; margin: 0; line-height: 1.45; }

@@ -24,6 +24,8 @@ export type BaseTool =
   | 'slice'
   | 'transparency'
   | 'contour'
+  | 'perspective'
+  | 'warp'
   | 'brush'
   | 'eraser'
   | 'bucket'
@@ -86,7 +88,7 @@ export type ArrowKind = '' | 'arrow' | 'open' | 'circle' | 'square' | 'diamond' 
 export type StrokeAlign = 'center' | 'inside' | 'outside';
 
 export interface Pattern {
-  type: 'stripes' | 'dots' | 'grid' | 'cross' | 'checker';
+  type: 'stripes' | 'dots' | 'grid' | 'cross' | 'checker' | 'waves' | 'bricks' | 'diamonds' | 'zigzag';
   color: string;
   /** cell size in px */
   size: number;

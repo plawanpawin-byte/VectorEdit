@@ -320,6 +320,10 @@ export function Appearance() {
             <option value="grid">Grid</option>
             <option value="cross">Cross-hatch</option>
             <option value="checker">Checker</option>
+            <option value="waves">Waves</option>
+            <option value="bricks">Bricks</option>
+            <option value="diamonds">Diamonds</option>
+            <option value="zigzag">Zigzag</option>
           </select>
         </div>
         {one.pattern && (

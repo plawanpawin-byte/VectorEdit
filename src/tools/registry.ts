@@ -3,6 +3,7 @@ import { penFinish, setState, getState } from '../store';
 import { artboardTool } from './artboard';
 import { brushTool, penTool, pencilTool } from './draw';
 import { frameEllipseTool, frameRectTool, imageTool, tableTool } from './layout';
+import { perspectiveTool, warpTool } from './warp';
 import { sliceTool } from './slice';
 import { knifeTool, scissorsTool } from './edit';
 import { eyedropperTool, fillTool, rotateTool } from './paint';
@@ -33,6 +34,8 @@ export const TOOLS: ToolDef[] = [
   knifeTool,
   scissorsTool,
   contourTool,
+  perspectiveTool,
+  warpTool,
   fillTool,
   transparencyTool,
   eyedropperTool,

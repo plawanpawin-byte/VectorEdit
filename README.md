@@ -31,7 +31,7 @@ Six workspaces, each with its own toolbox and panels:
 
 | Workspace | Highlights |
 | --- | --- |
-| **Vector** | Pen, Pencil, Vector Brush, Node/Corner tools, Knife, Scissors, 21 parametric shapes (star, cog, spiral, heart…), Transparency and Contour tools, boolean ops, Expand Stroke, groups, gradients and patterns, stroke alignment and arrowheads, 8 stackable effects, blend modes, multiple artboards, guides, snapshots |
+| **Vector** | Pen, Pencil, Vector Brush, Node/Corner tools, Knife, Scissors, 21 parametric shapes (star, cog, spiral, heart…), Transparency, Contour, Perspective and Envelope Warp tools, 9 pattern fills, boolean ops, Expand Stroke, groups, gradients and patterns, stroke alignment and arrowheads, 8 stackable effects, blend modes, multiple artboards, guides, snapshots |
 | **Pixel** | Raster layers, 14 brush presets, selection tools (marquee, lasso, magic wand, colour range), clone/heal/dodge/burn/blur/smudge, fill and gradient, 45 live-preview adjustments and filters, merge down |
 | **Layout** | Pages panel, image and picture frames, tables, text frames, grid |
 | **Typography** | Artistic and frame text, Character / Paragraph / Text Styles panels, wrapping, alignment and justify |
@@ -42,7 +42,7 @@ Also: autosave (IndexedDB) with crash recovery, `.vedit` documents, SVG/PNG expo
 
 ## Limitations
 
-VectorEdit is a young project and does **not** have everything Affinity has. Missing today: non-destructive adjustment/filter layers, live masks, AI features, true master pages and spreads, pressure dynamics for brushes, mesh warp / perspective, and mesh or hatch fills. Text styles are stored per browser. Scripts are not sandboxed, so only run code you trust.
+VectorEdit is a young project and does **not** have everything Affinity has. Missing today: non-destructive adjustment/filter layers, live masks, AI features, true master pages and spreads, pressure dynamics for brushes, free-form mesh warp (Envelope Warp uses a 3×3 net) and gradient-mesh fills. Text styles are stored per browser. Scripts are not sandboxed, so only run code you trust.
 
 ### Shortcuts
 

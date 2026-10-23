@@ -188,6 +188,20 @@ function PatternDef({ id, p }: { id: string; p: Pattern }) {
         </>
       );
       break;
+    case 'waves':
+      art = <path d={`M0 ${sz / 2}Q${sz / 4} ${sz / 2 - w} ${sz / 2} ${sz / 2}T${sz} ${sz / 2}`} fill="none" stroke={p.color} strokeWidth={Math.max(0.5, w / 3)} />;
+      break;
+    case 'bricks': {
+      const t = Math.max(0.5, w / 3);
+      art = <path d={`M0 0H${sz}M0 ${sz / 2}H${sz}M${sz / 2} 0V${sz / 2}M0 ${sz / 2}V${sz}M${sz} ${sz / 2}V${sz}`} fill="none" stroke={p.color} strokeWidth={t} />;
+      break;
+    }
+    case 'diamonds':
+      art = <path d={`M${sz / 2} ${sz / 2 - w / 2}L${sz / 2 + w / 2} ${sz / 2}L${sz / 2} ${sz / 2 + w / 2}L${sz / 2 - w / 2} ${sz / 2}Z`} fill={p.color} />;
+      break;
+    case 'zigzag':
+      art = <path d={`M0 ${sz * 0.75}L${sz / 2} ${sz * 0.25}L${sz} ${sz * 0.75}`} fill="none" stroke={p.color} strokeWidth={Math.max(0.5, w / 3)} />;
+      break;
   }
   return (
     <pattern id={id} patternUnits="userSpaceOnUse" width={sz} height={sz} patternTransform={`rotate(${p.angle})`}>
