@@ -13,7 +13,7 @@ import type { PointerCtx, Session, ToolDef } from './types';
 /* ---------- shared plumbing ---------- */
 
 /** Run a session builder once the layer's pixels are available, queueing events until then. */
-function lazy(work: HTMLCanvasElement | Promise<HTMLCanvasElement>, build: (canvas: HTMLCanvasElement) => Session): Session {
+export function lazy(work: HTMLCanvasElement | Promise<HTMLCanvasElement>, build: (canvas: HTMLCanvasElement) => Session): Session {
   if (!(work instanceof Promise)) return build(work);
   let real: Session | null = null;
   const queue: ['move' | 'up', PointerCtx][] = [];
@@ -29,7 +29,7 @@ function lazy(work: HTMLCanvasElement | Promise<HTMLCanvasElement>, build: (canv
 }
 
 /** Show intermediate pixels at a modest rate; encoding a big canvas on every pointer move is slow. */
-function makePreview(layerId: string, canvas: () => HTMLCanvasElement) {
+export function makePreview(layerId: string, canvas: () => HTMLCanvasElement) {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const run = () => {
     timer = null;
@@ -46,13 +46,13 @@ function makePreview(layerId: string, canvas: () => HTMLCanvasElement) {
   };
 }
 
-const base = {
+export const base = {
   workspaces: ['pixel'] as ToolDef['workspaces'],
   cursor: 'crosshair',
   chrome: 'none' as const,
 };
 
-const activeLayerOrCreate = (): Shape => {
+export const activeLayerOrCreate = (): Shape => {
   const layer = ensureLayer();
   setState({ selection: [layer.id] });
   return getState().shapes.find((s) => s.id === layer.id) ?? layer;
@@ -62,7 +62,7 @@ const hex = (c: string | null) => c ?? '#000000';
 
 /* ---------- paint and erase ---------- */
 
-function paintDown(mode: 'paint' | 'erase') {
+export function paintDown(mode: 'paint' | 'erase') {
   return (c: PointerCtx): Session => {
     const layer = activeLayerOrCreate();
     const st = getState();
@@ -91,7 +91,7 @@ function paintDown(mode: 'paint' | 'erase') {
   };
 }
 
-function BrushOptions() {
+export function BrushOptions() {
   const b = useStore((s) => s.pbrush);
   const set = (patch: Partial<typeof b>) => setState({ pbrush: { ...b, ...patch } });
   return (
@@ -140,7 +140,7 @@ export const eraserTool: ToolDef = {
   label: 'Eraser',
   key: 'e',
   icon: toolIcon.eraser,
-  group: 'paint',
+  group: 'erase',
   hint: '**Drag** to erase pixels to transparency. It uses the same brush settings.',
   Options: BrushOptions,
   down: paintDown('erase'),
@@ -148,7 +148,7 @@ export const eraserTool: ToolDef = {
 
 /* ---------- retouch brushes ---------- */
 
-function RetouchOptions() {
+export function RetouchOptions() {
   const b = useStore((s) => s.pbrush);
   const p = useStore((s) => s.pixel);
   return (
@@ -162,7 +162,7 @@ function RetouchOptions() {
 
 let cloneSource: { x: number; y: number } | null = null;
 
-function retouchDown(kind: RetouchKind) {
+export function retouchDown(kind: RetouchKind) {
   return (c: PointerCtx): Session | void => {
     const layer = activeLayerOrCreate();
     const st = getState();
@@ -185,10 +185,17 @@ function retouchDown(kind: RetouchKind) {
       const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const mask = selectionFor(layer)?.mask ?? null;
       let carried: ReturnType<typeof dab>['carried'] = null;
+      const sx = Math.min(canvas.width - 1, Math.max(0, Math.round(start.x)));
+      const sy = Math.min(canvas.height - 1, Math.max(0, Math.round(start.y)));
+      const here = (sy * canvas.width + sx) * 4;
+      // colour-aware brushes remember the colour under the first click
+      const target: [number, number, number] | null = kind === 'colourreplace' || kind === 'bgerase' ? [img.data[here], img.data[here + 1], img.data[here + 2]] : null;
+      const replace = parseColour(st.fill ?? '#000000');
+      const tolerance = st.pixel.tolerance;
       const flush = () => ctx.putImageData(img, 0, 0);
       const preview = makePreview(layer.id, () => (flush(), canvas));
       const stamp = (x: number, y: number) => {
-        carried = dab(img, kind, x, y, radius, st.pbrush.hardness, strength, { mask, carried, source }).carried;
+        carried = dab(img, kind, x, y, radius, st.pbrush.hardness, strength, { mask, carried, source, target, tolerance, replace }).carried;
       };
       let last = start;
       let carry = 0;
@@ -224,7 +231,7 @@ function retouchDown(kind: RetouchKind) {
   };
 }
 
-const retouch = (id: ToolDef['id'], label: string, key: string | undefined, group: string, kind: RetouchKind, hint: string): ToolDef => ({
+export const retouch = (id: ToolDef['id'], label: string, key: string | undefined, group: string, kind: RetouchKind, hint: string): ToolDef => ({
   ...base,
   id,
   label,
@@ -249,7 +256,7 @@ export const redEyeTool = retouch('redeye', 'Red Eye Removal', 'y', 'heal', 'red
 
 /* ---------- selection tools ---------- */
 
-function SelectOptions() {
+export function SelectOptions() {
   const p = useStore((s) => s.pixel);
   const sel = useStore((s) => s.pixelSel);
   return (
@@ -283,7 +290,7 @@ function WandOptions() {
   );
 }
 
-const selLayer = (): Shape => targetLayer() ?? activeLayerOrCreate();
+export const selLayer = (): Shape => targetLayer() ?? activeLayerOrCreate();
 
 function clearSelected(): boolean {
   const layer = targetLayer();

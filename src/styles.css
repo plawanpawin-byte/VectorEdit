@@ -576,3 +576,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 .range-grid .mini { width: 100%; }
 .layer-foot { flex-wrap: wrap; row-gap: 2px; }
 .layer-foot .txt { white-space: nowrap; padding: 0 6px; font-size: 11px; }
+
+/* keep the top bar inside narrow windows: workspaces collapse to icons, the active one keeps its name */
+.app { grid-template-columns: minmax(0, 1fr); }
+.topbar { min-width: 0; }
+@media (max-width: 1700px) {
+  .modes button:not(.on) span { display: none; }
+}
+@media (max-width: 1350px) {
+  .modes button span { display: none; }
+}

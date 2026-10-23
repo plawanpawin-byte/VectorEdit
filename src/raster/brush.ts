@@ -44,6 +44,7 @@ export const BRUSH_PRESETS: BrushPreset[] = [
   preset('watercolour', 'Watercolour', 'Paint', { size: 50, hardness: 0.25, flow: 0.2, opacity: 0.7, texture: 'grain', spacing: 0.06 }),
   preset('oil', 'Oil bristle', 'Paint', { size: 36, hardness: 0.7, texture: 'bristle', roundness: 0.6, angle: 30, spacing: 0.1, flow: 0.9 }),
   preset('splatter', 'Splatter', 'Effects', { size: 10, hardness: 0.9, spacing: 1.4, jitter: 2.2 }),
+  preset('pixel', 'Pixel (aliased)', 'Basic', { size: 4, hardness: 1, spacing: 0.5 }),
   preset('sponge', 'Sponge', 'Effects', { size: 44, hardness: 0.5, texture: 'chalk', spacing: 0.35, flow: 0.6, jitter: 0.25 }),
 ];
 

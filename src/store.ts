@@ -53,6 +53,7 @@ export interface State {
   rasterDialog: import('./raster/dialog').RasterDialogState | null;
   warpGrid: number;
   blendSteps: number;
+  opBrush: { filter: string; adjust: string };
   macroRecording: boolean;
   macroSteps: number;
   pbrush: import('./raster/brush').BrushParams & { preset: string };
@@ -135,6 +136,7 @@ let state: State = {
   rasterDialog: null,
   warpGrid: 4,
   blendSteps: 5,
+  opBrush: { filter: 'gaussian-blur', adjust: 'brightness-contrast' },
   macroRecording: false,
   macroSteps: 0,
   pbrush: { preset: 'round', size: 24, hardness: 0.85, opacity: 1, flow: 1, spacing: 0.12, roundness: 1, angle: 0, texture: 'none', jitter: 0 },

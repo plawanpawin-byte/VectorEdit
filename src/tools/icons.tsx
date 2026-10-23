@@ -50,6 +50,16 @@ export const toolIcon: Record<string, ReactNode> = {
   shapebuilder: svg(<><circle cx="7.500" cy="10" r="5" /><circle cx="12.500" cy="10" r="5" opacity=".6" /></>),
   vflood: svg(<><path d="M4 9l5-5 7 7-5 5z" /><path d="M16.500 13.500c0 1.300-.8 2-1.500 2s-1.500-.7-1.500-2l1.500-2z" /></>),
   areameasure: svg(<><path d="M3.500 14l3-9 8 2 2 7z" /><path d="M3.500 17.500h13" opacity=".5" /></>),
+  medianbrush: svg(<><circle cx="10" cy="10" r="6" /><path d="M7 10h6M10 7v6" opacity=".6" /></>),
+  colourreplace: svg(<><path d="M4 13l6-9 6 9a6 6 0 01-12 0z" /><path d="M7 14.500c1 1 3 1 4 0" opacity=".6" /></>),
+  bgeraser: svg(<><path d="M4 12l6-7 6 6-4 4H7z" /><path d="M2.500 17.500h15" opacity=".5" strokeDasharray="2 2" /></>),
+  mixer: svg(<><path d="M5 15c0-5 3-9 10-10-1 7-5 10-10 10z" /><path d="M5 15l4-4" opacity=".6" /></>),
+  pixelbrush: svg(<><rect x="4" y="4" width="4" height="4" /><rect x="8" y="8" width="4" height="4" /><rect x="12" y="12" width="4" height="4" /></>),
+  floderase: svg(<><path d="M4 10l5-6 7 7-5 5z" /><path d="M3 17h5" opacity=".6" /></>),
+  colmarquee: svg(<><path d="M10 2.500v15" strokeDasharray="2 2" /><path d="M7 2.500h6M7 17.500h6" opacity=".6" /></>),
+  rowmarquee: svg(<><path d="M2.500 10h15" strokeDasharray="2 2" /><path d="M2.500 7v6M17.500 7v6" opacity=".6" /></>),
+  filterbrush: svg(<><path d="M3 4h14l-5 6v6l-4-2v-4z" /></>),
+  adjustbrush: svg(<><circle cx="10" cy="10" r="6.500" /><path d="M10 3.500a6.500 6.500 0 010 13z" fill="currentColor" /></>),
   slice: svg(<><path d="M2.5 6.5h15M2.5 13.5h15M6.5 2.5v15M13.5 2.5v15" opacity=".45" /><rect x="6.5" y="6.5" width="7" height="7" /></>),
   artboard: svg(
     <>

@@ -4,6 +4,7 @@ import { artboardTool } from './artboard';
 import { brushTool, penTool, pencilTool } from './draw';
 import { frameEllipseTool, frameRectTool, imageTool, tableTool } from './layout';
 import { perspectiveTool, warpTool } from './warp';
+import { pixelTools2 } from './pixel2';
 import { areaMeasureTool, blendTool, shapeBuilderTool, vectorFloodTool } from './vector2';
 import { sliceTool } from './slice';
 import { knifeTool, scissorsTool } from './edit';
@@ -54,6 +55,7 @@ export const TOOLS: ToolDef[] = [
   measureTool,
   sliceTool,
   ...pixelTools,
+  ...pixelTools2,
 ];
 
 const BY_ID = new Map<string, ToolDef>(TOOLS.map((t) => [t.id, t]));

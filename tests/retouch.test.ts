@@ -79,3 +79,34 @@ describe('retouch brushes', () => {
     expect(() => dab(b, 'smudge', 0, 0, 5, 0.5, 1)).not.toThrow();
   });
 });
+
+describe('more retouch brushes', () => {
+  it('median removes a hot pixel', () => {
+    const b = solid(21, 21, [40, 40, 40]);
+    b.data.set([255, 255, 255, 255], (10 * 21 + 10) * 4);
+    dab(b, 'median', 10, 10, 5, 1, 1);
+    expect(px(b, 10, 10)[0]).toBe(40);
+  });
+  it('colour replace changes only pixels near the picked colour and keeps lightness', () => {
+    const b = solid(21, 21, [200, 40, 40]);
+    b.data.set([20, 20, 200, 255], (10 * 21 + 12) * 4); // a blue pixel that must stay
+    dab(b, 'colourreplace', 10, 10, 8, 1, 1, { target: [200, 40, 40], replace: [0, 0, 255], tolerance: 60 });
+    const [r, , bl] = px(b, 10, 8);
+    expect(bl).toBeGreaterThan(r);
+    expect(px(b, 12, 10)).toEqual([20, 20, 200]);
+    expect(px(b, 0, 0)).toEqual([200, 40, 40]); // outside the brush
+  });
+  it('background eraser clears only pixels near the picked colour', () => {
+    const b = solid(21, 21, [255, 255, 255]);
+    b.data.set([0, 0, 0, 255], (10 * 21 + 10) * 4);
+    dab(b, 'bgerase', 10, 10, 8, 1, 1, { target: [255, 255, 255], tolerance: 30 });
+    expect(b.data[(10 * 21 + 8) * 4 + 3]).toBe(0);
+    expect(b.data[(10 * 21 + 10) * 4 + 3]).toBe(255);
+  });
+  it('mixer brush drags paint along and tints it', () => {
+    const b = solid(41, 11, [255, 255, 255]);
+    let carried = dab(b, 'mixer', 5, 5, 4, 1, 1, { replace: [255, 0, 0] }).carried;
+    for (let x = 6; x < 30; x += 2) carried = dab(b, 'mixer', x, 5, 4, 1, 1, { carried, replace: [255, 0, 0] }).carried;
+    expect(px(b, 29, 5)[1]).toBeLessThan(200); // picked up red along the way
+  });
+});
