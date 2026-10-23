@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   arrange,
   deleteSelected,
@@ -185,20 +185,77 @@ function Help({ onClose }: { onClose: () => void }) {
   );
 }
 
+/** Tabs that do not fit the dock's width move into a ⋯ menu instead of being clipped. */
+function useFittingTabs(labels: string[]) {
+  const bar = useRef<HTMLDivElement>(null);
+  const widths = useRef(new Map<string, number>());
+  const [count, setCount] = useState(labels.length);
+  const fit = () => {
+    const el = bar.current;
+    if (!el) return;
+    const avail = el.clientWidth - 30; // room for the collapse button and the ⋯ menu
+    const more = 26;
+    let used = 0;
+    let k = 0;
+    for (const label of labels) {
+      const w = widths.current.get(label) ?? label.length * 6.6 + 12;
+      if (used + w > avail - (k < labels.length - 1 ? more : 0)) break;
+      used += w;
+      k++;
+    }
+    setCount(Math.max(1, k));
+  };
+  useLayoutEffect(() => {
+    bar.current?.querySelectorAll<HTMLButtonElement>('button[data-tab]').forEach((b) => widths.current.set(b.dataset.tab!, b.offsetWidth));
+    fit();
+  });
+  useEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labels.join('|')]);
+  return { bar, count };
+}
+
 function Dock({ tabs, grow }: { tabs: { id: string; label: string; body: React.ReactNode }[]; grow?: number }) {
   const [chosen, setActive] = useState(tabs[0].id);
   // the chosen tab may vanish when the workspace changes
   const current = tabs.find((t) => t.id === chosen) ?? tabs[0];
   const active = current.id;
   const [open, setOpen] = useState(true);
+  const [menu, setMenu] = useState(false);
+  const { bar, count } = useFittingTabs(tabs.map((t) => t.label));
+  const shown = tabs.slice(0, count);
+  const hidden = tabs.slice(count);
   return (
     <div className={'dock-group' + (open ? '' : ' closed')} style={{ flexGrow: open ? grow ?? 1 : 0 }}>
-      <div className="dock-tabs">
-        {tabs.map((t) => (
-          <button key={t.id} className={active === t.id && open ? 'on' : ''} onClick={() => (setActive(t.id), setOpen(true))}>
+      <div className="dock-tabs" ref={bar}>
+        {shown.map((t) => (
+          <button key={t.id} data-tab={t.label} className={active === t.id && open ? 'on' : ''} onClick={() => (setActive(t.id), setOpen(true))}>
             {t.label}
           </button>
         ))}
+        {hidden.length > 0 && (
+          <div className="pop">
+            <button className={'ibtn tabmore' + (menu ? ' on' : '')} title="More panels" onClick={() => setMenu(!menu)}>
+              ⋯
+            </button>
+            {menu && (
+              <div className="pop-panel menu-list" onMouseLeave={() => setMenu(false)}>
+                {hidden.map((t) => (
+                  <button key={t.id} onClick={() => (setActive(t.id), setOpen(true), setMenu(false))}>
+                    <span className="chk">{active === t.id ? '✓' : ''}</span>
+                    <span>{t.label}</span>
+                    <span className="sc" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <div className="grow" />
         <button className="collapse" title={open ? 'Collapse' : 'Expand'} onClick={() => setOpen(!open)}>
           <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="1.3" style={{ transform: open ? undefined : 'rotate(-90deg)' }}>
@@ -321,8 +378,6 @@ export function App() {
                     { id: 'pathbrushes', label: 'Path Brushes', body: <PathBrushesPanel /> },
                     { id: 'quickfx', label: 'Quick FX', body: <QuickFxPanel /> },
                     { id: 'vstyles', label: 'Styles', body: <StylesPanel /> },
-                    { id: 'pages', label: 'Pages', body: <PagesPanel /> },
-                    { id: 'assets', label: 'Assets', body: <AssetsPanel /> },
                   ]
                 : []),
             ]}
@@ -333,6 +388,7 @@ export function App() {
               { id: 'transform', label: 'Transform', body: <TransformPanel /> },
               { id: 'navigator', label: 'Navigator', body: <Navigator /> },
               { id: 'history', label: 'History', body: <History /> },
+              ...(workspace === 'vector' ? [{ id: 'pages', label: 'Pages', body: <PagesPanel /> }, { id: 'assets', label: 'Assets', body: <AssetsPanel /> }] : []),
             ]}
           />
         </aside>

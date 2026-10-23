@@ -511,7 +511,7 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; background: #ec
 /* text-style popover buttons in the top bar, and scrollable dock tabs */
 .pop > .ibtn:has(> .txtbtn) { width: auto; height: auto; padding: 0; }
 .pop > .ibtn:has(> .txtbtn):hover { background: none; }
-.dock-tabs { overflow-x: auto; overflow-y: hidden; white-space: nowrap; scrollbar-width: none; }
+.dock-tabs { overflow: visible; white-space: nowrap; }
 .dock-tabs::-webkit-scrollbar { display: none; }
 .dock-tabs button { flex: none; padding: 3px 6px; }
 .txtbtn { white-space: nowrap; }
@@ -758,3 +758,6 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']), select, te
 .style-save { padding-bottom: 0; }
 .style-row { display: grid; grid-template-columns: 1fr 22px; gap: 4px; padding: 0 8px 4px; align-items: stretch; }
 .style-row > button:first-child { padding: 5px 6px; }
+.dock-group:last-child .dock-tabs button { font-size: 10.5px; padding: 2px 4px; }
+.dock-tabs button { padding: 2px 4px; letter-spacing: -0.1px; }
+.dock-group:last-child .dock-tabs button { font-size: 10px; padding: 2px 3px; }
