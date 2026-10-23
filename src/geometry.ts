@@ -1,0 +1,189 @@
+import type { Box, Shape } from './types';
+
+interface P2 {
+  x: number;
+  y: number;
+}
+
+export function flatten(s: Shape, steps = 14): P2[] {
+  const out: P2[] = [];
+  const n = s.pts.length;
+  if (!n) return out;
+  out.push({ x: s.pts[0].x, y: s.pts[0].y });
+  const segs = s.closed ? n : n - 1;
+  for (let i = 0; i < segs; i++) {
+    const a = s.pts[i];
+    const b = s.pts[(i + 1) % n];
+    if (!a.hx && !a.hy && !b.hx && !b.hy) {
+      out.push({ x: b.x, y: b.y });
+      continue;
+    }
+    const c1x = a.x + a.hx;
+    const c1y = a.y + a.hy;
+    const c2x = b.x - b.hx;
+    const c2y = b.y - b.hy;
+    for (let t = 1; t <= steps; t++) {
+      const u = t / steps;
+      const v = 1 - u;
+      out.push({
+        x: v * v * v * a.x + 3 * v * v * u * c1x + 3 * v * u * u * c2x + u * u * u * b.x,
+        y: v * v * v * a.y + 3 * v * v * u * c1y + 3 * v * u * u * c2y + u * u * u * b.y,
+      });
+    }
+  }
+  return out;
+}
+
+export function textBox(s: Shape): Box {
+  const lines = s.text.split('\n');
+  const longest = Math.max(1, ...lines.map((l) => l.length));
+  return { x: s.x, y: s.y, w: longest * s.fontSize * 0.56, h: lines.length * s.fontSize * 1.2 };
+}
+
+export function bbox(s: Shape): Box {
+  if (s.kind === 'rect' || s.kind === 'ellipse') return { x: s.x, y: s.y, w: s.w, h: s.h };
+  if (s.kind === 'text') return textBox(s);
+  const pts = flatten(s);
+  if (!pts.length) return { x: 0, y: 0, w: 0, h: 0 };
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const p of pts) {
+    x0 = Math.min(x0, p.x);
+    y0 = Math.min(y0, p.y);
+    x1 = Math.max(x1, p.x);
+    y1 = Math.max(y1, p.y);
+  }
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+export function unionBox(boxes: Box[]): Box | null {
+  if (!boxes.length) return null;
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const b of boxes) {
+    x0 = Math.min(x0, b.x);
+    y0 = Math.min(y0, b.y);
+    x1 = Math.max(x1, b.x + b.w);
+    y1 = Math.max(y1, b.y + b.h);
+  }
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+export function translate(s: Shape, dx: number, dy: number): Shape {
+  return {
+    ...s,
+    x: s.x + dx,
+    y: s.y + dy,
+    pts: s.pts.map((p) => ({ ...p, x: p.x + dx, y: p.y + dy })),
+  };
+}
+
+export function scaleAbout(s: Shape, sx: number, sy: number, ox: number, oy: number): Shape {
+  let x = ox + (s.x - ox) * sx;
+  let y = oy + (s.y - oy) * sy;
+  let w = s.w * sx;
+  let h = s.h * sy;
+  if (w < 0) {
+    x += w;
+    w = -w;
+  }
+  if (h < 0) {
+    y += h;
+    h = -h;
+  }
+  return {
+    ...s,
+    x,
+    y,
+    w,
+    h,
+    fontSize: s.kind === 'text' ? Math.max(1, s.fontSize * Math.abs(sy)) : s.fontSize,
+    pts: s.pts.map((p) => ({
+      x: ox + (p.x - ox) * sx,
+      y: oy + (p.y - oy) * sy,
+      hx: p.hx * sx,
+      hy: p.hy * sy,
+    })),
+  };
+}
+
+const r = (n: number) => Math.round(n * 100) / 100;
+
+export function pathD(s: Shape): string {
+  const n = s.pts.length;
+  if (!n) return '';
+  let d = `M${r(s.pts[0].x)} ${r(s.pts[0].y)}`;
+  const segs = s.closed ? n : n - 1;
+  for (let i = 0; i < segs; i++) {
+    const a = s.pts[i];
+    const b = s.pts[(i + 1) % n];
+    if (!a.hx && !a.hy && !b.hx && !b.hy) {
+      d += `L${r(b.x)} ${r(b.y)}`;
+    } else {
+      d += `C${r(a.x + a.hx)} ${r(a.y + a.hy)} ${r(b.x - b.hx)} ${r(b.y - b.hy)} ${r(b.x)} ${r(b.y)}`;
+    }
+  }
+  return s.closed ? d + 'Z' : d;
+}
+
+function distToSeg(px: number, py: number, a: P2, b: P2): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = dx * dx + dy * dy;
+  const t = len === 0 ? 0 : Math.max(0, Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / len));
+  return Math.hypot(px - (a.x + t * dx), py - (a.y + t * dy));
+}
+
+function inPolygon(px: number, py: number, poly: P2[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i];
+    const b = poly[j];
+    if (a.y > py !== b.y > py && px < ((b.x - a.x) * (py - a.y)) / (b.y - a.y) + a.x) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+export function hitTest(s: Shape, x: number, y: number, tol: number): boolean {
+  if (!s.visible) return false;
+  const half = (s.stroke ? s.strokeWidth : 0) / 2 + tol;
+  if (s.kind === 'rect') {
+    const inOuter = x >= s.x - half && x <= s.x + s.w + half && y >= s.y - half && y <= s.y + s.h + half;
+    if (!inOuter) return false;
+    if (s.fill) return true;
+    return !(x > s.x + half && x < s.x + s.w - half && y > s.y + half && y < s.y + s.h - half);
+  }
+  if (s.kind === 'ellipse') {
+    const rx = s.w / 2;
+    const ry = s.h / 2;
+    if (rx <= 0 || ry <= 0) return false;
+    const nx = (x - (s.x + rx)) / (rx + half);
+    const ny = (y - (s.y + ry)) / (ry + half);
+    if (nx * nx + ny * ny > 1) return false;
+    if (s.fill) return true;
+    const ix = (x - (s.x + rx)) / Math.max(1, rx - half);
+    const iy = (y - (s.y + ry)) / Math.max(1, ry - half);
+    return ix * ix + iy * iy >= 1;
+  }
+  if (s.kind === 'text') {
+    const b = textBox(s);
+    return x >= b.x - tol && x <= b.x + b.w + tol && y >= b.y - tol && y <= b.y + b.h + tol;
+  }
+  const pts = flatten(s);
+  if (s.closed && s.fill && inPolygon(x, y, pts)) return true;
+  for (let i = 0; i < pts.length - 1; i++) {
+    if (distToSeg(x, y, pts[i], pts[i + 1]) <= half) return true;
+  }
+  if (s.closed && pts.length > 1 && distToSeg(x, y, pts[pts.length - 1], pts[0]) <= half) return true;
+  return false;
+}
+
+export function boxesIntersect(a: Box, b: Box): boolean {
+  return a.x <= b.x + b.w && a.x + a.w >= b.x && a.y <= b.y + b.h && a.y + a.h >= b.y;
+}
