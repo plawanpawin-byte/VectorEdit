@@ -1,39 +1,56 @@
-export type Tool =
+export type BaseTool =
   | 'select'
   | 'direct'
+  | 'corner'
   | 'pen'
   | 'pencil'
   | 'text'
+  | 'frametext'
+  | 'vbrush'
+  | 'knife'
+  | 'scissors'
+  | 'fill'
+  | 'measure'
   | 'line'
   | 'rect'
   | 'rrect'
   | 'ellipse'
-  | 'polygon'
-  | 'star'
   | 'rotate'
   | 'eyedropper'
   | 'hand'
   | 'zoom';
 
-export type Mode = 'vector' | 'layout' | 'draw';
+/** Base tools plus one tool per registered parametric shape, e.g. `shape:cloud`. */
+export type Tool = BaseTool | `shape:${string}`;
 
-/** Anchor point; (hx, hy) is the outgoing handle offset, the incoming handle is its mirror. */
+export type Workspace = 'vector' | 'layout' | 'typography';
+
+/**
+ * Anchor point. (hx, hy) is the outgoing handle offset. The incoming handle is its mirror unless
+ * (ix, iy) is set, which makes the node a cusp with an independent incoming handle offset
+ * (so {ix: 0, iy: 0} means "no incoming handle").
+ */
 export interface Pt {
   x: number;
   y: number;
   hx: number;
   hy: number;
+  ix?: number;
+  iy?: number;
 }
 
-/** rect/ellipse/polygon/star are parametric shapes defined by their box (x, y, w, h) plus parameters. */
-export type ShapeKind = 'rect' | 'ellipse' | 'polygon' | 'star' | 'line' | 'path' | 'text';
+/** rect, ellipse and registry shapes are parametric: defined by their box (x, y, w, h) plus parameters. */
+export type ShapeKind = 'rect' | 'ellipse' | 'shape' | 'line' | 'path' | 'text';
 
 export interface Gradient {
   type: 'linear' | 'radial';
   a: string;
   b: string;
-  /** degrees, 0 = left to right (linear only) */
+  /** degrees, 0 = left to right (linear without explicit geometry) */
   angle: number;
+  /** explicit gradient axis in document units (set by the Fill tool); radial uses p1 as centre */
+  p1?: { x: number; y: number };
+  p2?: { x: number; y: number };
 }
 
 export interface Effect {
@@ -61,10 +78,10 @@ export interface Shape {
   h: number;
   /** rect corner radius */
   radius: number;
-  /** polygon sides / star points */
-  sides: number;
-  /** star inner radius as a fraction of the outer radius */
-  inner: number;
+  /** id of the entry in the shape registry (kind 'shape') */
+  shapeId: string;
+  /** parameter values for that shape */
+  params: Record<string, number>;
   pts: Pt[];
   /** extra closed contours (holes or islands) drawn with even-odd fill, used by boolean results */
   extra: Pt[][];

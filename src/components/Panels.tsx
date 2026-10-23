@@ -18,6 +18,7 @@ import {
 import { Duplicate, Eye, I, Lock, Trash } from './Icons';
 import { NumField, Section } from './Fields';
 import { ShapeEl } from './ShapeEl';
+import { shapeDef, defaultParams } from '../shapes';
 import type { Effect, Shape } from '../types';
 
 const SWATCHES = [
@@ -26,7 +27,7 @@ const SWATCHES = [
   '#7a4de0', '#b84fc4', '#e0457b', '#8c5a3c', '#0e3b38', '#17325c', '#4a1c3d', '#5c2a14',
 ];
 
-const KIND_LABEL: Record<Shape['kind'], string> = { rect: 'Rectangle', ellipse: 'Ellipse', polygon: 'Polygon', star: 'Star', line: 'Line', path: 'Curve', text: 'Text' };
+const KIND_LABEL: Record<Shape['kind'], string> = { rect: 'Rectangle', ellipse: 'Ellipse', shape: 'Shape', line: 'Line', path: 'Curve', text: 'Text' };
 const BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity'];
 const label = (b: string) => b.replace(/(^|-)(\w)/g, (_, d, c) => (d ? ' ' : '') + c.toUpperCase());
 
@@ -240,7 +241,8 @@ export function Appearance() {
   const fillMode = one.gradient ? one.gradient.type : one.fill ? 'solid' : 'none';
   const setEffect = (i: number, patch: Partial<Effect>) =>
     updateSelected((s) => ({ ...s, effects: s.effects.map((e, k) => (k === i ? { ...e, ...patch } : e)) }), `fx${i}`);
-  const parametric = one.kind === 'rect' || one.kind === 'polygon' || one.kind === 'star';
+  const parametric = one.kind === 'rect' || one.kind === 'shape';
+  const sdef = one.kind === 'shape' ? shapeDef(one.shapeId) : undefined;
   const hasStroke = !!one.stroke;
 
   return (
@@ -305,20 +307,16 @@ export function Appearance() {
               <span className="val">{Math.round(one.radius ?? 0)}</span>
             </div>
           )}
-          {(one.kind === 'polygon' || one.kind === 'star') && (
-            <div className="row">
-              <span className="lbl">{one.kind === 'star' ? 'Points' : 'Sides'}</span>
-              <input type="range" min={3} max={24} value={one.sides} onChange={(e) => set({ sides: Number(e.target.value) }, 'sides')} />
-              <span className="val">{one.sides}</span>
-            </div>
-          )}
-          {one.kind === 'star' && (
-            <div className="row">
-              <span className="lbl">Inner</span>
-              <input type="range" min={5} max={95} value={Math.round(one.inner * 100)} onChange={(e) => set({ inner: Number(e.target.value) / 100 }, 'inner')} />
-              <span className="val">{Math.round(one.inner * 100)}%</span>
-            </div>
-          )}
+          {sdef?.params.map((q) => {
+            const value = one.params[q.key] ?? defaultParams(one.shapeId)[q.key];
+            return (
+              <div className="row" key={q.key}>
+                <span className="lbl">{q.label}</span>
+                <input type="range" min={q.min} max={q.max} step={q.step} value={value} onChange={(e) => set({ params: { ...one.params, [q.key]: Number(e.target.value) } }, `p-${q.key}`)} />
+                <span className="val">{q.step >= 1 ? Math.round(value) : value.toFixed(2)}</span>
+              </div>
+            );
+          })}
         </Section>
       )}
 
@@ -439,7 +437,7 @@ export function Layers() {
             ) : (
               <span className="name" onDoubleClick={() => setEditing(s.id)}>
                 {s.name}{s.group && <span className="gchip">grp</span>}
-                <em>{KIND_LABEL[s.kind]}</em>
+                <em>{s.kind === 'shape' ? (shapeDef(s.shapeId)?.name ?? 'Shape') : KIND_LABEL[s.kind]}</em>
               </span>
             )}
             <button className={'ic' + (s.locked ? ' on' : ' faint')} title="Lock" onClick={(e) => (e.stopPropagation(), updateShape(s.id, { locked: !s.locked }))}>

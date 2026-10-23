@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from 'react';
-import type { Box, Mode, Pt, Shape, ShapeKind, Tool } from './types';
+import type { Box, Pt, Shape, ShapeKind, Tool, Workspace } from './types';
 import { bbox, rotateShape, scaleAbout, toPath, translate, unionBox } from './geometry';
 import { type BoolOp, booleanPieces, canBoolean } from './boolean';
 import { blankShape, normalizeShape } from './shape';
+import { defaultParams, shapeDef } from './shapes';
 
 export interface State {
   shapes: Shape[];
@@ -20,15 +21,21 @@ export interface State {
   rulers: boolean;
   grid: boolean;
   snap: boolean;
-  mode: Mode;
+  workspace: Workspace;
   past: Shape[][];
   future: Shape[][];
   cursor: { x: number; y: number };
   pen: Pt[] | null;
   editingText: string | null;
   filePath: string | null;
-  sides: number;
-  starPoints: number;
+  /** last used parameters per registry shape, applied to newly drawn shapes */
+  shapeParams: Record<string, Record<string, number>>;
+  /** last tool used in each toolbar group (the group button shows it) */
+  lastTool: Record<string, Tool>;
+  /** selected nodes of the node/corner tools */
+  nodeSel: { id: string; i: number }[];
+  brush: { size: number; profile: 'taper' | 'uniform' | 'calligraphic'; taper: number };
+  gradientType: 'linear' | 'radial';
 }
 
 let counter = 0;
@@ -83,15 +90,18 @@ let state: State = {
   rulers: true,
   grid: false,
   snap: false,
-  mode: 'vector',
+  workspace: 'vector',
   past: [],
   future: [],
   cursor: { x: 0, y: 0 },
   pen: null,
   editingText: null,
   filePath: null,
-  sides: 6,
-  starPoints: 5,
+  shapeParams: {},
+  lastTool: {},
+  nodeSel: [],
+  brush: { size: 12, profile: 'taper', taper: 0.7 },
+  gradientType: 'linear',
 };
 
 const listeners = new Set<() => void>();
@@ -177,8 +187,7 @@ export function redo() {
 const NAMES: Record<ShapeKind, string> = {
   rect: 'Rectangle',
   ellipse: 'Ellipse',
-  polygon: 'Polygon',
-  star: 'Star',
+  shape: 'Shape',
   line: 'Line',
   path: 'Path',
   text: 'Text',
@@ -186,12 +195,14 @@ const NAMES: Record<ShapeKind, string> = {
 
 export function makeShape(kind: ShapeKind, p: Partial<Shape> = {}): Shape {
   const st = state;
-  const count = st.shapes.filter((s) => s.kind === kind).length + 1;
-  const isLine = kind === 'line';
+  const def = kind === 'shape' && p.shapeId ? shapeDef(p.shapeId) : undefined;
+  const label = def?.name ?? NAMES[kind];
+  const count = st.shapes.filter((s) => (def ? s.shapeId === def.id : s.kind === kind)).length + 1;
+  const isLine = kind === 'line' || !!def?.open;
   return blankShape(`s${++counter}`, kind, {
-    name: `${NAMES[kind]} ${count}`,
+    name: `${label} ${count}`,
     text: 'Type here',
-    sides: kind === 'star' ? st.starPoints : st.sides,
+    params: p.shapeId ? { ...defaultParams(p.shapeId), ...st.shapeParams[p.shapeId] } : {},
     fill: isLine ? null : st.fill,
     stroke: kind === 'text' ? null : (st.stroke ?? (isLine ? '#1c1c1c' : null)),
     strokeWidth: st.strokeWidth,
@@ -407,12 +418,6 @@ export function historyJump(target: number) {
   while (state.past.length < target && state.future.length) redo();
 }
 
-export const MODE_TOOLS: Record<Mode, Tool[]> = {
-  vector: ['select', 'direct', 'pen', 'pencil', 'text', 'line', 'rect', 'rrect', 'ellipse', 'polygon', 'star', 'rotate', 'eyedropper', 'hand', 'zoom'],
-  layout: ['select', 'text', 'rect', 'rrect', 'line', 'eyedropper', 'hand', 'zoom'],
-  draw: ['select', 'direct', 'pen', 'pencil', 'line', 'rect', 'ellipse', 'polygon', 'star', 'rotate', 'eyedropper', 'hand', 'zoom'],
-};
-
 export function rotateSelection(deg: number) {
   const box = selectionBox();
   if (!box) return;
@@ -423,11 +428,6 @@ export function rotateSelection(deg: number) {
 
 export function updateRadius(r: number) {
   updateSelected((s) => (s.kind === 'rect' ? { ...s, radius: Math.max(0, Math.min(r, Math.min(s.w, s.h) / 2)) } : s), 'radius');
-}
-
-export function setMode(mode: Mode) {
-  if (!MODE_TOOLS[mode].includes(state.tool)) setTool('select');
-  setState({ mode, grid: mode === 'layout' ? true : state.grid });
 }
 
 export const snapV = (v: number) => (state.snap ? Math.round(v / 10) * 10 : v);

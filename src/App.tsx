@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import type { Tool } from './types';
 import {
   arrange,
   deleteSelected,
@@ -7,14 +6,12 @@ import {
   fitArtboard,
   getState,
   groupSelected,
-  MODE_TOOLS,
   newDocument,
   penCancel,
   penFinish,
   redo,
   resetColors,
   setState,
-  setTool,
   swapColors,
   ungroupSelected,
   undo,
@@ -33,23 +30,9 @@ import { RulerH, RulerV, RULER } from './components/Rulers';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
 
-const TOOL_KEYS: Record<string, Tool> = {
-  v: 'select',
-  a: 'direct',
-  p: 'pen',
-  m: 'rect',
-  l: 'ellipse',
-  '\\': 'line',
-  t: 'text',
-  h: 'hand',
-  z: 'zoom',
-  n: 'pencil',
-  u: 'rrect',
-  y: 'polygon',
-  s: 'star',
-  r: 'rotate',
-  i: 'eyedropper',
-};
+import { TOOLS, activateTool, toolInWorkspace } from './tools/registry';
+
+const TOOL_KEYS = new Map(TOOLS.filter((t) => t.key).map((t) => [t.key!, t.id]));
 
 function useShortcuts() {
   useEffect(() => {
@@ -115,8 +98,8 @@ function useShortcuts() {
       if (key === 'x' && e.shiftKey) return swapColors();
       if (key === 'x') return setState({ colorTarget: st.colorTarget === 'fill' ? 'stroke' : 'fill' });
       if (key === 'd') return resetColors();
-      const tool = TOOL_KEYS[key];
-      if (tool && MODE_TOOLS[st.mode].includes(tool)) setTool(tool);
+      const tool = TOOL_KEYS.get(key);
+      if (tool && toolInWorkspace(tool, st.workspace)) activateTool(tool);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -124,18 +107,16 @@ function useShortcuts() {
 }
 
 const SHORTCUTS: [string, string][] = [
-  ['V / A', 'Selection / Direct selection'],
-  ['P', 'Pen'],
-  ['T', 'Text'],
-  ['M / L / \\', 'Rectangle / Ellipse / Line'],
-  ['H / Space', 'Hand'],
-  ['Z', 'Zoom (Alt to zoom out)'],
+  ...TOOLS.filter((t) => t.key).map((t): [string, string] => [t.key!.toUpperCase(), t.label]),
+  ['Space', 'Hand (hold)'],
   ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / Redo'],
   ['Ctrl+D', 'Duplicate'],
+  ['Ctrl+G / Ctrl+Shift+G', 'Group / Ungroup'],
   ['Ctrl+] / Ctrl+[', 'Forward / Backward'],
   ['Ctrl+0 / Ctrl+1', 'Fit / 100%'],
   ['X / Shift+X / D', 'Fill-stroke target / Swap / Defaults'],
   ['Arrows', 'Nudge (Shift = 10 px)'],
+  ['Right-click / hold a tool', 'Open its group'],
 ];
 
 function Help({ onClose }: { onClose: () => void }) {

@@ -7,13 +7,13 @@ const rect = (x = 0, y = 0, w = 100, h = 50) => blankShape('r', 'rect', { x, y, 
 describe('geometry', () => {
   it('computes boxes for parametric shapes', () => {
     expect(bbox(rect(10, 20, 30, 40))).toEqual({ x: 10, y: 20, w: 30, h: 40 });
-    const star = blankShape('s', 'star', { x: 0, y: 0, w: 100, h: 100, sides: 5, inner: 0.5 });
+    const star = blankShape('s', 'shape', { x: 0, y: 0, w: 100, h: 100, shapeId: 'star', params: { points: 5, inner: 0.5 } });
     expect(ptsOf(star)).toHaveLength(10);
-    expect(ptsOf(blankShape('p', 'polygon', { w: 10, h: 10, sides: 7 }))).toHaveLength(7);
+    expect(ptsOf(blankShape('p', 'shape', { w: 10, h: 10, shapeId: 'polygon', params: { sides: 7 } }))).toHaveLength(7);
   });
 
   it('generates a closed polygon from the box and scales with it', () => {
-    const hex = blankShape('h', 'polygon', { x: 0, y: 0, w: 100, h: 100, sides: 6 });
+    const hex = blankShape('h', 'shape', { x: 0, y: 0, w: 100, h: 100, shapeId: 'polygon', params: { sides: 6 } });
     const big = scaleAbout(hex, 2, 2, 0, 0);
     expect(bbox(big)).toEqual({ x: 0, y: 0, w: 200, h: 200 });
     expect(pathD(hex).endsWith('Z')).toBe(true);
@@ -82,6 +82,14 @@ describe('normalizeShape', () => {
     expect(s!.effects).toEqual([]);
     expect(s!.dash).toBe('solid');
     expect(s!.group).toBeNull();
+  });
+
+  it('migrates legacy polygon and star kinds to registry shapes', () => {
+    const star = normalizeShape({ id: 's2', kind: 'star', x: 0, y: 0, w: 10, h: 10, sides: 7, inner: 0.4 });
+    expect(star!.kind).toBe('shape');
+    expect(star!.shapeId).toBe('star');
+    expect(star!.params.points).toBe(7);
+    expect(normalizeShape({ id: 's3', kind: 'polygon', w: 5, h: 5, sides: 8 })!.params.sides).toBe(8);
   });
 
   it('rejects invalid entries', () => {

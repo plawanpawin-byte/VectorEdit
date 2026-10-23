@@ -1,19 +1,32 @@
-import type { Box, Pt, Shape } from './types';
+import type { Box, Gradient, Pt, Shape } from './types';
+import { buildShape } from './shapes';
 
 interface P2 {
   x: number;
   y: number;
 }
 
+/** Control point leaving an anchor towards the next one. */
+export const outCtl = (p: Pt): P2 => ({ x: p.x + p.hx, y: p.y + p.hy });
+/** Control point arriving at an anchor from the previous one. */
+export const inCtl = (p: Pt): P2 => (p.ix !== undefined || p.iy !== undefined ? { x: p.x + (p.ix ?? 0), y: p.y + (p.iy ?? 0) } : { x: p.x - p.hx, y: p.y - p.hy });
+/** True when a segment between two anchors is a straight line. */
+const straight = (a: Pt, b: Pt) => {
+  const i = inCtl(b);
+  return !a.hx && !a.hy && i.x === b.x && i.y === b.y;
+};
+
 /** Anchor list of a shape; polygons and stars are generated from their box and parameters. */
 export function ptsOf(s: Shape): Pt[] {
-  if (s.kind === 'polygon') return ngonPts(s, Math.max(3, Math.round(s.sides ?? 6)), null);
-  if (s.kind === 'star') return ngonPts(s, Math.max(3, Math.round(s.sides ?? 5)), clamp01(s.inner ?? 0.5));
-  return s.pts ?? [];
+  return s.kind === 'shape' ? buildShape(s).pts : (s.pts ?? []);
 }
 
-const clamp01 = (n: number) => Math.max(0.05, Math.min(0.95, n));
-const isClosed = (s: Shape) => s.closed || s.kind === 'polygon' || s.kind === 'star';
+/** Extra closed contours (holes) of a shape. */
+export function extraOf(s: Shape): Pt[][] {
+  return s.kind === 'shape' ? (buildShape(s).extra ?? []) : (s.extra ?? []);
+}
+
+export const isClosed = (s: Shape) => (s.kind === 'shape' ? buildShape(s).closed : s.closed);
 
 function flattenRing(pts: Pt[], closed: boolean, steps: number): P2[] {
   const out: P2[] = [];
@@ -24,14 +37,16 @@ function flattenRing(pts: Pt[], closed: boolean, steps: number): P2[] {
   for (let i = 0; i < segs; i++) {
     const a = pts[i];
     const b = pts[(i + 1) % n];
-    if (!a.hx && !a.hy && !b.hx && !b.hy) {
+    if (straight(a, b)) {
       out.push({ x: b.x, y: b.y });
       continue;
     }
-    const c1x = a.x + a.hx;
-    const c1y = a.y + a.hy;
-    const c2x = b.x - b.hx;
-    const c2y = b.y - b.hy;
+    const c1 = outCtl(a);
+    const c2 = inCtl(b);
+    const c1x = c1.x;
+    const c1y = c1.y;
+    const c2x = c2.x;
+    const c2y = c2.y;
     for (let t = 1; t <= steps; t++) {
       const u = t / steps;
       const v = 1 - u;
@@ -52,7 +67,7 @@ export function flatten(s: Shape, steps = 14): P2[] {
 export function rings(s: Shape, steps = 14): P2[][] {
   const t = toPath(s);
   const main = flattenRing(ptsOf(t), true, steps);
-  const extra = (t.extra ?? []).map((r) => flattenRing(r, true, steps));
+  const extra = extraOf(t).map((r) => flattenRing(r, true, steps));
   return [main, ...extra].filter((r) => r.length >= 3);
 }
 
@@ -63,9 +78,9 @@ export function textBox(s: Shape): Box {
 }
 
 export function bbox(s: Shape): Box {
-  if (s.kind === 'rect' || s.kind === 'ellipse' || s.kind === 'polygon' || s.kind === 'star') return { x: s.x, y: s.y, w: s.w, h: s.h };
+  if (s.kind === 'rect' || s.kind === 'ellipse' || s.kind === 'shape') return { x: s.x, y: s.y, w: s.w, h: s.h };
   if (s.kind === 'text') return textBox(s);
-  const pts = [...flatten(s), ...(s.extra ?? []).flatMap((r) => flattenRing(r, true, 14))];
+  const pts = [...flatten(s), ...extraOf(s).flatMap((r) => flattenRing(r, true, 14))];
   if (!pts.length) return { x: 0, y: 0, w: 0, h: 0 };
   let x0 = Infinity;
   let y0 = Infinity;
@@ -95,9 +110,15 @@ export function unionBox(boxes: Box[]): Box | null {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
+function mapGradient(g: Gradient | null, f: (p: { x: number; y: number }) => { x: number; y: number }): Gradient | null {
+  if (!g || !g.p1 || !g.p2) return g;
+  return { ...g, p1: f(g.p1), p2: f(g.p2) };
+}
+
 export function translate(s: Shape, dx: number, dy: number): Shape {
   return {
     ...s,
+    gradient: mapGradient(s.gradient, (p) => ({ x: p.x + dx, y: p.y + dy })),
     x: s.x + dx,
     y: s.y + dy,
     pts: s.pts.map((p) => ({ ...p, x: p.x + dx, y: p.y + dy })),
@@ -120,6 +141,7 @@ export function scaleAbout(s: Shape, sx: number, sy: number, ox: number, oy: num
   }
   return {
     ...s,
+    gradient: mapGradient(s.gradient, (p) => ({ x: ox + (p.x - ox) * sx, y: oy + (p.y - oy) * sy })),
     x,
     y,
     w,
@@ -130,12 +152,12 @@ export function scaleAbout(s: Shape, sx: number, sy: number, ox: number, oy: num
   };
 }
 
-const scalePt = (p: Pt, sx: number, sy: number, ox: number, oy: number): Pt => ({
-  x: ox + (p.x - ox) * sx,
-  y: oy + (p.y - oy) * sy,
-  hx: p.hx * sx,
-  hy: p.hy * sy,
-});
+const scalePt = (p: Pt, sx: number, sy: number, ox: number, oy: number): Pt => {
+  const q: Pt = { x: ox + (p.x - ox) * sx, y: oy + (p.y - oy) * sy, hx: p.hx * sx, hy: p.hy * sy };
+  if (p.ix !== undefined) q.ix = p.ix * sx;
+  if (p.iy !== undefined) q.iy = p.iy * sy;
+  return q;
+};
 
 const r = (n: number) => Math.round(n * 100) / 100;
 
@@ -147,17 +169,19 @@ function ringD(pts: Pt[], closed: boolean): string {
   for (let i = 0; i < segs; i++) {
     const a = pts[i];
     const b = pts[(i + 1) % n];
-    if (!a.hx && !a.hy && !b.hx && !b.hy) {
+    if (straight(a, b)) {
       d += `L${r(b.x)} ${r(b.y)}`;
     } else {
-      d += `C${r(a.x + a.hx)} ${r(a.y + a.hy)} ${r(b.x - b.hx)} ${r(b.y - b.hy)} ${r(b.x)} ${r(b.y)}`;
+      const c1 = outCtl(a);
+      const c2 = inCtl(b);
+      d += `C${r(c1.x)} ${r(c1.y)} ${r(c2.x)} ${r(c2.y)} ${r(b.x)} ${r(b.y)}`;
     }
   }
   return closed ? d + 'Z' : d;
 }
 
 export function pathD(s: Shape): string {
-  return ringD(ptsOf(s), isClosed(s)) + (s.extra ?? []).map((ring) => ringD(ring, true)).join('');
+  return ringD(ptsOf(s), isClosed(s)) + extraOf(s).map((ring) => ringD(ring, true)).join('');
 }
 
 function distToSeg(px: number, py: number, a: P2, b: P2): number {
@@ -205,7 +229,7 @@ export function hitTest(s: Shape, x: number, y: number, tol: number): boolean {
     const b = textBox(s);
     return x >= b.x - tol && x <= b.x + b.w + tol && y >= b.y - tol && y <= b.y + b.h + tol;
   }
-  const all = [flatten(s), ...(s.extra ?? []).map((ring) => flattenRing(ring, true, 14))];
+  const all = [flatten(s), ...extraOf(s).map((ring) => flattenRing(ring, true, 14))];
   const closed = isClosed(s);
   if (closed && (s.fill || s.gradient)) {
     const hits = all.filter((ring) => inPolygon(x, y, ring)).length;
@@ -228,7 +252,10 @@ const KAPPA = 0.5522847498;
 
 /** Turn rectangles and ellipses into editable paths; other kinds are returned unchanged. */
 export function toPath(s: Shape): Shape {
-  if (s.kind === 'polygon' || s.kind === 'star') return { ...s, kind: 'path', closed: true, pts: ptsOf(s) };
+  if (s.kind === 'shape') {
+    const b = buildShape(s);
+    return { ...s, kind: 'path', closed: b.closed, pts: b.pts, extra: b.extra ?? [], shapeId: '', params: {} };
+  }
   if (s.kind === 'rect') {
     const { x, y, w, h } = s;
     const pt = (px: number, py: number) => ({ x: px, y: py, hx: 0, hy: 0 });
@@ -260,13 +287,23 @@ export function rotateShape(s: Shape, deg: number, cx: number, cy: number): Shap
   const cos = Math.cos(a);
   const sin = Math.sin(a);
   const p = toPath(s);
-  const rot = (q: Pt): Pt => ({
-    x: cx + (q.x - cx) * cos - (q.y - cy) * sin,
-    y: cy + (q.x - cx) * sin + (q.y - cy) * cos,
-    hx: q.hx * cos - q.hy * sin,
-    hy: q.hx * sin + q.hy * cos,
-  });
-  return { ...p, pts: p.pts.map(rot), extra: (p.extra ?? []).map((ring) => ring.map(rot)) };
+const rot = (q: Pt): Pt => {
+    const o: Pt = {
+      x: cx + (q.x - cx) * cos - (q.y - cy) * sin,
+      y: cy + (q.x - cx) * sin + (q.y - cy) * cos,
+      hx: q.hx * cos - q.hy * sin,
+      hy: q.hx * sin + q.hy * cos,
+    };
+    if (q.ix !== undefined || q.iy !== undefined) {
+      const ix = q.ix ?? 0;
+      const iy = q.iy ?? 0;
+      o.ix = ix * cos - iy * sin;
+      o.iy = ix * sin + iy * cos;
+    }
+    return o;
+  };
+  const rg = (v: { x: number; y: number }) => ({ x: cx + (v.x - cx) * cos - (v.y - cy) * sin, y: cy + (v.x - cx) * sin + (v.y - cy) * cos });
+  return { ...p, gradient: mapGradient(p.gradient, rg), pts: p.pts.map(rot), extra: (p.extra ?? []).map((ring) => ring.map(rot)) };
 }
 
 /** Regular polygon or star inscribed in the box. */

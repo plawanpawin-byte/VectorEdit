@@ -43,3 +43,20 @@ export function booleanPieces(ordered: Shape[], op: BoolOp): BoolPiece[] {
     .map((poly) => ({ outer: toPts(poly[0]), holes: poly.slice(1).map(toPts) }))
     .filter((p) => p.outer.length >= 3);
 }
+
+/**
+ * Cut a closed shape along the segment a-b by subtracting a hair-thin strip. Returns the pieces,
+ * or null when the line does not separate the shape.
+ */
+export function cutPieces(s: Shape, a: { x: number; y: number }, b: { x: number; y: number }, width: number): BoolPiece[] | null {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) return null;
+  const nx = (-dy / len) * (width / 2);
+  const ny = (dx / len) * (width / 2);
+  const cutter: Polygon = [[[a.x + nx, a.y + ny], [b.x + nx, b.y + ny], [b.x - nx, b.y - ny], [a.x - nx, a.y - ny]]];
+  const result = polygonClipping.difference(toPolygon(s), cutter);
+  const pieces = result.map((poly) => ({ outer: toPts(poly[0]), holes: poly.slice(1).map(toPts) })).filter((p) => p.outer.length >= 3);
+  return pieces.length >= 2 ? pieces : null;
+}

@@ -1,40 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import type { Box, Pt, Shape } from '../types';
-import { bbox, boxesIntersect, hitTest, pathD, rotateShape, scaleAbout, smoothStroke, toPath, translate, unionBox } from '../geometry';
-import {
-  commit,
-  endLive,
-  expandToGroups,
-  fitArtboard,
-  getState,
-  live,
-  makeShape,
-  penAdd,
-  penDragLast,
-  penDropLast,
-  penFinish,
-  setColor,
-  setState,
-  setTool,
-  snapV,
-  updateShape,
-  useStore,
-  zoomAt,
-} from '../store';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import type { Box } from '../types';
+import { bbox, inCtl, outCtl, pathD, unionBox } from '../geometry';
+import { commit, fitArtboard, getState, setState, snapV, updateShape, useStore, zoomAt } from '../store';
+import { toolDef } from '../tools/registry';
+import type { PointerCtx } from '../tools/types';
+import { panSession } from '../tools/view';
+import type { Session } from '../tools/types';
 import { ShapeEl } from './ShapeEl';
-
-type XY = { x: number; y: number };
-
-type Drag =
-  | { k: 'pan'; sx: number; sy: number; px: number; py: number }
-  | { k: 'move'; start: XY; orig: Map<string, Shape>; before: Shape[] }
-  | { k: 'resize'; h: string; box: Box; orig: Map<string, Shape>; before: Shape[] }
-  | { k: 'marquee'; start: XY; base: string[] }
-  | { k: 'create'; kind: 'rect' | 'rrect' | 'ellipse' | 'polygon' | 'star' | 'line'; start: XY; id: string; before: Shape[] }
-  | { k: 'pencil'; raw: XY[] }
-  | { k: 'rotate'; center: XY; startAngle: number; orig: Map<string, Shape>; before: Shape[] }
-  | { k: 'anchor'; id: string; i: number; part: 'p' | 'out' | 'in'; before: Shape[] }
-  | { k: 'pen' };
+import { blankShape } from '../shape';
 
 const HANDLE_CURSOR: Record<string, string> = {
   nw: 'nwse-resize',
@@ -61,28 +34,18 @@ function handleList(b: Box): [string, number, number][] {
   ];
 }
 
-const CURSORS: Record<string, string> = {
-  select: 'default',
-  direct: 'default',
-  pen: 'crosshair',
-  rect: 'crosshair',
-  ellipse: 'crosshair',
-  line: 'crosshair',
-  text: 'text',
-  hand: 'grab',
-  zoom: 'zoom-in',
-};
+const BLUE = '#2d8cf0';
 
 export function Canvas() {
   const ref = useRef<HTMLDivElement>(null);
-  const drag = useRef<Drag | null>(null);
+  const session = useRef<Session | null>(null);
   const space = useRef(false);
-  const [marquee, setMarquee] = useState<Box | null>(null);
+  const [overlay, setOverlay] = useState<ReactNode | null>(null);
   const [panning, setPanning] = useState(false);
-  const [pencil, setPencil] = useState<XY[] | null>(null);
 
   const shapes = useStore((s) => s.shapes);
   const selection = useStore((s) => s.selection);
+  const nodeSel = useStore((s) => s.nodeSel);
   const tool = useStore((s) => s.tool);
   const zoom = useStore((s) => s.zoom);
   const panX = useStore((s) => s.panX);
@@ -94,8 +57,12 @@ export function Canvas() {
   const editingText = useStore((s) => s.editingText);
   const editShape = shapes.find((s) => s.id === editingText);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const def = toolDef(tool);
+
+  // a tool's overlay belongs to that tool
+  useEffect(() => setOverlay(null), [tool]);
+
   useEffect(() => {
-    // focus after the click that created the text has finished moving focus
     if (!editingText) return;
     const id = requestAnimationFrame(() => {
       textRef.current?.focus();
@@ -104,7 +71,7 @@ export function Canvas() {
     return () => cancelAnimationFrame(id);
   }, [editingText]);
 
-  // viewport size + initial fit
+  // viewport size and first fit
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -120,16 +87,15 @@ export function Canvas() {
     return () => ro.disconnect();
   }, []);
 
-  // wheel: pan, ctrl/alt = zoom at cursor
+  // wheel: pan; ctrl/alt = zoom at the cursor
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const rect = el.getBoundingClientRect();
-      if (e.ctrlKey || e.metaKey || e.altKey) {
-        zoomAt(Math.exp(-e.deltaY * 0.0022), e.clientX - rect.left, e.clientY - rect.top);
-      } else {
+      if (e.ctrlKey || e.metaKey || e.altKey) zoomAt(Math.exp(-e.deltaY * 0.0022), e.clientX - rect.left, e.clientY - rect.top);
+      else {
         const st = getState();
         setState({ panX: st.panX - (e.shiftKey ? e.deltaY : e.deltaX), panY: st.panY - (e.shiftKey ? 0 : e.deltaY) });
       }
@@ -138,7 +104,7 @@ export function Canvas() {
     return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
-  // space = temporary hand
+  // space = temporary hand tool
   useEffect(() => {
     const typing = (e: KeyboardEvent) => /INPUT|TEXTAREA|SELECT/.test((e.target as HTMLElement).tagName);
     const down = (e: KeyboardEvent) => {
@@ -147,9 +113,7 @@ export function Canvas() {
         e.preventDefault();
       }
     };
-    const up = (e: KeyboardEvent) => {
-      if (e.code === 'Space') space.current = false;
-    };
+    const up = (e: KeyboardEvent) => e.code === 'Space' && (space.current = false);
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     return () => {
@@ -158,396 +122,131 @@ export function Canvas() {
     };
   }, []);
 
-  const toDoc = (e: { clientX: number; clientY: number }): XY => {
+  function ctxFor(e: { clientX: number; clientY: number; shiftKey: boolean; altKey: boolean; ctrlKey: boolean; metaKey: boolean; target: EventTarget }): PointerCtx {
     const rect = ref.current!.getBoundingClientRect();
     const st = getState();
-    return { x: (e.clientX - rect.left - st.panX) / st.zoom, y: (e.clientY - rect.top - st.panY) / st.zoom };
-  };
-  const toDocSnap = (e: { clientX: number; clientY: number }): XY => {
-    const p = toDoc(e);
-    return { x: snapV(p.x), y: snapV(p.y) };
-  };
-
-  const toScreen = (e: { clientX: number; clientY: number }): XY => {
-    const rect = ref.current!.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  };
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const raw = { x: (sx - st.panX) / st.zoom, y: (sy - st.panY) / st.zoom };
+    return {
+      p: { x: snapV(raw.x), y: snapV(raw.y) },
+      raw,
+      screen: { x: sx, y: sy },
+      shift: e.shiftKey,
+      alt: e.altKey,
+      ctrl: e.ctrlKey || e.metaKey,
+      target: e.target as Element,
+      st,
+      zoom: st.zoom,
+      tol: 5 / st.zoom,
+      setOverlay,
+    };
+  }
 
   function onDown(e: React.PointerEvent) {
     if (e.button === 2) return;
-    const st = getState();
-    const p = toDocSnap(e);
-    const target = e.target as SVGElement;
     ref.current!.setPointerCapture(e.pointerId);
-
-    if (e.button === 1 || space.current || st.tool === 'hand') {
-      drag.current = { k: 'pan', sx: e.clientX, sy: e.clientY, px: st.panX, py: st.panY };
+    const c = ctxFor(e);
+    if (e.button === 1 || space.current) {
+      session.current = panSession(c);
       setPanning(true);
       return;
     }
-
-    const tol = 5 / st.zoom;
-
-    if (st.tool === 'zoom') {
-      const s = toScreen(e);
-      zoomAt(e.altKey ? 1 / 1.5 : 1.5, s.x, s.y);
-      return;
-    }
-
-    if (st.tool === 'pen') {
-      const first = st.pen?.[0];
-      if (first && st.pen!.length >= 2 && Math.hypot(p.x - first.x, p.y - first.y) <= 8 / st.zoom) {
-        penFinish(true);
-        return;
-      }
-      penAdd({ x: p.x, y: p.y, hx: 0, hy: 0 });
-      drag.current = { k: 'pen' };
-      return;
-    }
-
-    if (st.tool === 'text') {
-      const before = st.shapes;
-      const t = makeShape('text', { x: p.x, y: p.y - 12, text: '', fill: st.fill ?? '#1c1c1c' });
-      live([...before, t], [t.id]);
-      endLive(before);
-      setTool('select');
-      setState({ editingText: t.id });
-      return;
-    }
-
-    if (st.tool === 'eyedropper') {
-      for (let i = st.shapes.length - 1; i >= 0; i--) {
-        const src = st.shapes[i];
-        if (hitTest(src, p.x, p.y, tol)) {
-          setState({ strokeWidth: src.strokeWidth });
-          setColor('fill', src.fill);
-          setColor('stroke', src.stroke);
-          break;
-        }
-      }
-      return;
-    }
-
-    if (st.tool === 'pencil') {
-      penFinish(false);
-      setPencil([p]);
-      drag.current = { k: 'pencil', raw: [p] };
-      return;
-    }
-
-    if (st.tool === 'rotate') {
-      const sel = st.shapes.filter((s) => st.selection.includes(s.id) && !s.locked && s.kind !== 'text');
-      const box = unionBox(sel.map(bbox));
-      if (!box) return;
-      const center = { x: box.x + box.w / 2, y: box.y + box.h / 2 };
-      drag.current = {
-        k: 'rotate',
-        center,
-        startAngle: Math.atan2(p.y - center.y, p.x - center.x),
-        orig: new Map(sel.map((s) => [s.id, s])),
-        before: st.shapes,
-      };
-      return;
-    }
-
-    if (['rect', 'rrect', 'ellipse', 'polygon', 'star', 'line'].includes(st.tool)) {
-      const before = st.shapes;
-      const tool = st.tool as 'rect' | 'rrect' | 'ellipse' | 'polygon' | 'star' | 'line';
-      const shape =
-        tool === 'line'
-          ? makeShape('line', { pts: [{ x: p.x, y: p.y, hx: 0, hy: 0 }, { x: p.x, y: p.y, hx: 0, hy: 0 }] })
-          : tool === 'rrect'
-            ? makeShape('rect', { x: p.x, y: p.y, radius: 16 })
-            : makeShape(tool, { x: p.x, y: p.y });
-      live([...before, shape], [shape.id]);
-      drag.current = { k: 'create', kind: tool, start: p, id: shape.id, before };
-      return;
-    }
-
-    // select / direct ----------------------------------------------------
-    const hAttr = target.getAttribute?.('data-h');
-    if (hAttr) {
-      const sel = st.shapes.filter((s) => st.selection.includes(s.id));
-      const box = unionBox(sel.map(bbox));
-      if (box) {
-        drag.current = { k: 'resize', h: hAttr, box, orig: new Map(sel.map((s) => [s.id, s])), before: st.shapes };
-        return;
-      }
-    }
-    const aAttr = target.getAttribute?.('data-a');
-    if (aAttr) {
-      const [id, i, part] = aAttr.split(':');
-      drag.current = { k: 'anchor', id, i: Number(i), part: part as 'p' | 'out' | 'in', before: st.shapes };
-      return;
-    }
-
-    let hit: Shape | undefined;
-    for (let i = st.shapes.length - 1; i >= 0; i--) {
-      const s = st.shapes[i];
-      if (!s.locked && hitTest(s, p.x, p.y, tol)) {
-        hit = s;
-        break;
-      }
-    }
-    if (hit && st.tool === 'direct' && hit.kind !== 'path' && hit.kind !== 'line' && hit.kind !== 'text') {
-      // editing nodes needs real curves: convert the parametric shape first
-      const conv = toPath(hit);
-      commit(st.shapes.map((s) => (s.id === hit!.id ? conv : s)), { selection: [hit.id] });
-      return;
-    }
-    if (hit) {
-      let sel = st.selection;
-      const members = expandToGroups([hit.id], st.shapes);
-      if (e.shiftKey) sel = sel.includes(hit.id) ? sel.filter((i) => !members.includes(i)) : [...sel, ...members];
-      else if (!sel.includes(hit.id)) sel = members;
-      setState({ selection: Array.from(new Set(sel)) });
-      const moving = st.shapes.filter((s) => sel.includes(s.id) && !s.locked);
-      drag.current = { k: 'move', start: p, orig: new Map(moving.map((s) => [s.id, s])), before: st.shapes };
-    } else {
-      const base = e.shiftKey ? st.selection : [];
-      setState({ selection: base });
-      drag.current = { k: 'marquee', start: p, base };
-      setMarquee({ x: p.x, y: p.y, w: 0, h: 0 });
-    }
+    session.current = toolDef(c.st.tool)?.down?.(c) ?? null;
   }
 
   function onMove(e: React.PointerEvent) {
-    const st = getState();
-    const p = toDocSnap(e);
-    setState({ cursor: { x: Math.round(p.x), y: Math.round(p.y) } });
-    const d = drag.current;
-    if (!d) return;
-
-    if (d.k === 'pan') {
-      setState({ panX: d.px + e.clientX - d.sx, panY: d.py + e.clientY - d.sy });
-    } else if (d.k === 'pen') {
-      const pts = st.pen;
-      if (pts?.length) {
-        const last = pts[pts.length - 1];
-        const dx = p.x - last.x;
-        const dy = p.y - last.y;
-        if (Math.hypot(dx, dy) > 3 / st.zoom) penDragLast(dx, dy);
-      }
-    } else if (d.k === 'move') {
-      let dx = p.x - d.start.x;
-      let dy = p.y - d.start.y;
-      if (e.shiftKey) {
-        if (Math.abs(dx) > Math.abs(dy)) dy = 0;
-        else dx = 0;
-      }
-      live(st.shapes.map((s) => (d.orig.has(s.id) ? translate(d.orig.get(s.id)!, dx, dy) : s)));
-    } else if (d.k === 'resize') {
-      const { box, h } = d;
-      const dragX = h.includes('e') ? box.x + box.w : h.includes('w') ? box.x : null;
-      const dragY = h.includes('s') ? box.y + box.h : h.includes('n') ? box.y : null;
-      const ax = dragX === null ? box.x : dragX === box.x ? box.x + box.w : box.x;
-      const ay = dragY === null ? box.y : dragY === box.y ? box.y + box.h : box.y;
-      let sx = dragX === null || dragX === ax ? 1 : (p.x - ax) / (dragX - ax);
-      let sy = dragY === null || dragY === ay ? 1 : (p.y - ay) / (dragY - ay);
-      if (e.shiftKey && dragX !== null && dragY !== null) {
-        const m = Math.max(Math.abs(sx), Math.abs(sy));
-        sx = Math.sign(sx || 1) * m;
-        sy = Math.sign(sy || 1) * m;
-      }
-      live(st.shapes.map((s) => (d.orig.has(s.id) ? scaleAbout(d.orig.get(s.id)!, sx, sy, ax, ay) : s)));
-    } else if (d.k === 'pencil') {
-      const last = d.raw[d.raw.length - 1];
-      if (Math.hypot(p.x - last.x, p.y - last.y) > 2 / st.zoom) {
-        d.raw.push(p);
-        setPencil(d.raw.slice());
-      }
-    } else if (d.k === 'rotate') {
-      let deg = ((Math.atan2(p.y - d.center.y, p.x - d.center.x) - d.startAngle) * 180) / Math.PI;
-      if (e.shiftKey) deg = Math.round(deg / 15) * 15;
-      live(st.shapes.map((s) => (d.orig.has(s.id) ? rotateShape(d.orig.get(s.id)!, deg, d.center.x, d.center.y) : s)));
-    } else if (d.k === 'create') {
-      let x1 = p.x;
-      let y1 = p.y;
-      const { start } = d;
-      if (e.shiftKey) {
-        if (d.kind === 'line') {
-          const ang = Math.round(Math.atan2(y1 - start.y, x1 - start.x) / (Math.PI / 4)) * (Math.PI / 4);
-          const len = Math.hypot(x1 - start.x, y1 - start.y);
-          x1 = start.x + Math.cos(ang) * len;
-          y1 = start.y + Math.sin(ang) * len;
-        } else {
-          const m = Math.max(Math.abs(x1 - start.x), Math.abs(y1 - start.y));
-          x1 = start.x + Math.sign(x1 - start.x || 1) * m;
-          y1 = start.y + Math.sign(y1 - start.y || 1) * m;
-        }
-      }
-      live(
-        st.shapes.map((s) => {
-          if (s.id !== d.id) return s;
-          if (d.kind === 'line') return { ...s, pts: [s.pts[0], { x: x1, y: y1, hx: 0, hy: 0 }] };
-          return { ...s, x: Math.min(start.x, x1), y: Math.min(start.y, y1), w: Math.abs(x1 - start.x), h: Math.abs(y1 - start.y) };
-        }),
-      );
-    } else if (d.k === 'anchor') {
-      live(
-        st.shapes.map((s) => {
-          if (s.id !== d.id) return s;
-          const pts = s.pts.slice();
-          const pt = pts[d.i];
-          if (d.part === 'p') {
-            const o = d.before.find((q) => q.id === d.id)!.pts[d.i];
-            pts[d.i] = { ...pt, x: p.x, y: p.y, hx: o.hx, hy: o.hy };
-          } else if (d.part === 'out') {
-            pts[d.i] = { ...pt, hx: p.x - pt.x, hy: p.y - pt.y };
-          } else {
-            pts[d.i] = { ...pt, hx: pt.x - p.x, hy: pt.y - p.y };
-          }
-          return { ...s, pts };
-        }),
-      );
-    } else if (d.k === 'marquee') {
-      const box = {
-        x: Math.min(d.start.x, p.x),
-        y: Math.min(d.start.y, p.y),
-        w: Math.abs(p.x - d.start.x),
-        h: Math.abs(p.y - d.start.y),
-      };
-      setMarquee(box);
-      const ids = st.shapes.filter((s) => s.visible && !s.locked && boxesIntersect(box, bbox(s))).map((s) => s.id);
-      setState({ selection: Array.from(new Set([...d.base, ...ids])) });
-    }
+    const c = ctxFor(e);
+    setState({ cursor: { x: Math.round(c.raw.x), y: Math.round(c.raw.y) } });
+    session.current?.move?.(c);
   }
 
-  function onUp() {
-    const d = drag.current;
-    drag.current = null;
+  function onUp(e: React.PointerEvent) {
+    const s = session.current;
+    session.current = null;
     setPanning(false);
-    if (!d) return;
-    const st = getState();
-    if (d.k === 'move' || d.k === 'resize' || d.k === 'anchor' || d.k === 'rotate') endLive(d.before);
-    if (d.k === 'pencil') {
-      setPencil(null);
-      if (d.raw.length > 2) {
-        const pts = smoothStroke(d.raw, 1.5 / st.zoom);
-        const shape = makeShape('path', { pts, closed: false, fill: null, stroke: st.stroke ?? '#1c1c1c' });
-        commit([...st.shapes, shape], { selection: [shape.id] });
-      }
-    }
-    if (d.k === 'create') {
-      const made = st.shapes.find((s) => s.id === d.id);
-      const b = made ? bbox(made) : null;
-      if (!made || !b || (b.w < 2 && b.h < 2)) {
-        live(d.before, []);
-      } else {
-        endLive(d.before);
-      }
-    }
-    if (d.k === 'marquee') setMarquee(null);
-  }
-
-  function onDouble(e: React.MouseEvent) {
-    const st = getState();
-    if (st.tool === 'pen' && st.pen) {
-      // the double click already added a duplicate anchor
-      penDropLast();
-      penFinish(false);
-    } else if (st.tool === 'select' || st.tool === 'direct') {
-      const p = toDoc(e);
-      const t = [...st.shapes].reverse().find((s) => s.kind === 'text' && hitTest(s, p.x, p.y, 4 / st.zoom));
-      if (t) setState({ selection: [t.id], editingText: t.id });
-    }
+    s?.up?.(ctxFor(e));
   }
 
   const k = 1 / zoom;
   const selShapes = shapes.filter((s) => selection.includes(s.id));
   const box = unionBox(selShapes.map(bbox));
-  const showAnchors = tool === 'direct';
+  const chrome = def?.chrome ?? 'none';
 
   return (
     <div
       ref={ref}
       className="canvas"
-      style={{ cursor: panning ? 'grabbing' : space.current ? 'grab' : CURSORS[tool] }}
+      style={{ cursor: panning ? 'grabbing' : space.current ? 'grab' : (def?.cursor ?? 'default') }}
       onPointerDown={onDown}
       onPointerMove={onMove}
       onPointerUp={onUp}
-      onDoubleClick={onDouble}
+      onDoubleClick={(e) => toolDef(getState().tool)?.dblclick?.(ctxFor(e))}
       onContextMenu={(e) => e.preventDefault()}
     >
       <svg width="100%" height="100%" style={{ display: 'block' }}>
         <g transform={`translate(${panX} ${panY}) scale(${zoom})`}>
-          <rect x={0} y={0} width={artboard.w} height={artboard.h} fill="#fff" stroke="#111" strokeWidth={k} filter="url(#shadow)" />
+          <rect x={0} y={0} width={artboard.w} height={artboard.h} fill="#fff" stroke="#000" strokeWidth={k} filter="url(#shadow)" />
           {grid && <rect x={0} y={0} width={artboard.w} height={artboard.h} fill="url(#grid)" pointerEvents="none" />}
-          <g>
-            {shapes.map((s) => (s.id === editingText ? null : <ShapeEl key={s.id} shape={s} />))}
-          </g>
+          <g>{shapes.map((s) => (s.id === editingText ? null : <ShapeEl key={s.id} shape={s} />))}</g>
 
-          {/* selection chrome */}
-          {selShapes.map((s) => {
-            const b = bbox(s);
-            return (
+          {/* selection outlines */}
+          {chrome !== 'none' &&
+            selShapes.map((s) => (
               <g key={s.id} pointerEvents="none">
-                {s.kind === 'path' || s.kind === 'line' || s.kind === 'polygon' || s.kind === 'star' ? (
-                  <path d={pathD(s)} fill="none" stroke="#2d8cf0" strokeWidth={1.5 * k} />
+                {s.kind === 'rect' || s.kind === 'ellipse' || s.kind === 'text' ? (
+                  <rect x={bbox(s).x} y={bbox(s).y} width={bbox(s).w} height={bbox(s).h} fill="none" stroke={BLUE} strokeWidth={1.5 * k} />
                 ) : (
-                  <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="none" stroke="#2d8cf0" strokeWidth={1.5 * k} />
+                  <path d={pathD(s)} fill="none" stroke={BLUE} strokeWidth={1.5 * k} fillRule="evenodd" />
                 )}
               </g>
-            );
-          })}
-          {showAnchors &&
+            ))}
+
+          {/* node editing chrome */}
+          {chrome === 'nodes' &&
             selShapes
               .filter((s) => s.kind === 'path' || s.kind === 'line')
               .map((s) => (
-                <g key={`a${s.id}`}>
-                  {s.pts.map((pt, i) => (
-                    <g key={i}>
-                      {s.kind === 'path' && (pt.hx || pt.hy) ? (
-                        <>
-                          <path d={`M${pt.x - pt.hx} ${pt.y - pt.hy}L${pt.x + pt.hx} ${pt.y + pt.hy}`} stroke="#2d8cf0" strokeWidth={k} pointerEvents="none" />
-                          {(['out', 'in'] as const).map((part) => (
-                            <circle
-                              key={part}
-                              data-a={`${s.id}:${i}:${part}`}
-                              cx={part === 'out' ? pt.x + pt.hx : pt.x - pt.hx}
-                              cy={part === 'out' ? pt.y + pt.hy : pt.y - pt.hy}
-                              r={3.5 * k}
-                              fill="#fff"
-                              stroke="#2d8cf0"
-                              strokeWidth={k}
-                              style={{ cursor: 'pointer' }}
-                            />
-                          ))}
-                        </>
-                      ) : null}
-                      <rect
-                        data-a={`${s.id}:${i}:p`}
-                        x={pt.x - 3.5 * k}
-                        y={pt.y - 3.5 * k}
-                        width={7 * k}
-                        height={7 * k}
-                        fill="#2d8cf0"
-                        stroke="#fff"
-                        strokeWidth={k}
-                        style={{ cursor: 'pointer' }}
-                      />
-                    </g>
-                  ))}
+                <g key={`n${s.id}`}>
+                  {s.pts.map((pt, i) => {
+                    const selected = nodeSel.some((n) => n.id === s.id && n.i === i);
+                    const o = outCtl(pt);
+                    const inn = inCtl(pt);
+                    const hasOut = !!(pt.hx || pt.hy);
+                    const hasIn = inn.x !== pt.x || inn.y !== pt.y;
+                    return (
+                      <g key={i}>
+                        {s.kind === 'path' && (hasOut || hasIn) && (
+                          <>
+                            <path d={`M${inn.x} ${inn.y}L${pt.x} ${pt.y}L${o.x} ${o.y}`} stroke={BLUE} strokeWidth={k} fill="none" pointerEvents="none" />
+                            {hasOut && <circle data-a={`${s.id}:${i}:out`} cx={o.x} cy={o.y} r={3.5 * k} fill="#fff" stroke={BLUE} strokeWidth={k} style={{ cursor: 'pointer' }} />}
+                            {hasIn && <circle data-a={`${s.id}:${i}:in`} cx={inn.x} cy={inn.y} r={3.5 * k} fill="#fff" stroke={BLUE} strokeWidth={k} style={{ cursor: 'pointer' }} />}
+                          </>
+                        )}
+                        <rect
+                          data-a={`${s.id}:${i}:p`}
+                          x={pt.x - 4 * k}
+                          y={pt.y - 4 * k}
+                          width={8 * k}
+                          height={8 * k}
+                          fill={selected ? BLUE : '#fff'}
+                          stroke={BLUE}
+                          strokeWidth={1.2 * k}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </g>
+                    );
+                  })}
                 </g>
               ))}
-          {!showAnchors && box && (
+
+          {/* transform handles */}
+          {chrome === 'transform' && box && (
             <g>
-              <rect x={box.x} y={box.y} width={box.w} height={box.h} fill="none" stroke="#2d8cf0" strokeWidth={k} pointerEvents="none" />
-              {tool === 'select' &&
-                handleList(box).map(([h, hx, hy]) => (
-                  <rect
-                    key={h}
-                    data-h={h}
-                    x={hx - 3.5 * k}
-                    y={hy - 3.5 * k}
-                    width={7 * k}
-                    height={7 * k}
-                    fill="#fff"
-                    stroke="#2d8cf0"
-                    strokeWidth={k}
-                    style={{ cursor: HANDLE_CURSOR[h] }}
-                  />
-                ))}
+              <rect x={box.x} y={box.y} width={box.w} height={box.h} fill="none" stroke={BLUE} strokeWidth={k} pointerEvents="none" />
+              {handleList(box).map(([h, hx, hy]) => (
+                <rect key={h} data-h={h} x={hx - 3.5 * k} y={hy - 3.5 * k} width={7 * k} height={7 * k} fill="#fff" stroke={BLUE} strokeWidth={k} style={{ cursor: HANDLE_CURSOR[h] }} />
+              ))}
             </g>
           )}
 
@@ -555,24 +254,18 @@ export function Canvas() {
           {pen && pen.length > 0 && (
             <g pointerEvents="none">
               <path
-                d={pathD({ ...makeShape('path'), pts: penCursor ? [...pen, { x: penCursor.x, y: penCursor.y, hx: 0, hy: 0 }] : pen })}
+                d={pathD(blankShape('pen', 'path', { pts: penCursor ? [...pen, { x: penCursor.x, y: penCursor.y, hx: 0, hy: 0 }] : pen }))}
                 fill="none"
-                stroke="#2d8cf0"
+                stroke={BLUE}
                 strokeWidth={1.5 * k}
               />
-              {pen.map((pt: Pt, i) => (
-                <rect key={i} x={pt.x - 3 * k} y={pt.y - 3 * k} width={6 * k} height={6 * k} fill={i === 0 ? '#fff' : '#2d8cf0'} stroke="#2d8cf0" strokeWidth={k} />
+              {pen.map((pt, i) => (
+                <rect key={i} x={pt.x - 3 * k} y={pt.y - 3 * k} width={6 * k} height={6 * k} fill={i === 0 ? '#fff' : BLUE} stroke={BLUE} strokeWidth={k} />
               ))}
             </g>
           )}
 
-          {pencil && pencil.length > 1 && (
-            <path d={`M${pencil.map((q) => `${q.x} ${q.y}`).join('L')}`} fill="none" stroke="#2d8cf0" strokeWidth={1.5 * k} strokeLinejoin="round" pointerEvents="none" />
-          )}
-
-          {marquee && (
-            <rect x={marquee.x} y={marquee.y} width={marquee.w} height={marquee.h} fill="rgba(45,140,240,.12)" stroke="#2d8cf0" strokeWidth={k} strokeDasharray={`${4 * k} ${3 * k}`} pointerEvents="none" />
-          )}
+          {overlay}
         </g>
         <defs>
           <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">

@@ -1,24 +1,8 @@
 import { Fragment } from 'react';
 import { fitArtboard, useStore, zoomTo } from '../store';
+import { toolDef } from '../tools/registry';
 
-// **word** renders bold
-const HINTS: Record<string, string> = {
-  select: '**Drag** to marquee select. **Click** an object to select it. **Shift** adds to the selection. **Drag** a handle to scale.',
-  direct: '**Click** a path to show its nodes. **Drag** a node or handle to reshape.',
-  pen: '**Click** to add a node. **Drag** to pull curve handles. **Click** the first node to close. **Enter** to finish.',
-  rect: '**Drag** to draw a rectangle. **Shift** constrains to a square.',
-  ellipse: '**Drag** to draw an ellipse. **Shift** constrains to a circle.',
-  line: '**Drag** to draw a line. **Shift** snaps to 45°.',
-  text: '**Click** on the page to place text, then type in the Appearance panel.',
-  pencil: '**Drag** to draw freehand. The stroke is simplified into smooth curves.',
-  rrect: '**Drag** to draw a rounded rectangle. Change the corner radius in Appearance.',
-  polygon: '**Drag** to draw a polygon. Change the number of sides in the context bar or Appearance.',
-  star: '**Drag** to draw a star. Change points and inner radius in Appearance.',
-  rotate: '**Drag** around the selection to rotate it. **Shift** snaps to 15°.',
-  eyedropper: '**Click** an object to copy its fill and stroke to the selection and to new objects.',
-  hand: '**Drag** to pan. **Space** gives the Hand tool from any tool.',
-  zoom: '**Click** to zoom in. **Alt-click** to zoom out. **Ctrl+wheel** zooms at the cursor.',
-};
+// hints come from the active tool; **word** renders bold
 
 function Rich({ text }: { text: string }) {
   return (
@@ -56,7 +40,7 @@ export function StatusBar() {
       <span className="dim">{count} objects</span>
       <span className="sep" />
       <span className="hint-text">
-        <Rich text={HINTS[tool]} />
+        <Rich text={toolDef(tool)?.hint ?? ''} />
       </span>
       <div className="grow" />
       <span className="mono">

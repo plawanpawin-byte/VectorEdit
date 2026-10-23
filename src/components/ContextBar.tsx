@@ -2,6 +2,7 @@ import { bbox, unionBox } from '../geometry';
 import { fitArtboard, setColor, setState, setTransform, useStore } from '../store';
 import { NumField } from './Fields';
 import { Popover } from './TopBar';
+import { toolDef } from '../tools/registry';
 
 const PRESETS: [string, number, number][] = [
   ['A4 (72 dpi)', 595, 842],
@@ -20,8 +21,7 @@ export function ContextBar() {
   const strokeWidth = useStore((s) => s.strokeWidth);
   const artboard = useStore((s) => s.artboard);
   const tool = useStore((s) => s.tool);
-  const sides = useStore((s) => s.sides);
-  const starPoints = useStore((s) => s.starPoints);
+  const Options = toolDef(tool)?.Options;
   const sel = shapes.filter((s) => selection.includes(s.id));
   const box = unionBox(sel.map(bbox));
 
@@ -77,11 +77,11 @@ export function ContextBar() {
         <input type="color" value={stroke ?? '#000000'} onChange={(e) => setColor('stroke', e.target.value)} />
       </label>
       <NumField label="" value={strokeWidth} suffix="pt" min={0} step={0.5} onCommit={(v) => setState({ strokeWidth: v })} />
-      {tool === 'polygon' && (
-        <NumField label="Sides" value={sides} min={3} onCommit={(v) => setState({ sides: Math.max(3, Math.min(60, Math.round(v))) })} />
-      )}
-      {tool === 'star' && (
-        <NumField label="Points" value={starPoints} min={3} onCommit={(v) => setState({ starPoints: Math.max(3, Math.min(60, Math.round(v))) })} />
+      {Options && (
+        <>
+          <i className="vr" />
+          <Options />
+        </>
       )}
       {box && (
         <>

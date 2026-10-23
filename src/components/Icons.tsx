@@ -1,47 +1,4 @@
 import type { ReactNode } from 'react';
-import type { Tool } from '../types';
-
-const svg = (children: ReactNode) => (
-  <svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-    {children}
-  </svg>
-);
-
-export const toolIcons: Record<Tool, ReactNode> = {
-  select: svg(<path d="M5 3l10 7.2-4.4 1 2.6 4.8-2 1.1-2.6-4.8L5 15.6z" fill="currentColor" stroke="none" />),
-  direct: svg(<path d="M5 3l10 7.2-4.4 1 2.6 4.8-2 1.1-2.6-4.8L5 15.6z" />),
-  pen: svg(
-    <>
-      <path d="M10 2.5l5.2 6.6-2.4 4.4H7.2L4.8 9.1z" />
-      <path d="M10 8.4v5.1M7.2 13.5L6 17.5h8l-1.2-4" />
-      <circle cx="10" cy="8" r="1" fill="currentColor" />
-    </>,
-  ),
-  rect: svg(<rect x="3.5" y="5" width="13" height="10" />),
-  ellipse: svg(<ellipse cx="10" cy="10" rx="6.5" ry="5.2" />),
-  line: svg(<path d="M4 16L16 4" />),
-  text: svg(<path d="M4.5 5.5V4h11v1.5M10 4v12M8 16h4" />),
-  hand: svg(
-    <path d="M7 10V5.2a1.1 1.1 0 012.2 0V9m0-4.3a1.1 1.1 0 012.2 0V9m0-3a1.1 1.1 0 012.2 0v4.6c0 3-1.7 5-4.3 5-2 0-3.1-.9-4.3-2.7L3.8 11a1.1 1.1 0 011.8-1.2L7 11.5" />,
-  ),
-  pencil: svg(<path d="M4 16l1.2-3.8L13.6 3.8a1.6 1.6 0 012.3 0l.3.3a1.6 1.6 0 010 2.3L7.8 14.8zM11.8 5.6l2.6 2.6" />),
-  rrect: svg(<rect x="3.5" y="5" width="13" height="10" rx="3.5" />),
-  polygon: svg(<path d="M10 3.2l5.6 4.1-2.1 6.6H6.5L4.4 7.3z" />),
-  star: svg(<path d="M10 3l2.1 4.7 5 .5-3.8 3.4 1.1 5-4.4-2.6-4.4 2.6 1.1-5-3.8-3.4 5-.5z" />),
-  rotate: svg(
-    <>
-      <path d="M15.5 10a5.5 5.5 0 11-1.9-4.2" />
-      <path d="M14.2 2.8v3.3h-3.3" />
-    </>,
-  ),
-  eyedropper: svg(<path d="M12.6 3.4a2 2 0 012.8 2.8l-1.4 1.4-2.8-2.8zM10.4 5.6L4 12l-.5 3.5L7 15l6.4-6.4M4.8 12.8l2.4 2.4" />),
-  zoom: svg(
-    <>
-      <circle cx="8.5" cy="8.5" r="4.8" />
-      <path d="M12.2 12.2L16.5 16.5M6.4 8.5h4.2M8.5 6.4v4.2" />
-    </>,
-  ),
-};
 
 export const Eye = ({ off }: { off?: boolean }) => (
   <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
@@ -101,6 +58,7 @@ const ui = (children: ReactNode, size = 18) => (
 export const I: Record<string, React.ReactNode> = {
   vector: ui(<><path d="M3 14C5 5 12 4 15 6" /><rect x="1.5" y="12.5" width="3" height="3" fill="currentColor" /><rect x="13.5" y="4.5" width="3" height="3" fill="currentColor" /></>, 14),
   layout: ui(<><rect x="2.5" y="2.5" width="13" height="13" /><path d="M2.5 6.5h13M7 6.5v9" /></>, 14),
+  typo: ui(<path d="M3.5 4.5h11M9 4.5v10M6.5 14.5h5" />, 14),
   draw: ui(<path d="M3 15l1-3.5L12.5 3 15 5.5 6.5 14z M11 4.5l2.5 2.5" />, 14),
   more: ui(<g fill="currentColor" stroke="none"><circle cx="9" cy="4" r="1.3" /><circle cx="9" cy="9" r="1.3" /><circle cx="9" cy="14" r="1.3" /></g>),
   front: ui(<><rect x="2.5" y="2.5" width="8" height="8" opacity=".55" /><rect x="7.5" y="7.5" width="8" height="8" fill="currentColor" /></>),

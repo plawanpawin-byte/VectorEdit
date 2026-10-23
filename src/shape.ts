@@ -1,4 +1,5 @@
 import type { Shape, ShapeKind } from './types';
+import { defaultParams } from './shapes';
 
 /** A shape with every field set; the single place that defines defaults. */
 export function blankShape(id: string, kind: ShapeKind, p: Partial<Shape> = {}): Shape {
@@ -11,8 +12,8 @@ export function blankShape(id: string, kind: ShapeKind, p: Partial<Shape> = {}):
     w: 0,
     h: 0,
     radius: 0,
-    sides: kind === 'star' ? 5 : 6,
-    inner: 0.5,
+    shapeId: '',
+    params: {},
     pts: [],
     extra: [],
     closed: false,
@@ -35,12 +36,16 @@ export function blankShape(id: string, kind: ShapeKind, p: Partial<Shape> = {}):
   };
 }
 
-const KINDS = new Set<ShapeKind>(['rect', 'ellipse', 'polygon', 'star', 'line', 'path', 'text']);
+const KINDS = new Set<string>(['rect', 'ellipse', 'shape', 'line', 'path', 'text', 'polygon', 'star']);
 
 /** Fill in fields missing from documents saved by older versions; drops unusable entries. */
 export function normalizeShape(raw: unknown): Shape | null {
   if (!raw || typeof raw !== 'object') return null;
-  const r = raw as Partial<Shape>;
+  const r = raw as Partial<Shape> & { sides?: number; inner?: number; kind?: string };
+  const legacy = r.kind as string | undefined;
   if (typeof r.id !== 'string' || !r.kind || !KINDS.has(r.kind)) return null;
-  return blankShape(r.id, r.kind, r);
+  // documents from before the shape registry stored polygons and stars as their own kinds
+  if (legacy === 'polygon') return blankShape(r.id, 'shape', { ...r, kind: 'shape', shapeId: 'polygon', params: { ...defaultParams('polygon'), sides: r.sides ?? 6 } });
+  if (legacy === 'star') return blankShape(r.id, 'shape', { ...r, kind: 'shape', shapeId: 'star', params: { ...defaultParams('star'), points: r.sides ?? 5, inner: r.inner ?? 0.5 } });
+  return blankShape(r.id, r.kind as ShapeKind, r);
 }

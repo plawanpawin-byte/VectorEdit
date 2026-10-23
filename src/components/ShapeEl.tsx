@@ -69,8 +69,7 @@ export function ShapeEl({ shape: s }: { shape: Shape }) {
     case 'ellipse':
       body = <ellipse cx={s.x + s.w / 2} cy={s.y + s.h / 2} rx={s.w / 2} ry={s.h / 2} {...common} />;
       break;
-    case 'polygon':
-    case 'star':
+    case 'shape':
     case 'line':
     case 'path':
       body = <path d={pathD(s)} {...common} />;
@@ -102,13 +101,25 @@ export function ShapeEl({ shape: s }: { shape: Shape }) {
   return (
     <>
       <defs>
-        {g?.type === 'linear' && (
+        {g?.type === 'linear' && g.p1 && g.p2 && (
+          <linearGradient id={gid} gradientUnits="userSpaceOnUse" x1={g.p1.x} y1={g.p1.y} x2={g.p2.x} y2={g.p2.y}>
+            <stop offset="0" stopColor={g.a} />
+            <stop offset="1" stopColor={g.b} />
+          </linearGradient>
+        )}
+        {g?.type === 'radial' && g.p1 && g.p2 && (
+          <radialGradient id={gid} gradientUnits="userSpaceOnUse" cx={g.p1.x} cy={g.p1.y} fx={g.p1.x} fy={g.p1.y} r={Math.max(0.001, Math.hypot(g.p2.x - g.p1.x, g.p2.y - g.p1.y))}>
+            <stop offset="0" stopColor={g.a} />
+            <stop offset="1" stopColor={g.b} />
+          </radialGradient>
+        )}
+        {g?.type === 'linear' && !g.p1 && (
           <linearGradient id={gid} x1={0.5 - Math.cos(a) / 2} y1={0.5 - Math.sin(a) / 2} x2={0.5 + Math.cos(a) / 2} y2={0.5 + Math.sin(a) / 2}>
             <stop offset="0" stopColor={g.a} />
             <stop offset="1" stopColor={g.b} />
           </linearGradient>
         )}
-        {g?.type === 'radial' && (
+        {g?.type === 'radial' && !g.p1 && (
           <radialGradient id={gid} cx="0.5" cy="0.5" r="0.5">
             <stop offset="0" stopColor={g.a} />
             <stop offset="1" stopColor={g.b} />

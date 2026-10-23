@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Mode } from '../types';
+import { WORKSPACES, setWorkspace } from '../tools/registry';
 import {
   align,
   arrange,
@@ -15,7 +15,6 @@ import {
   redo,
   rotateSelection,
   selectAll,
-  setMode,
   setState,
   undo,
   ungroupSelected,
@@ -68,14 +67,10 @@ function Popover({ button, children, className = '', title }: { button: React.Re
   );
 }
 
-const MODES: { id: Mode; label: string; icon: React.ReactNode }[] = [
-  { id: 'vector', label: 'Vector', icon: I.vector },
-  { id: 'layout', label: 'Layout', icon: I.layout },
-  { id: 'draw', label: 'Draw', icon: I.draw },
-];
+const WS_ICON: Record<string, React.ReactNode> = { vector: I.vector, layout: I.layout, typography: I.typo };
 
 export function TopBar({ onHelp }: { onHelp: () => void }) {
-  const mode = useStore((s) => s.mode);
+  const workspace = useStore((s) => s.workspace);
   const rulers = useStore((s) => s.rulers);
   const grid = useStore((s) => s.grid);
   const snap = useStore((s) => s.snap);
@@ -121,9 +116,9 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
         <Logo />
       </div>
       <div className="modes">
-        {MODES.map((m) => (
-          <button key={m.id} className={mode === m.id ? 'on' : ''} onClick={() => setMode(m.id)}>
-            {m.icon}
+        {WORKSPACES.map((m) => (
+          <button key={m.id} className={workspace === m.id ? 'on' : ''} title={m.description} onClick={() => setWorkspace(m.id)}>
+            {WS_ICON[m.id]}
             <span>{m.label}</span>
           </button>
         ))}
