@@ -232,3 +232,19 @@ describe('added filters and adjustments', () => {
     run('polar-to-rect', b);
   });
 });
+
+describe('range selection', () => {
+  it('selects shadows, highlights and reds softly', async () => {
+    const { rangeMask } = await import('../src/raster/range');
+    const b = newBuf(3, 1);
+    b.data.set([10, 10, 10, 255, 245, 245, 245, 255, 255, 0, 0, 255], 0);
+    const sh = rangeMask(b, 'shadows');
+    expect(sh[0]).toBeGreaterThan(200);
+    expect(sh[1]).toBe(0);
+    expect(rangeMask(b, 'highlights')[1]).toBeGreaterThan(200);
+    const red = rangeMask(b, 'reds');
+    expect(red[2]).toBeGreaterThan(200);
+    expect(red[0]).toBe(0);
+    expect(rangeMask(b, 'opaque')[0]).toBe(255);
+  });
+});

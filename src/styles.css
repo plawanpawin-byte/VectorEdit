@@ -571,3 +571,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 .menu-msg { margin: 4px 10px 8px; color: #ff9d8f; font-size: 11px; line-height: 1.4; }
 
 .qr-templates { flex-wrap: wrap; gap: 4px; padding-left: 58px; }
+
+.range-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 2px 0 6px; }
+.range-grid .mini { width: 100%; }

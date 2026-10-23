@@ -5,6 +5,7 @@ import { applyRasterDialog, cancelRasterDialog, openRasterOp, setRasterPreview, 
 import { commitPixels, targetLayer, workingCanvas } from '../raster/layer';
 import { loadMacros, playMacro, saveMacros, startRecording, stopRecording, type PixelMacro } from '../raster/macro';
 import { RASTER_OPS, rasterOp } from '../raster/ops';
+import { RANGE_LABELS, outlineSelection, selectRange, type RangeKind } from '../raster/range';
 import { deselect, featherSelection, growSelection, invertSelection, selectAll, selectionFor, smoothSelection } from '../raster/selection';
 import { getState, setState, useStore } from '../store';
 import { NumField, Section } from './Fields';
@@ -165,6 +166,17 @@ export function SelectionPanel() {
         <div className="row">
           <button className="mini wide" disabled={!sel} onClick={withLayer((l) => featherSelection(l, 6))}>Feather 6px</button>
           <button className="mini wide" disabled={!sel} onClick={withLayer((l) => smoothSelection(l, 4))}>Smooth</button>
+        </div>
+        <div className="row">
+          <button className="mini wide" disabled={!sel} onClick={withLayer((l) => outlineSelection(l, 3))}>Outline 3px</button>
+        </div>
+        <div className="menu-head">Select by range</div>
+        <div className="range-grid">
+          {(Object.keys(RANGE_LABELS) as RangeKind[]).map((k) => (
+            <button key={k} className="mini wide" title="Shift adds to the current selection" onClick={(e) => withLayer((l) => void selectRange(l, k, e.shiftKey ? 'add' : 'replace'))()}>
+              {RANGE_LABELS[k]}
+            </button>
+          ))}
         </div>
         <p className="hint tight">{sel ? 'A selection is active: painting, filters and adjustments stay inside it.' : 'No selection. Use the Marquee, Freehand, Flood Select or Selection Brush.'}</p>
       </Section>
