@@ -101,4 +101,5 @@ Compared against a screenshot of the reference editor's Layout studio (1911×100
 | Layers / Character / Paragraph / Text Styles tabs | ✅ | ✅ (Text Styles is named Styles) |
 | Transform panel with X/Y/W/H/R/S in physical units | ✅ | ✅ px, mm, cm, pt or in (App Settings) |
 | Status bar with page navigation ("1 of 1") and tool hint | ✅ | ✅ |
-| Page thumbnails strip with page navigation buttons, Stock panel, anchor grid in Transform, panel icon rows | ✅ | ❌ not reproduced |
+| Anchor (reference point) grid in Transform | ✅ | ✅ |
+| Page thumbnail strip along the bottom edge, Stock panel, panel icon rows | ✅ | ❌ not reproduced |

@@ -298,3 +298,17 @@ describe('data merge', () => {
     expect(mergeRows([])).toBe(0);
   });
 });
+
+import { setTransform as applyBox } from '../src/store';
+describe('transform with a reference point', () => {
+  it('keeps the chosen edge fixed when the size changes', () => {
+    reset();
+    const r = makeShape('rect', { x: 100, y: 50, w: 40, h: 20 });
+    commit([r], { selection: [r.id] });
+    const box = { x: 100, y: 50, w: 40, h: 20 };
+    applyBox(box, { w: 80, x: box.x + (box.w - 80) * 1 }); // anchor on the right edge
+    const s = getState().shapes[0];
+    expect(s.x + s.w).toBeCloseTo(140);
+    expect(s.w).toBeCloseTo(80);
+  });
+});

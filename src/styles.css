@@ -638,3 +638,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 
 .autosel { margin: 0 8px; }
 .setting { display: grid; grid-template-columns: 60px 1fr; align-items: center; gap: 8px; padding: 4px 0; color: var(--text-dim); }
+
+.transform-panel { display: grid; grid-template-columns: 44px 1fr; column-gap: 10px; align-items: start; }
+.transform-panel .hint { grid-column: 1 / -1; }
+.anchor-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 3px; width: 44px; height: 44px; padding: 4px; margin-top: 2px; background: var(--ui-0); border: 1px solid #000; border-radius: 3px; }
+.anchor-grid button { border-radius: 1px; background: #555; }
+.anchor-grid button:hover { background: #888; }
+.anchor-grid button.on { background: var(--sel); box-shadow: 0 0 0 1px #fff; }

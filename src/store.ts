@@ -55,6 +55,8 @@ export interface State {
   rasterDialog: import('./raster/dialog').RasterDialogState | null;
   warpGrid: number;
   blendSteps: number;
+  /** reference point of the Transform panel: 0, 0.5 or 1 across and down the selection box */
+  anchor: { x: number; y: number };
   units: Unit;
   autoSelect: boolean;
   pickerSize: number;
@@ -141,6 +143,7 @@ let state: State = {
   rasterDialog: null,
   warpGrid: 4,
   blendSteps: 5,
+  anchor: { x: 0, y: 0 },
   units: 'px',
   autoSelect: true,
   pickerSize: 5,

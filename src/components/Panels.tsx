@@ -848,14 +848,22 @@ export function Layers() {
 export function TransformPanel() {
   const shapes = useStore((s) => s.shapes);
   const selection = useStore((s) => s.selection);
+  const anchor = useStore((s) => s.anchor);
   const box = unionBox(shapes.filter((s) => selection.includes(s.id)).map(bbox));
+  const ax = anchor.x;
+  const ay = anchor.y;
   return (
-    <div className="panel-body pad">
+    <div className="panel-body pad transform-panel">
+      <div className="anchor-grid" title="Reference point: X and Y refer to it, and size changes keep it fixed">
+        {[0, 0.5, 1].flatMap((y) => [0, 0.5, 1].map((x) => (
+          <button key={`${x}${y}`} className={x === ax && y === ay ? 'on' : ''} onClick={() => setState({ anchor: { x, y } })} aria-label={`Reference point ${x},${y}`} />
+        )))}
+      </div>
       <div className="grid2">
-        <UnitField label="X" value={box?.x ?? null} disabled={!box} onCommit={(x) => box && setTransform(box, { x })} />
-        <UnitField label="W" value={box?.w ?? null} min={0.01} disabled={!box} onCommit={(w) => box && setTransform(box, { w })} />
-        <UnitField label="Y" value={box?.y ?? null} disabled={!box} onCommit={(y) => box && setTransform(box, { y })} />
-        <UnitField label="H" value={box?.h ?? null} min={0.01} disabled={!box} onCommit={(h) => box && setTransform(box, { h })} />
+        <UnitField label="X" value={box ? box.x + box.w * ax : null} disabled={!box} onCommit={(x) => box && setTransform(box, { x: x - box.w * ax })} />
+        <UnitField label="W" value={box?.w ?? null} min={0.01} disabled={!box} onCommit={(w) => box && setTransform(box, { w, x: box.x + (box.w - w) * ax })} />
+        <UnitField label="Y" value={box ? box.y + box.h * ay : null} disabled={!box} onCommit={(y) => box && setTransform(box, { y: y - box.h * ay })} />
+        <UnitField label="H" value={box?.h ?? null} min={0.01} disabled={!box} onCommit={(h) => box && setTransform(box, { h, y: box.y + (box.h - h) * ay })} />
         <NumField label="R" value={0} suffix="°" disabled={!box} onCommit={(deg) => rotateSelection(deg)} />
         <NumField label="S" value={0} suffix="°" disabled={!box} onCommit={(deg) => shearSelection(Math.max(-80, Math.min(80, deg)))} />
       </div>
