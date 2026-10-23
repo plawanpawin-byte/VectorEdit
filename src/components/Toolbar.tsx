@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { resetColors, setState, swapColors, useStore } from '../store';
 import { type ToolGroup, activateTool, groupsFor } from '../tools/registry';
 import type { Workspace } from '../types';
@@ -51,6 +51,38 @@ export function slotsFor(ws: Workspace): Entry[] {
   return out;
 }
 
+const SLOT_H = 36; // 34px button + 2px gap
+const SEP_H = 11;
+const MORE_ID = 'toolbar-more';
+
+/**
+ * Fits the toolbox into `room` px: entries that don't fit are folded into one trailing "•••" slot
+ * (with a dividing rule kept off the end), so a short window never hides tools or the colour well.
+ */
+export function fitSlots(entries: Entry[], room: number): Entry[] {
+  const height = (e: Entry) => (e === '|' ? SEP_H : SLOT_H);
+  if (entries.reduce((n, e) => n + height(e), 0) <= room) return entries;
+  const out: Entry[] = [];
+  let used = SLOT_H; // the "•••" slot itself
+  let i = 0;
+  for (; i < entries.length && used + height(entries[i]) <= room; i++) {
+    out.push(entries[i]);
+    used += height(entries[i]);
+  }
+  while (out[out.length - 1] === '|') out.pop();
+  const rest = entries.slice(i).flatMap((e) => (e === '|' ? [] : e.tools));
+  if (rest.length) out.push({ id: MORE_ID, tools: rest });
+  return out;
+}
+
+const Dots = () => (
+  <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor">
+    <circle cx="4.5" cy="10" r="1.6" />
+    <circle cx="10" cy="10" r="1.6" />
+    <circle cx="15.5" cy="10" r="1.6" />
+  </svg>
+);
+
 function Slot({ group, arranged }: { group: ToolGroup; arranged?: boolean }) {
   const tool = useStore((s) => s.tool);
   const last = useStore((s) => s.lastTool[group.id]);
@@ -67,25 +99,26 @@ function Slot({ group, arranged }: { group: ToolGroup; arranged?: boolean }) {
 
   const active = group.tools.find((t) => t.id === tool);
   const current: ToolDef = active ?? group.tools.find((t) => t.id === last) ?? group.tools[0];
-  const many = group.tools.length > 1;
+  const overflow = group.id === MORE_ID;
+  const many = group.tools.length > 1 || overflow;
   const wide = group.tools.length > 8;
 
   return (
     <div className="slot" ref={ref} data-group={arranged ? undefined : group.id}>
       <button
         className={'tool' + (active ? ' on' : '')}
-        title={`${current.label}${current.key ? ` (${current.key.toUpperCase()})` : ''}`}
-        onClick={() => (setOpen(false), activateTool(current.id))}
+        title={overflow ? 'More tools' : `${current.label}${current.key ? ` (${current.key.toUpperCase()})` : ''}`}
+        onClick={() => (overflow ? setOpen(!open) : (setOpen(false), activateTool(current.id)))}
         onContextMenu={(e) => (e.preventDefault(), many && setOpen(true))}
         onPointerDown={() => many && (hold.current = setTimeout(() => setOpen(true), 380))}
         onPointerUp={() => clearTimeout(hold.current)}
         onPointerLeave={() => clearTimeout(hold.current)}
       >
-        {current.icon}
-        {many && <i className="more" />}
+        {overflow && !active ? <Dots /> : current.icon}
+        {many && !overflow && <i className="more" />}
       </button>
       {open && (
-        <div className={'flyout' + (wide ? ' wide' : '')}>
+        <div className={'flyout' + (wide ? ' wide' : '') + (overflow ? ' up' : '')}>
           {group.tools.map((t) => (
             <button key={t.id} className={t.id === tool ? 'on' : ''} onClick={() => (setOpen(false), activateTool(t.id))}>
               <span className="fi">{t.icon}</span>
@@ -104,12 +137,22 @@ export function Toolbar() {
   const fill = useStore((s) => s.fill);
   const stroke = useStore((s) => s.stroke);
   const target = useStore((s) => s.colorTarget);
+  const tools = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState(Infinity);
+  useLayoutEffect(() => {
+    const el = tools.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setRoom(el.clientHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   return (
     <nav className="toolbar">
-      {slotsFor(workspace).map((g, i) =>
+      <div className="toolbar-tools" ref={tools}>
+      {fitSlots(slotsFor(workspace), room).map((g, i) =>
         g === '|' ? <hr key={'sep' + i} className="tsep" /> : <Slot key={g.tools[0].id} group={g} arranged={workspace in ARRANGE} />,
       )}
-      <div className="spacer" />
+      </div>
       <div className="fillstroke">
         <button
           className={'fs stroke' + (target === 'stroke' ? ' front' : '')}

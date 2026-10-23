@@ -734,3 +734,8 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']), select, te
 .anchor-grid { border-radius: 6px; }
 .anchor-grid button, .anchor-grid > * { border-radius: 3px; }
 .layer.sel { box-shadow: inset 0 0 0 1px rgba(47,149,255,.7); }
+.toolbar { overflow: visible; }
+.toolbar-tools { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.toolbar .fillstroke { flex: none; }
+.flyout.up { top: auto; bottom: 0; }
+.toolbar { min-height: 0; } .toolbar-tools { overflow: visible; }
