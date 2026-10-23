@@ -399,6 +399,7 @@ export function Appearance() {
               <span className="val">{Math.round(one.radius ?? 0)}</span>
             </div>
           )}
+          {one.shapeId === 'qr' && <QrPayload id={one.id} text={one.text} />}
           {sdef?.params.map((q) => {
             const value = one.params[q.key] ?? defaultParams(one.shapeId)[q.key];
             return (
@@ -588,6 +589,39 @@ function AdjustControls({ s }: { s: Shape }) {
         );
       })}
     </div>
+  );
+}
+
+const QR_TEMPLATES: [string, (v: string) => string][] = [
+  ['URL', (v) => (/^https?:\/\//.test(v) ? v : 'https://' + v.replace(/^[a-z]+:\/*/i, ''))],
+  ['Email', (v) => 'mailto:' + v.replace(/^mailto:/i, '')],
+  ['Phone', (v) => 'tel:' + v.replace(/^tel:/i, '')],
+  ['SMS', (v) => 'sms:' + v.replace(/^sms:/i, '')],
+];
+
+/** Edit what a QR code encodes. */
+function QrPayload({ id, text }: { id: string; text: string }) {
+  const set = (t: string, key?: string) => updateShape(id, { text: t }, key);
+  const wifi = () => {
+    const ssid = window.prompt('Network name (SSID)');
+    if (!ssid) return;
+    const pass = window.prompt('Password (leave empty for an open network)') ?? '';
+    const esc = (v: string) => v.replace(/([\\;,:"])/g, '\\$1');
+    set(`WIFI:T:${pass ? 'WPA' : 'nopass'};S:${esc(ssid)};${pass ? `P:${esc(pass)};` : ''};`);
+  };
+  return (
+    <>
+      <div className="row">
+        <span className="lbl">Content</span>
+        <input className="grow" value={text} onChange={(e) => set(e.target.value, 'qr' + id)} onKeyDown={(e) => e.stopPropagation()} />
+      </div>
+      <div className="row qr-templates">
+        {QR_TEMPLATES.map(([name, f]) => (
+          <button key={name} className="mini wide" onClick={() => set(f(text))}>{name}</button>
+        ))}
+        <button className="mini wide" onClick={wifi}>Wi-Fi</button>
+      </div>
+    </>
   );
 }
 

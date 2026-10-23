@@ -188,3 +188,47 @@ describe('every operation', () => {
     for (const op of RASTER_OPS) for (const q of op.params) expect(q.min).toBeLessThanOrEqual(q.def), expect(q.def).toBeLessThanOrEqual(q.max);
   });
 });
+
+describe('added filters and adjustments', () => {
+  const run = (id: string, b: Buf, params: Record<string, number> = {}) => (applyOp(b, rasterOp(id)!, params), b);
+  it('median removes a single hot pixel', () => {
+    const b = solid(7, 7, [50, 50, 50, 255]);
+    b.data.set([255, 255, 255, 255], (3 * 7 + 3) * 4);
+    run('median', b, { radius: 1 });
+    expect(px(b, 3, 3)[0]).toBe(50);
+  });
+  it('maximum grows light areas and minimum grows dark ones', () => {
+    const grown = run('maximum', halves(), { radius: 2 });
+    expect(px(grown, 6, 4)[0]).toBe(255);
+    const shrunk = run('minimum', halves(), { radius: 2 });
+    expect(px(shrunk, 9, 4)[0]).toBe(0);
+  });
+  it('bilateral keeps a hard edge while lens blur softens it', () => {
+    const edge = run('bilateral', halves(), { radius: 3, tolerance: 20 });
+    expect(px(edge, 7, 4)[0]).toBeLessThan(10);
+    expect(px(edge, 8, 4)[0]).toBeGreaterThan(245);
+    const lens = run('lens-blur', halves(), { radius: 4, highlights: 0 });
+    expect(px(lens, 7, 4)[0]).toBeGreaterThan(10);
+  });
+  it('selective colour only touches the targeted hue', () => {
+    const b = newBuf(2, 1);
+    b.data.set([255, 0, 0, 255, 0, 0, 255, 255], 0);
+    run('selective-colour', b, { hue: 0, range: 30, shift: 120, sat: 0, lum: 0 });
+    expect(px(b, 0, 0)[1]).toBeGreaterThan(200); // red moved to green
+    expect(px(b, 1, 0)).toEqual([0, 0, 255, 255]); // blue untouched
+  });
+  it('tone compression pulls values toward the midpoint', () => {
+    const b = run('tone-compression', halves(), { amount: 50, mid: 128 });
+    expect(px(b, 0, 0)[0]).toBe(64);
+    expect(px(b, 15, 0)[0]).toBe(192);
+  });
+  it('normal map of a flat image points straight out', () => {
+    const b = run('normals', solid(4, 4, [90, 90, 90, 255]));
+    expect(px(b, 2, 2)).toEqual([128, 128, 255, 255]);
+  });
+  it('polar conversions run and keep alpha', () => {
+    const b = run('rect-to-polar', halves());
+    expect(px(b, 8, 4)[3]).toBe(255);
+    run('polar-to-rect', b);
+  });
+});

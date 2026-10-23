@@ -28,6 +28,7 @@ import {
 import { exportPng, exportSvg } from './exporter';
 import { openDoc, saveDoc } from '../fileio';
 import { openRasterOp } from '../raster/dialog';
+import { divideSelected, joinSelected, reverseSelected, separateSelected, setAll, smoothSelected, stepRepeatSelected, strokeWeight, traceSelected } from '../objectcmds';
 import { mergeDown, rasteriseSelection } from '../raster/rasterise';
 import { targetLayer } from '../raster/layer';
 import { RASTER_OPS } from '../raster/ops';
@@ -98,6 +99,63 @@ function OpMenu({ label, kind }: { label: string; kind: 'adjust' | 'filter' }) {
                 ))}
             </div>
           ))}
+        </div>
+      )}
+    </Popover>
+  );
+}
+
+function ObjectMenu() {
+  const [rep, setRep] = useState({ count: 3, dx: 40, dy: 0 });
+  const [trace, setTrace] = useState({ level: 128, detail: 1 });
+  const [msg, setMsg] = useState('');
+  const run = (fn: () => boolean | void | Promise<boolean | void>, fail: string, close: () => void) => async () => {
+    const ok = await fn();
+    if (ok === false) setMsg(fail);
+    else close();
+  };
+  const num = (k: keyof typeof rep) => (
+    <input className="mini-num" type="number" value={rep[k]} onChange={(e) => setRep({ ...rep, [k]: Number(e.target.value) })} onKeyDown={(e) => e.stopPropagation()} />
+  );
+  return (
+    <Popover button={<span className="txtbtn">Object</span>} className="left" title="Object operations">
+      {(close) => (
+        <div className="menu-list object-menu">
+          <div className="menu-head">Combine</div>
+          <button onClick={run(divideSelected, 'Select two or more overlapping closed shapes.', close)}><span className="chk" /><span>Divide</span><span className="sc" /></button>
+          <div className="menu-head">Paths</div>
+          <button onClick={run(reverseSelected, '', close)}><span className="chk" /><span>Reverse direction</span><span className="sc" /></button>
+          <button onClick={run(joinSelected, 'Select exactly two open paths.', close)}><span className="chk" /><span>Join two open paths</span><span className="sc" /></button>
+          <button onClick={run(smoothSelected, '', close)}><span className="chk" /><span>Smooth curves</span><span className="sc" /></button>
+          <button onClick={run(separateSelected, 'Select a compound path (a shape with holes).', close)}><span className="chk" /><span>Separate compound path</span><span className="sc" /></button>
+          <button onClick={run(convertToCurves, '', close)}><span className="chk" /><span>Convert to curves</span><span className="sc" /></button>
+          <button onClick={run(() => strokeWeight(1), '', () => undefined)}><span className="chk" /><span>Stroke weight +1</span><span className="sc" /></button>
+          <button onClick={run(() => strokeWeight(-1), '', () => undefined)}><span className="chk" /><span>Stroke weight −1</span><span className="sc" /></button>
+          <div className="menu-head">Step and repeat</div>
+          <div className="menu-form">
+            <label>Copies {num('count')}</label>
+            <label>ΔX {num('dx')}</label>
+            <label>ΔY {num('dy')}</label>
+            <button className="mini wide" onClick={run(() => stepRepeatSelected(rep.count, rep.dx, rep.dy), 'Select something to repeat.', close)}>Repeat</button>
+          </div>
+          <div className="menu-head">Image trace (selected pixel layer)</div>
+          <div className="menu-form">
+            <label>
+              Threshold
+              <input type="range" min={10} max={245} value={trace.level} onChange={(e) => setTrace({ ...trace, level: Number(e.target.value) })} />
+            </label>
+            <label>
+              Detail
+              <input type="range" min={0.3} max={4} step={0.1} value={trace.detail} onChange={(e) => setTrace({ ...trace, detail: Number(e.target.value) })} />
+            </label>
+            <button className="mini wide" onClick={run(() => traceSelected(trace.level, trace.detail), 'Select a pixel layer with dark artwork on it.', close)}>Trace</button>
+          </div>
+          <div className="menu-head">All layers</div>
+          <button onClick={() => (setAll('visible', true), close())}><span className="chk" /><span>Show all</span><span className="sc" /></button>
+          <button onClick={() => (setAll('visible', false), close())}><span className="chk" /><span>Hide all</span><span className="sc" /></button>
+          <button onClick={() => (setAll('locked', true), close())}><span className="chk" /><span>Lock all</span><span className="sc" /></button>
+          <button onClick={() => (setAll('locked', false), close())}><span className="chk" /><span>Unlock all</span><span className="sc" /></button>
+          {msg && <p className="menu-msg">{msg}</p>}
         </div>
       )}
     </Popover>
@@ -231,6 +289,7 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
         <button className="ibtn" title="Intersect" disabled={sel < 2} onClick={() => booleanOp('intersect')}>{I.intersect}</button>
         <button className="ibtn" title="Exclude (xor)" disabled={sel < 2} onClick={() => booleanOp('xor')}>{I.xor}</button>
       </div>
+      <ObjectMenu />
       <div className="seg">
         <button className="ibtn" title="Group (Ctrl+G)" disabled={sel < 2} onClick={groupSelected}>{I.group}</button>
         <button className="ibtn" title="Ungroup (Shift+Ctrl+G)" disabled={!hasSel} onClick={ungroupSelected}>{I.ungroup}</button>

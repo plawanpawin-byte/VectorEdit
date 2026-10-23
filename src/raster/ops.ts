@@ -308,6 +308,60 @@ const adjust: RasterOp[] = [
       perPixel(b, (r, g, bl) => [r * gain[0], g * gain[1], bl * gain[2]]);
     },
   },
+  {
+    id: 'selective-colour',
+    name: 'Selective Colour',
+    kind: 'adjust',
+    category: 'Colour',
+    params: [P('hue', 'Target hue', 0, 360, 0), P('range', 'Range', 5, 180, 40), P('shift', 'Hue shift', -180, 180, 0), P('sat', 'Saturation', -100, 100, 0), P('lum', 'Lightness', -100, 100, 0)],
+    apply(b, p) {
+      for (let i = 0; i < b.data.length; i += 4) {
+        const [h, sat, l] = rgbToHsl(b.data[i], b.data[i + 1], b.data[i + 2]);
+        const d = Math.abs(((h - p.hue + 540) % 360) - 180);
+        if (d > p.range) continue;
+        const w = (1 - d / p.range) * Math.min(1, sat * 4);
+        const nh = (h + p.shift * w + 360) % 360;
+        const ns = clamp(sat * (1 + (p.sat / 100) * w), 0, 1);
+        const nl = clamp(l + (p.lum / 100) * w * (p.lum > 0 ? 1 - l : l), 0, 1);
+        const [r, g, bl] = hslToRgb(nh, ns, nl);
+        b.data[i] = r;
+        b.data[i + 1] = g;
+        b.data[i + 2] = bl;
+      }
+    },
+  },
+  {
+    id: 'tone-compression',
+    name: 'Tone Compression',
+    kind: 'adjust',
+    category: 'Tone',
+    params: [P('amount', 'Compress', 0, 100, 40), P('mid', 'Midpoint', 20, 235, 128)],
+    apply(b, p) {
+      const k = 1 - p.amount / 100;
+      for (let i = 0; i < b.data.length; i += 4) for (let c = 0; c < 3; c++) b.data[i + c] = clamp(p.mid + (b.data[i + c] - p.mid) * k);
+    },
+  },
+  {
+    id: 'normals',
+    name: 'Normal Map',
+    kind: 'adjust',
+    category: 'Effect',
+    params: [P('strength', 'Strength', 0.1, 10, 2, 0.1)],
+    apply(b, p) {
+      const src = copyBuf(b);
+      const h = (x: number, y: number) => luma(sample(src, x, y, 0), sample(src, x, y, 1), sample(src, x, y, 2)) / 255;
+      for (let y = 0; y < b.height; y++)
+        for (let x = 0; x < b.width; x++) {
+          const dx = (h(x + 1, y) - h(x - 1, y)) * p.strength;
+          const dy = (h(x, y + 1) - h(x, y - 1)) * p.strength;
+          const len = Math.hypot(dx, dy, 1);
+          const i = (y * b.width + x) * 4;
+          b.data[i] = clamp((-dx / len) * 127.5 + 127.5);
+          b.data[i + 1] = clamp((-dy / len) * 127.5 + 127.5);
+          b.data[i + 2] = clamp((1 / len) * 127.5 + 127.5);
+        }
+    },
+  },
 ];
 
 /* ===================== filters ===================== */
@@ -724,6 +778,156 @@ const filters: RasterOp[] = [
           for (let c = 0; c < 4; c++) b.data[i + c] = src.data[si + c];
         }
       }
+    },
+  },
+  {
+    id: 'median',
+    name: 'Median',
+    kind: 'filter',
+    category: 'Blur',
+    params: [P('radius', 'Radius', 1, 6, 2)],
+    apply(b, p) {
+      const src = copyBuf(b);
+      const r = Math.round(p.radius);
+      const win: number[] = [];
+      for (let y = 0; y < b.height; y++)
+        for (let x = 0; x < b.width; x++)
+          for (let c = 0; c < 4; c++) {
+            win.length = 0;
+            for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) win.push(sample(src, x + dx, y + dy, c));
+            win.sort((a, z) => a - z);
+            b.data[(y * b.width + x) * 4 + c] = win[win.length >> 1];
+          }
+    },
+  },
+  ...(['maximum', 'minimum'] as const).map(
+    (kind): RasterOp => ({
+      id: kind,
+      name: kind === 'maximum' ? 'Maximum (grow lights)' : 'Minimum (grow darks)',
+      kind: 'filter',
+      category: 'Blur',
+      params: [P('radius', 'Radius', 1, 12, 2)],
+      apply(b, p) {
+        const src = copyBuf(b);
+        const r = Math.round(p.radius);
+        const pick = kind === 'maximum' ? Math.max : Math.min;
+        for (let y = 0; y < b.height; y++)
+          for (let x = 0; x < b.width; x++)
+            for (let c = 0; c < 3; c++) {
+              let v = kind === 'maximum' ? 0 : 255;
+              for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) v = pick(v, sample(src, x + dx, y + dy, c));
+              b.data[(y * b.width + x) * 4 + c] = v;
+            }
+      },
+    }),
+  ),
+  {
+    id: 'bilateral',
+    name: 'Bilateral Blur',
+    kind: 'filter',
+    category: 'Blur',
+    params: [P('radius', 'Radius', 1, 8, 4), P('tolerance', 'Colour tolerance', 1, 120, 30)],
+    apply(b, p) {
+      const src = copyBuf(b);
+      const r = Math.round(p.radius);
+      const sigS = r / 2 + 0.5;
+      const sigR = p.tolerance;
+      for (let y = 0; y < b.height; y++)
+        for (let x = 0; x < b.width; x++) {
+          const c0 = [0, 1, 2].map((c) => sample(src, x, y, c));
+          const acc = [0, 0, 0];
+          let wsum = 0;
+          for (let dy = -r; dy <= r; dy++)
+            for (let dx = -r; dx <= r; dx++) {
+              const px = [0, 1, 2].map((c) => sample(src, x + dx, y + dy, c));
+              const dc = Math.hypot(px[0] - c0[0], px[1] - c0[1], px[2] - c0[2]);
+              const w = Math.exp(-(dx * dx + dy * dy) / (2 * sigS * sigS)) * Math.exp(-(dc * dc) / (2 * sigR * sigR));
+              for (let c = 0; c < 3; c++) acc[c] += px[c] * w;
+              wsum += w;
+            }
+          const i = (y * b.width + x) * 4;
+          for (let c = 0; c < 3; c++) b.data[i + c] = acc[c] / wsum;
+        }
+    },
+  },
+  {
+    id: 'lens-blur',
+    name: 'Lens Blur',
+    kind: 'filter',
+    category: 'Blur',
+    params: [P('radius', 'Radius', 1, 40, 8), P('highlights', 'Highlight boost', 0, 100, 30)],
+    apply(b, p) {
+      const src = copyBuf(b);
+      const n = 48;
+      const boost = 1 + p.highlights / 50;
+      for (let y = 0; y < b.height; y++)
+        for (let x = 0; x < b.width; x++) {
+          const acc = [0, 0, 0, 0];
+          let wsum = 0;
+          for (let k = 0; k < n; k++) {
+            const a = k * 2.399963; // golden angle spiral covers the disc evenly
+            const rr = p.radius * Math.sqrt((k + 0.5) / n);
+            const px = [0, 1, 2, 3].map((c) => sample(src, x + Math.cos(a) * rr, y + Math.sin(a) * rr, c));
+            const w = 1 + (luma(px[0], px[1], px[2]) / 255) ** 4 * (boost - 1) * 4;
+            for (let c = 0; c < 4; c++) acc[c] += px[c] * w;
+            wsum += w;
+          }
+          const i = (y * b.width + x) * 4;
+          for (let c = 0; c < 4; c++) b.data[i + c] = acc[c] / wsum;
+        }
+    },
+  },
+  {
+    id: 'diffuse-glow',
+    name: 'Diffuse Glow',
+    kind: 'filter',
+    category: 'Stylise',
+    params: [P('radius', 'Radius', 1, 60, 14), P('amount', 'Amount', 0, 100, 60)],
+    apply(b, p) {
+      const glow = copyBuf(b);
+      gaussianBlur(glow, p.radius, [0, 1, 2]);
+      const k = p.amount / 100;
+      for (let i = 0; i < b.data.length; i += 4)
+        for (let c = 0; c < 3; c++) {
+          const a = b.data[i + c] / 255;
+          const g = glow.data[i + c] / 255;
+          b.data[i + c] = clamp((1 - (1 - a) * (1 - g * k)) * 255); // screen blend
+        }
+    },
+  },
+  {
+    id: 'polar-to-rect',
+    name: 'Polar to Rectangular',
+    kind: 'filter',
+    category: 'Distort',
+    params: [],
+    apply(b) {
+      const cx = b.width / 2;
+      const cy = b.height / 2;
+      const R = Math.hypot(cx, cy);
+      remap(b, (x, y) => {
+        const ang = (x / b.width) * Math.PI * 2;
+        const rad = (y / b.height) * R;
+        return [cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad];
+      });
+    },
+  },
+  {
+    id: 'rect-to-polar',
+    name: 'Rectangular to Polar',
+    kind: 'filter',
+    category: 'Distort',
+    params: [],
+    apply(b) {
+      const cx = b.width / 2;
+      const cy = b.height / 2;
+      const R = Math.hypot(cx, cy);
+      remap(b, (x, y) => {
+        const dx = x - cx;
+        const dy = y - cy;
+        const ang = (Math.atan2(dy, dx) + Math.PI * 2) % (Math.PI * 2);
+        return [(ang / (Math.PI * 2)) * b.width, (Math.hypot(dx, dy) / R) * b.height];
+      });
     },
   },
 ];

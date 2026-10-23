@@ -1,3 +1,4 @@
+import qrcode from 'qrcode-generator';
 import type { Pt, Shape } from './types';
 
 /* A registry of parametric shapes. Each definition builds anchors inside a w x h box;
@@ -24,7 +25,8 @@ export interface ShapeDef {
   /** true for open paths (stroked, not filled) */
   open?: boolean;
   params: ShapeParam[];
-  build(w: number, h: number, p: Record<string, number>): Built;
+  /** `text` carries free-form content for shapes that need it (QR code payload) */
+  build(w: number, h: number, p: Record<string, number>, text?: string): Built;
 }
 
 type Params = Record<string, number>;
@@ -204,6 +206,100 @@ export const SHAPES: ShapeDef[] = [
         return V(w / 2 + (Math.cos(a) * w * k) / 2, h / 2 + (Math.sin(a) * h * k) / 2);
       });
       return { closed: true, pts: polygonPath(verts) };
+    },
+  },
+  {
+    id: 'qr',
+    name: 'QR Code',
+    params: [
+      { key: 'level', label: 'Error correction', min: 0, max: 3, step: 1, def: 1 },
+      { key: 'quiet', label: 'Quiet zone', min: 0, max: 8, step: 1, def: 0 },
+    ],
+    build: (w, h, p, text) => {
+      const size = Math.min(w, h);
+      const ox = (w - size) / 2;
+      const oy = (h - size) / 2;
+      let qr: ReturnType<typeof qrcode>;
+      try {
+        qr = qrcode(0, (['L', 'M', 'Q', 'H'] as const)[Math.max(0, Math.min(3, Math.round(p.level)))]);
+        qr.addData(text || ' ', 'Byte');
+        qr.make();
+      } catch {
+        return { closed: true, pts: [] }; // payload too long for any QR version
+      }
+      const n = qr.getModuleCount();
+      const quiet = Math.round(p.quiet);
+      const unit = size / (n + quiet * 2);
+      const contours: ReturnType<typeof V>[][] = [];
+      // merge horizontal runs of dark modules into one rectangle each
+      for (let r = 0; r < n; r++) {
+        let c = 0;
+        while (c < n) {
+          if (!qr.isDark(r, c)) {
+            c++;
+            continue;
+          }
+          let e = c;
+          while (e < n && qr.isDark(r, e)) e++;
+          const x0 = ox + (c + quiet) * unit;
+          const x1 = ox + (e + quiet) * unit;
+          const y0 = oy + (r + quiet) * unit;
+          const y1 = y0 + unit;
+          contours.push([V(x0, y0), V(x1, y0), V(x1, y1), V(x0, y1)]);
+          c = e;
+        }
+      }
+      const rings = contours.map((ring) => polygonPath(ring, 0));
+      return { closed: true, pts: rings[0] ?? [], extra: rings.slice(1) };
+    },
+  },
+  {
+    id: 'doublestar',
+    name: 'Double Star',
+    params: [
+      { key: 'points', label: 'Points', min: 3, max: 30, step: 1, def: 6 },
+      { key: 'inner', label: 'Inner radius', min: 0.05, max: 0.95, step: 0.01, def: 0.45 },
+      { key: 'small', label: 'Small point radius', min: 0.1, max: 0.95, step: 0.01, def: 0.7 },
+      corner,
+    ],
+    build: (w, h, p) => {
+      const n = Math.round(p.points);
+      const radii = [1, p.inner, Math.max(p.small, p.inner + 0.02), p.inner];
+      const verts = Array.from({ length: n * 4 }, (_, i) => {
+        const a = -Math.PI / 2 + (i * Math.PI * 2) / (n * 4);
+        const k = radii[i % 4];
+        return V(w / 2 + (Math.cos(a) * w * k) / 2, h / 2 + (Math.sin(a) * h * k) / 2);
+      });
+      return { closed: true, pts: polygonPath(verts, p.corner) };
+    },
+  },
+  {
+    id: 'squarestar',
+    name: 'Square Star',
+    params: [
+      { key: 'sides', label: 'Sides', min: 3, max: 16, step: 1, def: 4 },
+      { key: 'cutout', label: 'Cutout', min: 0.05, max: 0.9, step: 0.01, def: 0.35 },
+      corner,
+    ],
+    build: (w, h, p) => {
+      const n = Math.round(p.sides);
+      const corners = Array.from({ length: n }, (_, i) => {
+        const a = -Math.PI / 2 + (i * Math.PI * 2) / n - Math.PI / n;
+        return V(w / 2 + (Math.cos(a) * w) / 2, h / 2 + (Math.sin(a) * h) / 2);
+      });
+      const c = V(w / 2, h / 2);
+      const verts: { x: number; y: number }[] = [];
+      for (let i = 0; i < n; i++) {
+        const a = corners[i];
+        const e = corners[(i + 1) % n];
+        const at = (t: number, inset: number) => {
+          const x = a.x + (e.x - a.x) * t;
+          const y = a.y + (e.y - a.y) * t;
+          return V(x + (c.x - x) * inset, y + (c.y - y) * inset);
+        };
+        verts.push(a, at(0.3, 0), at(0.3, p.cutout), at(0.7, p.cutout), at(0.7, 0));
+      }
+      return { closed: true, pts: polygonPath(verts, p.corner) };
     },
   },
   {
@@ -476,7 +572,7 @@ export function buildShape(s: Shape): Built {
   const def = shapeDef(s.shapeId);
   const w = Math.max(0, s.w);
   const h = Math.max(0, s.h);
-  const raw = def ? def.build(w, h, { ...defaultParams(s.shapeId), ...s.params }) : { pts: [], closed: true };
+  const raw = def ? def.build(w, h, { ...defaultParams(s.shapeId), ...s.params }, s.text) : { pts: [], closed: true };
   const move = (p: Pt): Pt => ({ ...p, x: p.x + s.x, y: p.y + s.y });
   const built: Built = { closed: raw.closed, pts: raw.pts.map(move), extra: raw.extra?.map((r) => r.map(move)) };
   cache.set(s, built);

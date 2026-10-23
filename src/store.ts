@@ -271,10 +271,10 @@ export function makeShape(kind: ShapeKind, p: Partial<Shape> = {}): Shape {
   const isLine = kind === 'line' || !!def?.open;
   return blankShape(`s${++counter}`, kind, {
     name: `${label} ${count}`,
-    text: 'Type here',
+    text: p.shapeId === 'qr' ? 'https://example.com' : 'Type here',
     params: p.shapeId ? { ...defaultParams(p.shapeId), ...st.shapeParams[p.shapeId] } : {},
-    fill: isLine ? null : st.fill,
-    stroke: kind === 'text' ? null : (st.stroke ?? (isLine ? '#1c1c1c' : null)),
+    fill: p.shapeId === 'qr' ? '#111111' : isLine ? null : st.fill,
+    stroke: kind === 'text' || p.shapeId === 'qr' ? null : (st.stroke ?? (isLine ? '#1c1c1c' : null)),
     strokeWidth: st.strokeWidth,
     ...p,
   });

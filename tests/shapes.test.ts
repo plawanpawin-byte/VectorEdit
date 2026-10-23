@@ -64,3 +64,19 @@ describe('shape registry', () => {
     expect(buildShape(make('spiral')).closed).toBe(false);
   });
 });
+
+describe('qr code shape', () => {
+  const qr = (text: string, w = 100, h = 100, params = {}) => buildShape(blankShape('q', 'shape', { shapeId: 'qr', w, h, text, params }));
+  it('builds module rectangles that stay inside the box and centre when not square', () => {
+    const b = qr('https://example.com', 200, 100);
+    const all = [b.pts, ...(b.extra ?? [])];
+    expect(all.length).toBeGreaterThan(10);
+    const xs = all.flat().map((p) => p.x);
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(50 - 1e-6); // 100px square centred in a 200px box
+    expect(Math.max(...xs)).toBeLessThanOrEqual(150 + 1e-6);
+  });
+  it('different payloads give different codes, and oversize ones do not crash', () => {
+    expect(JSON.stringify(qr('a'))).not.toBe(JSON.stringify(qr('b')));
+    expect(qr('x'.repeat(5000)).pts).toEqual([]);
+  });
+});

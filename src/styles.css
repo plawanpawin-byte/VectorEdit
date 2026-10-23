@@ -563,3 +563,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 
 .master-box { padding: 6px 10px; display: grid; gap: 6px; border-bottom: 1px solid var(--line); }
 .master-pick { display: grid; grid-template-columns: 48px 1fr; align-items: center; gap: 8px; color: var(--text-dim); }
+
+.object-menu { min-width: 230px; max-height: 80vh; overflow: auto; }
+.menu-form { display: grid; gap: 6px; padding: 4px 10px 8px; color: var(--text-dim); }
+.menu-form label { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 8px; }
+.mini-num { width: 100%; height: 20px; padding: 0 5px; }
+.menu-msg { margin: 4px 10px 8px; color: #ff9d8f; font-size: 11px; line-height: 1.4; }
+
+.qr-templates { flex-wrap: wrap; gap: 4px; padding-left: 58px; }
