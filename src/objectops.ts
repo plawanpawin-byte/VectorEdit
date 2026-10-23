@@ -1,4 +1,5 @@
-import polygonClipping, { type MultiPolygon, type Polygon } from 'polygon-clipping';
+import { type MultiPolygon, type Polygon } from 'polygon-clipping';
+import { clip } from './clip';
 import { rings } from './geometry';
 import type { Pt, Shape } from './types';
 
@@ -76,13 +77,13 @@ export function divideRegions(ordered: Shape[]): Region[] {
     const poly = toPolygon(s);
     const next: Region[] = [];
     for (const r of regions) {
-      const inter = polygonClipping.intersection(r.mp, poly);
-      const rest = polygonClipping.difference(r.mp, poly);
+      const inter = clip.intersection(r.mp, poly);
+      const rest = clip.difference(r.mp, poly);
       if (inter.length) next.push({ mp: inter, owner: i });
       if (rest.length) next.push({ mp: rest, owner: r.owner });
     }
-    const covered = regions.length ? polygonClipping.union(regions[0].mp, ...regions.slice(1).map((r) => r.mp)) : [];
-    const fresh = covered.length ? polygonClipping.difference(poly, covered) : [poly];
+    const covered = regions.length ? clip.union(regions[0].mp, ...regions.slice(1).map((r) => r.mp)) : [];
+    const fresh = covered.length ? clip.difference(poly, covered) : [poly];
     if (fresh.length) next.push({ mp: fresh as MP, owner: i });
     regions = next;
   });
@@ -115,8 +116,13 @@ export function floodRegion(ordered: Shape[], x: number, y: number): Region | nu
     return b.x0 <= box.x1 && b.x1 >= box.x0 && b.y0 <= box.y1 && b.y1 >= box.y0;
   });
   let mp: MP = polys[under[0]].length ? [polys[under[0]]] : [];
-  for (const i of under.slice(1)) mp = polygonClipping.intersection(mp, polys[i]);
-  if (near.length && mp.length) mp = polygonClipping.difference(mp, ...near);
+  try {
+    for (const i of under.slice(1)) mp = clip.intersection(mp, polys[i]);
+    if (near.length && mp.length) mp = clip.difference(mp, ...near);
+  } catch {
+    // the clipping library cannot split this particular geometry: nothing to fill here
+    return null;
+  }
   // the pieces can fall apart; the one under the click is the area
   const piece = mp.filter((poly) => regionContains([poly], x, y));
   return piece.length ? { mp: piece, owner: under[under.length - 1] } : null;
@@ -222,7 +228,7 @@ export function regionContains(mp: MultiPolygon, x: number, y: number): boolean 
 
 /** Union of several regions into one multipolygon. */
 export function unionRegions(list: MultiPolygon[]): MultiPolygon {
-  return list.length ? polygonClipping.union(list[0], ...list.slice(1)) : [];
+  return list.length ? clip.union(list[0], ...list.slice(1)) : [];
 }
 
 /** SVG path data for a multipolygon (even-odd). */

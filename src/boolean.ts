@@ -1,4 +1,5 @@
-import polygonClipping, { type MultiPolygon, type Polygon } from 'polygon-clipping';
+import { type MultiPolygon, type Polygon } from 'polygon-clipping';
+import { clip } from './clip';
 import { rings } from './geometry';
 import type { Pt, Shape } from './types';
 
@@ -33,12 +34,12 @@ export function booleanPieces(ordered: Shape[], op: BoolOp): BoolPiece[] {
   const [first, ...rest] = ordered.map(toPolygon);
   const result: MultiPolygon =
     op === 'union'
-      ? polygonClipping.union(first, ...rest)
+      ? clip.union(first, ...rest)
       : op === 'subtract'
-        ? polygonClipping.difference(first, ...rest)
+        ? clip.difference(first, ...rest)
         : op === 'intersect'
-          ? polygonClipping.intersection(first, ...rest)
-          : polygonClipping.xor(first, ...rest);
+          ? clip.intersection(first, ...rest)
+          : clip.xor(first, ...rest);
   return result
     .map((poly) => ({ outer: toPts(poly[0]), holes: poly.slice(1).map(toPts) }))
     .filter((p) => p.outer.length >= 3);
@@ -56,7 +57,7 @@ export function cutPieces(s: Shape, a: { x: number; y: number }, b: { x: number;
   const nx = (-dy / len) * (width / 2);
   const ny = (dx / len) * (width / 2);
   const cutter: Polygon = [[[a.x + nx, a.y + ny], [b.x + nx, b.y + ny], [b.x - nx, b.y - ny], [a.x - nx, a.y - ny]]];
-  const result = polygonClipping.difference(toPolygon(s), cutter);
+  const result = clip.difference(toPolygon(s), cutter);
   const pieces = result.map((poly) => ({ outer: toPts(poly[0]), holes: poly.slice(1).map(toPts) })).filter((p) => p.outer.length >= 3);
   return pieces.length >= 2 ? pieces : null;
 }

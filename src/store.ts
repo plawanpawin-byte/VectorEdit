@@ -754,7 +754,13 @@ export function booleanOp(op: BoolOp): boolean {
   const sel = new Set(state.selection);
   const ordered = state.shapes.filter((s) => sel.has(s.id) && canBoolean(s));
   if (ordered.length < 2) return false;
-  const pieces = booleanPieces(ordered, op);
+  let pieces: ReturnType<typeof booleanPieces>;
+  try {
+    pieces = booleanPieces(ordered, op);
+  } catch {
+    notify('These shapes could not be combined (their outlines are too close or too complex).');
+    return false;
+  }
   const style = ordered[0];
   const ids = new Set(ordered.map((s) => s.id));
   const made = pieces.map((piece, i) =>
