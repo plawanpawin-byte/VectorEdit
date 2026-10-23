@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { openDoc, openRecent } from '../fileio';
 import { openNewDocument, setState, useStore } from '../store';
 
@@ -22,7 +23,8 @@ export function StartPage() {
 
   if (!open) return null;
   const close = () => setState({ startOpen: false });
-  return (
+  // drawn on document.body so the editor's panels and menu bar can never paint over it
+  return createPortal(
     <div className="startpage" role="dialog" aria-label="Start">
       <div className="start-inner">
         <h1>VectorEdit</h1>
@@ -63,6 +65,7 @@ export function StartPage() {
           </section>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

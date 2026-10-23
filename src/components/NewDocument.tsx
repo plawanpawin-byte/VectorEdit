@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DOC_PRESETS, validSize, type DocPreset } from '../docpresets';
 import { confirmDiscard, newDocument, setState, useStore } from '../store';
 import { fromPx, toPx, UNITS, type Unit } from '../units';
@@ -65,7 +66,8 @@ export function NewDocument() {
 
   if (!open) return null;
   const landscape = Number(w) > Number(h);
-  return (
+  // on document.body so it stays above the start page
+  return createPortal(
     <div className="modal-back" onMouseDown={close}>
       <div className="modal newdoc" role="dialog" aria-label="New Document" onMouseDown={(e) => e.stopPropagation()}>
         <header>
@@ -122,6 +124,7 @@ export function NewDocument() {
           <button className="mini wide primary" onClick={create}>Create</button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
