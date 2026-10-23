@@ -31,6 +31,8 @@ export type BaseTool =
   | 'vflood'
   | 'areameasure'
   | 'heal'
+  | 'undobrush'
+  | 'pushwarp'
   | 'medianbrush'
   | 'colourreplace'
   | 'bgeraser'

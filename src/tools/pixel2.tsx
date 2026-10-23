@@ -2,11 +2,12 @@ import { NumField } from '../components/Fields';
 import { cloneCanvas } from '../raster/cache';
 import { commitPixels, pixelScale, toPixel, workingCanvas } from '../raster/layer';
 import { RASTER_OPS, applyOp, defaultOpParams, rasterOp } from '../raster/ops';
-import { floodMask } from '../raster/pixels';
+import { type Buf, floodMask, sample } from '../raster/pixels';
 import { applySelection, deselect, maskFromDraw, modeFromKeys, selectionFor } from '../raster/selection';
 import { getState, setState, useStore } from '../store';
 import { toolIcon } from './icons';
 import { RetouchOptions, activeLayerOrCreate, base, lazy, makePreview, paintDown, retouch, selLayer } from './pixel';
+import type { Shape } from '../types';
 import type { PointerCtx, Session, ToolDef } from './types';
 
 /* ---------- retouch-engine brushes ---------- */
@@ -175,28 +176,34 @@ const soft = (d: number, hardness: number) => {
   return a * a * (3 - 2 * a);
 };
 
-/** Paint where an operation should apply; the result is previewed live and committed on release. */
-function opBrush(kind: 'filter' | 'adjust') {
+/**
+ * Paint a soft mask with the brush and show `compose(original, mask)` live; the result is committed on release.
+ * `prepare` runs once per stroke and may return null to cancel it.
+ */
+function maskedBrush(prepare: (layer: Shape, original: HTMLCanvasElement) => Promise<null | ((img: ImageData, mask: Uint8Array) => void)> | null | ((img: ImageData, mask: Uint8Array) => void)) {
   return (c: PointerCtx): Session | void => {
     const layer = activeLayerOrCreate();
     const st = getState();
-    const op = rasterOp(st.opBrush[kind]);
-    if (!op) return;
     const before = st.shapes;
     const radius = Math.max(1, (st.pbrush.size * pixelScale(layer).sx) / 2);
-    return lazy(workingCanvas(layer), (canvas) => {
+    let live: Session | null = null;
+    const queued: ['move' | 'up', PointerCtx][] = [];
+    void Promise.resolve(workingCanvas(layer)).then(async (canvas) => {
       const original = cloneCanvas(canvas);
+      const compose = await prepare(layer, original);
+      if (!compose) {
+        queued.length = 0;
+        return;
+      }
       const w = canvas.width;
       const h = canvas.height;
       const painted = new Uint8Array(w * h);
       const sel = selectionFor(layer)?.mask ?? null;
-      const params = defaultOpParams(op);
       const result = () => {
         const out = cloneCanvas(original);
         const ctx = out.getContext('2d')!;
         const img = ctx.getImageData(0, 0, w, h);
-        const mask = sel ? painted.map((v, i) => (v * sel[i]) / 255) : painted;
-        applyOp(img, op, params, mask);
+        compose(img, sel ? painted.map((v, i) => (v * sel[i]) / 255) : painted);
         ctx.putImageData(img, 0, 0);
         return out;
       };
@@ -214,23 +221,125 @@ function opBrush(kind: 'filter' | 'adjust') {
       };
       let last = toPixel(layer, c.raw.x, c.raw.y);
       stamp(last.x, last.y);
-      if (w * h <= 1_000_000) preview.schedule();
-      return {
+      const small = w * h <= 1_000_000;
+      if (small) preview.schedule();
+      live = {
         move(m) {
           const p = toPixel(layer, m.raw.x, m.raw.y);
-          const dist = Math.hypot(p.x - last.x, p.y - last.y);
-          const steps = Math.max(1, Math.ceil(dist / Math.max(1, radius * 0.4)));
+          const steps = Math.max(1, Math.ceil(Math.hypot(p.x - last.x, p.y - last.y) / Math.max(1, radius * 0.4)));
           for (let i = 1; i <= steps; i++) stamp(last.x + ((p.x - last.x) * i) / steps, last.y + ((p.y - last.y) * i) / steps);
           last = p;
-          if (w * h <= 1_000_000) preview.schedule();
+          if (small) preview.schedule();
         },
         up() {
           commitPixels(layer.id, result(), before);
         },
       };
+      for (const [k, ctx] of queued) live[k]?.(ctx);
+      queued.length = 0;
     });
+    return {
+      move: (m) => (live ? live.move?.(m) : queued.push(['move', m])),
+      up: (m) => (live ? live.up?.(m) : queued.push(['up', m])),
+    };
   };
 }
+
+const opBrush = (kind: 'filter' | 'adjust') =>
+  maskedBrush((_layer, _original) => {
+    const op = rasterOp(getState().opBrush[kind]);
+    if (!op) return null;
+    const params = defaultOpParams(op);
+    return (img, mask) => applyOp(img, op, params, mask);
+  });
+
+/** Paint back what the layer looked like before its most recent change. */
+const undoBrush = maskedBrush(async (layer) => {
+  const past = getState().past;
+  const earlier = [...past].reverse().map((d) => d.shapes.find((s) => s.id === layer.id)).find((s) => s && s.src !== layer.src);
+  if (!earlier) return null;
+  const old = await workingCanvas(earlier);
+  const oldImg = old.getContext('2d')!.getImageData(0, 0, old.width, old.height);
+  return (img, mask) => {
+    if (oldImg.width !== img.width || oldImg.height !== img.height) return;
+    for (let p = 0, i = 0; p < mask.length; p++, i += 4) {
+      const k = mask[p] / 255;
+      if (!k) continue;
+      for (let c = 0; c < 4; c++) img.data[i + c] += (oldImg.data[i + c] - img.data[i + c]) * k;
+    }
+  };
+});
+
+export const undoBrushTool: ToolDef = {
+  ...base,
+  id: 'undobrush',
+  label: 'Undo Brush',
+  key: undefined,
+  icon: toolIcon.undobrush,
+  group: 'tone',
+  hint: '**Drag** to paint back what the layer looked like before its last change.',
+  Options: RetouchOptions,
+  down: undoBrush,
+};
+
+/* ---------- push warp (free-form deform) ---------- */
+
+export const pushWarpTool: ToolDef = {
+  ...base,
+  id: 'pushwarp',
+  label: 'Push Warp',
+  key: undefined,
+  icon: toolIcon.pushwarp,
+  group: 'edit',
+  hint: '**Drag** to push pixels along the stroke, like melting the image. Size sets the reach, hardness how sharply it falls off.',
+  Options: RetouchOptions,
+  down(c): Session | void {
+    const layer = activeLayerOrCreate();
+    const st = getState();
+    const before = st.shapes;
+    const radius = Math.max(2, (st.pbrush.size * pixelScale(layer).sx) / 2);
+    const strength = st.pixel.strength;
+    return lazy(workingCanvas(layer), (canvas) => {
+      const ctx = canvas.getContext('2d')!;
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const w = canvas.width;
+      const h = canvas.height;
+      const preview = makePreview(layer.id, () => (ctx.putImageData(img, 0, 0), canvas));
+      let last = toPixel(layer, c.raw.x, c.raw.y);
+      const push = (cx: number, cy: number, dx: number, dy: number) => {
+        const snap = new Uint8ClampedArray(img.data);
+        const src: Buf = { width: w, height: h, data: snap };
+        const x0 = Math.max(0, Math.floor(cx - radius));
+        const x1 = Math.min(w - 1, Math.ceil(cx + radius));
+        const y0 = Math.max(0, Math.floor(cy - radius));
+        const y1 = Math.min(h - 1, Math.ceil(cy + radius));
+        for (let y = y0; y <= y1; y++)
+          for (let x = x0; x <= x1; x++) {
+            const k = soft(Math.hypot(x + 0.5 - cx, y + 0.5 - cy) / radius, st.pbrush.hardness) * strength;
+            if (k <= 0) continue;
+            const i = (y * w + x) * 4;
+            for (let ch = 0; ch < 4; ch++) img.data[i + ch] = sample(src, x - dx * k, y - dy * k, ch);
+          }
+      };
+      return {
+        move(m) {
+          const p = toPixel(layer, m.raw.x, m.raw.y);
+          const dx = p.x - last.x;
+          const dy = p.y - last.y;
+          if (Math.hypot(dx, dy) < 0.5) return;
+          push(p.x, p.y, dx, dy);
+          last = p;
+          preview.schedule();
+        },
+        up() {
+          ctx.putImageData(img, 0, 0);
+          preview.flush();
+          commitPixels(layer.id, canvas, before);
+        },
+      };
+    });
+  },
+};
 
 export const filterBrushTool: ToolDef = {
   ...base,
@@ -256,4 +365,4 @@ export const adjustBrushTool: ToolDef = {
   down: opBrush('adjust'),
 };
 
-export const pixelTools2: ToolDef[] = [medianBrushTool, colourReplaceTool, backgroundEraserTool, mixerBrushTool, pixelBrushTool, floodEraseTool, columnMarqueeTool, rowMarqueeTool, filterBrushTool, adjustBrushTool];
+export const pixelTools2: ToolDef[] = [medianBrushTool, colourReplaceTool, backgroundEraserTool, mixerBrushTool, pixelBrushTool, floodEraseTool, columnMarqueeTool, rowMarqueeTool, filterBrushTool, adjustBrushTool, undoBrushTool, pushWarpTool];
