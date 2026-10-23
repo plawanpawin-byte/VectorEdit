@@ -761,3 +761,6 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']), select, te
 .dock-group:last-child .dock-tabs button { font-size: 10.5px; padding: 2px 4px; }
 .dock-tabs button { padding: 2px 4px; letter-spacing: -0.1px; }
 .dock-group:last-child .dock-tabs button { font-size: 10px; padding: 2px 3px; }
+/* measured against the Affinity Vector reference at 1902x1014: first tool 5px higher, dividers take 4px */
+.toolbar { padding-top: 1px; }
+.tsep { margin: 2px 0; }
