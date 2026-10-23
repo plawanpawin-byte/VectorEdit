@@ -1,4 +1,4 @@
-import type { Box, Gradient, Pt, Shape } from './types';
+import type { Box, Fade, Gradient, Pt, Shape } from './types';
 import { buildShape } from './shapes';
 import { layoutText } from './textlayout';
 
@@ -64,12 +64,12 @@ export function flatten(s: Shape, steps = 14): P2[] {
   return flattenRing(ptsOf(s), isClosed(s), steps);
 }
 
-/** Flattened closed rings of a shape (outer contour first, then extras). */
-export function rings(s: Shape, steps = 14): P2[][] {
+/** Flattened rings of a shape (outer contour first, then extras). Open paths stay open when `keepOpen` is set. */
+export function rings(s: Shape, steps = 14, keepOpen = false): P2[][] {
   const t = toPath(s);
-  const main = flattenRing(ptsOf(t), true, steps);
+  const main = flattenRing(ptsOf(t), keepOpen ? isClosed(t) : true, steps);
   const extra = extraOf(t).map((r) => flattenRing(r, true, steps));
-  return [main, ...extra].filter((r) => r.length >= 3);
+  return [main, ...extra].filter((r) => r.length >= (keepOpen ? 2 : 3));
 }
 
 export function textBox(s: Shape): Box {
@@ -110,15 +110,22 @@ export function unionBox(boxes: Box[]): Box | null {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
-function mapGradient(g: Gradient | null, f: (p: { x: number; y: number }) => { x: number; y: number }): Gradient | null {
+type MapPt = (p: { x: number; y: number }) => { x: number; y: number };
+
+function mapGradient(g: Gradient | null, f: MapPt): Gradient | null {
   if (!g || !g.p1 || !g.p2) return g;
   return { ...g, p1: f(g.p1), p2: f(g.p2) };
+}
+
+function mapFade(g: Fade | null, f: MapPt): Fade | null {
+  return g ? { ...g, p1: f(g.p1), p2: f(g.p2) } : g;
 }
 
 export function translate(s: Shape, dx: number, dy: number): Shape {
   return {
     ...s,
     gradient: mapGradient(s.gradient, (p) => ({ x: p.x + dx, y: p.y + dy })),
+    fade: mapFade(s.fade, (p) => ({ x: p.x + dx, y: p.y + dy })),
     x: s.x + dx,
     y: s.y + dy,
     pts: s.pts.map((p) => ({ ...p, x: p.x + dx, y: p.y + dy })),
@@ -142,6 +149,7 @@ export function scaleAbout(s: Shape, sx: number, sy: number, ox: number, oy: num
   return {
     ...s,
     gradient: mapGradient(s.gradient, (p) => ({ x: ox + (p.x - ox) * sx, y: oy + (p.y - oy) * sy })),
+    fade: mapFade(s.fade, (p) => ({ x: ox + (p.x - ox) * sx, y: oy + (p.y - oy) * sy })),
     x,
     y,
     w,
@@ -303,7 +311,7 @@ const rot = (q: Pt): Pt => {
     return o;
   };
   const rg = (v: { x: number; y: number }) => ({ x: cx + (v.x - cx) * cos - (v.y - cy) * sin, y: cy + (v.x - cx) * sin + (v.y - cy) * cos });
-  return { ...p, gradient: mapGradient(p.gradient, rg), pts: p.pts.map(rot), extra: (p.extra ?? []).map((ring) => ring.map(rot)) };
+  return { ...p, gradient: mapGradient(p.gradient, rg), fade: mapFade(p.fade, rg), pts: p.pts.map(rot), extra: (p.extra ?? []).map((ring) => ring.map(rot)) };
 }
 
 /** Regular polygon or star inscribed in the box. */
@@ -369,5 +377,6 @@ export function shearShape(s: Shape, deg: number, ox: number, oy: number): Shape
     return o;
   };
   void ox;
-  return { ...p, gradient: mapGradient(p.gradient, (v) => ({ x: v.x + (v.y - oy) * k, y: v.y })), pts: p.pts.map(sh), extra: (p.extra ?? []).map((r) => r.map(sh)) };
+  const sg: MapPt = (v) => ({ x: v.x + (v.y - oy) * k, y: v.y });
+  return { ...p, gradient: mapGradient(p.gradient, sg), fade: mapFade(p.fade, sg), pts: p.pts.map(sh), extra: (p.extra ?? []).map((r) => r.map(sh)) };
 }

@@ -42,6 +42,8 @@ export const toolIcon: Record<string, ReactNode> = {
   redeye: svg(<><path d="M2.5 10S5.5 5 10 5s7.5 5 7.5 5-3 5-7.5 5-7.5-5-7.5-5z" /><circle cx="10" cy="10" r="2.5" /><circle cx="10" cy="10" r=".9" fill="currentColor" stroke="none" /></>),
   crop: svg(<><path d="M6 2.500v11.500h11.500M2.5 6H14v11.5" /></>),
   picker: svg(<><path d="M12.6 3.400a2 2 0 012.8 2.800l-1.4 1.4-2.8-2.800zM10.4 5.600L4 12l-.5 3.500L7 15l6.4-6.4" /><rect x="14" y="13.5" width="3.5" height="3.5" fill="currentColor" stroke="none" /></>),
+  transparency: svg(<><rect x="3.5" y="3.5" width="13" height="13" /><path d="M3.5 7.5h13M3.5 11.5h13M3.5 15.5h13" strokeDasharray="1.5 1.5" opacity=".55" /><path d="M3.5 3.5v13" strokeWidth="3" opacity=".5" /></>),
+  contour: svg(<><rect x="6" y="6" width="8" height="8" /><rect x="3.5" y="3.5" width="13" height="13" opacity=".55" /><rect x="1.5" y="1.5" width="17" height="17" opacity=".3" /></>),
   artboard: svg(
     <>
       <path d="M6.5 2.5v15M13.5 2.5v15M2.5 6.5h15M2.5 13.5h15" />

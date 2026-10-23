@@ -27,7 +27,7 @@ import { ShapeEl } from './ShapeEl';
 import { chooseImageInto } from '../images';
 import { shapeDef, defaultParams } from '../shapes';
 import { addPixelLayer } from '../raster/layer';
-import type { Effect, Shape } from '../types';
+import type { ArrowKind, Effect, Pattern, Shape } from '../types';
 
 const SWATCHES = [
   '#000000', '#262626', '#4d4d4d', '#808080', '#b3b3b3', '#d9d9d9', '#f2efe8', '#ffffff',
@@ -35,6 +35,7 @@ const SWATCHES = [
   '#7a4de0', '#b84fc4', '#e0457b', '#8c5a3c', '#0e3b38', '#17325c', '#4a1c3d', '#5c2a14',
 ];
 
+const ARROWS: [ArrowKind, string][] = [['', 'None'], ['arrow', 'Arrow'], ['open', 'Open arrow'], ['circle', 'Circle'], ['square', 'Square'], ['diamond', 'Diamond'], ['bar', 'Bar']];
 const KIND_LABEL: Record<Shape['kind'], string> = { rect: 'Rectangle', ellipse: 'Ellipse', shape: 'Shape', line: 'Line', path: 'Curve', text: 'Text' };
 const BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity'];
 const label = (b: string) => b.replace(/(^|-)(\w)/g, (_, d, c) => (d ? ' ' : '') + c.toUpperCase());
@@ -217,6 +218,22 @@ const DEFAULT_EFFECT: Record<Effect['type'], Effect> = {
   shadow: { type: 'shadow', enabled: true, color: '#000000', opacity: 0.45, blur: 10, dx: 4, dy: 6 },
   glow: { type: 'glow', enabled: true, color: '#ffd24a', opacity: 0.9, blur: 14, dx: 0, dy: 0 },
   blur: { type: 'blur', enabled: true, color: '#000000', opacity: 1, blur: 6, dx: 0, dy: 0 },
+  innerShadow: { type: 'innerShadow', enabled: true, color: '#000000', opacity: 0.55, blur: 8, dx: 3, dy: 4 },
+  innerGlow: { type: 'innerGlow', enabled: true, color: '#ffffff', opacity: 0.8, blur: 12, dx: 0, dy: 0 },
+  outline: { type: 'outline', enabled: true, color: '#111111', opacity: 1, blur: 6, dx: 0, dy: 0 },
+  overlay: { type: 'overlay', enabled: true, color: '#ff7a1a', opacity: 0.5, blur: 0, dx: 0, dy: 0 },
+  bevel: { type: 'bevel', enabled: true, color: '#ffffff', opacity: 0.9, blur: 8, dx: 0, dy: 0 },
+};
+
+const EFFECT_LABEL: Record<Effect['type'], string> = {
+  shadow: 'Drop shadow',
+  glow: 'Outer glow',
+  blur: 'Gaussian blur',
+  innerShadow: 'Inner shadow',
+  innerGlow: 'Inner glow',
+  outline: 'Outline',
+  overlay: 'Colour overlay',
+  bevel: 'Bevel / emboss',
 };
 
 function ColorBox({ value, onChange, none }: { value: string | null; onChange: (c: string) => void; none?: boolean }) {
@@ -288,6 +305,43 @@ export function Appearance() {
             )}
           </>
         )}
+        <div className="row">
+          <span className="lbl">Pattern</span>
+          <select
+            value={one.pattern?.type ?? ''}
+            onChange={(e) => {
+              const t = e.target.value as Pattern['type'] | '';
+              set({ pattern: t ? { type: t, color: one.pattern?.color ?? '#00000055', size: one.pattern?.size ?? 12, angle: one.pattern?.angle ?? 45, weight: one.pattern?.weight ?? 0.35 } : null });
+            }}
+          >
+            <option value="">None</option>
+            <option value="stripes">Stripes (hatch)</option>
+            <option value="dots">Dots</option>
+            <option value="grid">Grid</option>
+            <option value="cross">Cross-hatch</option>
+            <option value="checker">Checker</option>
+          </select>
+        </div>
+        {one.pattern && (
+          <>
+            <div className="row">
+              <span className="lbl">Colour</span>
+              <ColorBox value={one.pattern.color.slice(0, 7)} onChange={(c) => set({ pattern: { ...one.pattern!, color: c } }, 'pcol')} />
+              <input type="range" min={3} max={80} value={one.pattern.size} onChange={(e) => set({ pattern: { ...one.pattern!, size: Number(e.target.value) } }, 'psz')} />
+              <span className="val">{one.pattern.size}</span>
+            </div>
+            <div className="row">
+              <span className="lbl">Angle</span>
+              <input type="range" min={0} max={180} value={one.pattern.angle} onChange={(e) => set({ pattern: { ...one.pattern!, angle: Number(e.target.value) } }, 'pan')} />
+              <span className="val">{one.pattern.angle}°</span>
+            </div>
+            <div className="row">
+              <span className="lbl">Weight</span>
+              <input type="range" min={0.1} max={0.9} step={0.01} value={one.pattern.weight} onChange={(e) => set({ pattern: { ...one.pattern!, weight: Number(e.target.value) } }, 'pwt')} />
+              <span className="val">{Math.round(one.pattern.weight * 100)}%</span>
+            </div>
+          </>
+        )}
       </Section>
 
       <Section title="Stroke">
@@ -302,6 +356,25 @@ export function Appearance() {
             <div className="row"><span className="lbl">Style</span><Seg value={one.dash ?? 'solid'} options={[['solid', 'Solid'], ['dash', 'Dashed'], ['dot', 'Dotted']]} onChange={(dash) => set({ dash })} /></div>
             <div className="row"><span className="lbl">Cap</span><Seg value={one.cap ?? 'round'} options={[['butt', 'Butt'], ['round', 'Round'], ['square', 'Square']]} onChange={(cap) => set({ cap })} /></div>
             <div className="row"><span className="lbl">Join</span><Seg value={one.join ?? 'round'} options={[['miter', 'Miter'], ['round', 'Round'], ['bevel', 'Bevel']]} onChange={(join) => set({ join })} /></div>
+            {(one.kind === 'rect' || one.kind === 'ellipse' || (one.kind === 'path' && one.closed) || one.kind === 'shape') && (
+              <div className="row"><span className="lbl">Align</span><Seg value={one.strokeAlign ?? 'center'} options={[['center', 'Centre'], ['inside', 'Inside'], ['outside', 'Outside']]} onChange={(strokeAlign) => set({ strokeAlign })} /></div>
+            )}
+            {(one.kind === 'line' || (one.kind === 'path' && !one.closed)) && (
+              <>
+                <div className="row">
+                  <span className="lbl">Start</span>
+                  <select value={one.arrowStart ?? ''} onChange={(e) => set({ arrowStart: e.target.value as ArrowKind })}>
+                    {ARROWS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+                <div className="row">
+                  <span className="lbl">End</span>
+                  <select value={one.arrowEnd ?? ''} onChange={(e) => set({ arrowEnd: e.target.value as ArrowKind })}>
+                    {ARROWS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
           </>
         )}
       </Section>
@@ -340,6 +413,26 @@ export function Appearance() {
         </Section>
       )}
 
+      <Section title="Transparency">
+        {one.fade ? (
+          <>
+            <div className="row">
+              <span className="lbl">Start</span>
+              <input type="range" min={0} max={1} step={0.01} value={one.fade.from} onChange={(e) => set({ fade: { ...one.fade!, from: Number(e.target.value) } }, 'fdf')} />
+              <span className="val">{Math.round(one.fade.from * 100)}%</span>
+            </div>
+            <div className="row">
+              <span className="lbl">End</span>
+              <input type="range" min={0} max={1} step={0.01} value={one.fade.to} onChange={(e) => set({ fade: { ...one.fade!, to: Number(e.target.value) } }, 'fdt')} />
+              <span className="val">{Math.round(one.fade.to * 100)}%</span>
+            </div>
+            <button className="mini wide" onClick={() => set({ fade: null })}>Remove fade</button>
+          </>
+        ) : (
+          <p className="hint tight">Use the Transparency tool to drag a fade across the object.</p>
+        )}
+      </Section>
+
       <Section
         title="Effects"
         right={
@@ -352,9 +445,11 @@ export function Appearance() {
             }}
           >
             <option value="">+ Add</option>
-            <option value="shadow">Drop shadow</option>
-            <option value="glow">Outer glow</option>
-            <option value="blur">Gaussian blur</option>
+            {(Object.keys(EFFECT_LABEL) as Effect['type'][]).map((t) => (
+              <option key={t} value={t}>
+                {EFFECT_LABEL[t]}
+              </option>
+            ))}
           </select>
         }
       >
@@ -364,7 +459,7 @@ export function Appearance() {
             <div className="fx-head">
               <label className="check">
                 <input type="checkbox" checked={fx.enabled} onChange={(e) => setEffect(i, { enabled: e.target.checked })} />
-                {fx.type === 'shadow' ? 'Drop shadow' : fx.type === 'glow' ? 'Outer glow' : 'Gaussian blur'}
+                {EFFECT_LABEL[fx.type]}
               </label>
               <button className="mini" title="Remove effect" onClick={() => set({ effects: one.effects.filter((_, k) => k !== i) })}>×</button>
             </div>
@@ -376,12 +471,14 @@ export function Appearance() {
                 <span className="val">{Math.round(fx.opacity * 100)}%</span>
               </div>
             )}
+            {fx.type !== 'overlay' && (
             <div className="row">
-              <span className="lbl">Radius</span>
+              <span className="lbl">{fx.type === 'outline' ? 'Width' : fx.type === 'bevel' ? 'Depth' : 'Radius'}</span>
               <input type="range" min={0} max={60} value={fx.blur} onChange={(e) => setEffect(i, { blur: Number(e.target.value) })} />
               <span className="val">{fx.blur}</span>
             </div>
-            {fx.type === 'shadow' && (
+            )}
+            {(fx.type === 'shadow' || fx.type === 'innerShadow') && (
               <div className="grid2">
                 <NumField label="X" value={fx.dx} onCommit={(dx) => setEffect(i, { dx })} />
                 <NumField label="Y" value={fx.dy} onCommit={(dy) => setEffect(i, { dy })} />

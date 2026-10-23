@@ -4,6 +4,7 @@ import type { Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Snapshot, Tool, W
 import { bbox, rotateShape, scaleAbout, shearShape, toPath, translate, unionBox } from './geometry';
 import { type BoolOp, booleanPieces, canBoolean } from './boolean';
 import { blankShape, normalizeShape } from './shape';
+import { strokeOutline } from './offset';
 import { defaultParams, shapeDef } from './shapes';
 
 export interface State {
@@ -42,6 +43,7 @@ export interface State {
   brush: { size: number; profile: 'taper' | 'uniform' | 'calligraphic'; taper: number };
   gradientType: 'linear' | 'radial';
   table: { rows: number; cols: number };
+  contour: { steps: number; join: 'round' | 'miter' | 'bevel' };
   /** pixel selection of the layer being edited (not saved, not undoable) */
   pixelSel: PixelSel | null;
   rasterDialog: import('./raster/dialog').RasterDialogState | null;
@@ -118,6 +120,7 @@ let state: State = {
   brush: { size: 12, profile: 'taper', taper: 0.7 },
   gradientType: 'linear',
   table: { rows: 4, cols: 3 },
+  contour: { steps: 3, join: 'round' },
   pixelSel: null,
   rasterDialog: null,
   pbrush: { preset: 'round', size: 24, hardness: 0.85, opacity: 1, flow: 1, spacing: 0.12, roundness: 1, angle: 0, texture: 'none', jitter: 0 },
@@ -695,5 +698,32 @@ export function booleanOp(op: BoolOp): boolean {
   const rest = state.shapes.filter((s) => !ids.has(s.id));
   const insertAt = state.shapes.slice(0, at).filter((s) => !ids.has(s.id)).length;
   commit([...rest.slice(0, insertAt), ...made, ...rest.slice(insertAt)], { selection: made.map((m) => m.id) });
+  return true;
+}
+
+/** Replace stroked shapes with filled outlines of their strokes. */
+export function expandStroke() {
+  const sel = new Set(state.selection);
+  const targets = state.shapes.filter((s) => sel.has(s.id) && !s.locked && s.stroke && s.kind !== 'text' && !s.raster);
+  if (!targets.length) return false;
+  const replaced = new Map<string, Shape[]>();
+  for (const s of targets) {
+    const parts = strokeOutline(s);
+    if (!parts.length) continue;
+    replaced.set(
+      s.id,
+      parts.map((c, i) =>
+        makeShape('path', { name: `${s.name} stroke${parts.length > 1 ? ` ${i + 1}` : ''}`, pts: c.outer, extra: c.holes, closed: true, fill: s.stroke, stroke: null, opacity: s.opacity, group: s.group }),
+      ),
+    );
+  }
+  if (!replaced.size) return false;
+  const next = state.shapes.flatMap((s) => {
+    const parts = replaced.get(s.id);
+    if (!parts) return [s];
+    // keep the fill of the original (without its stroke) under the new outline
+    return s.fill || s.gradient ? [{ ...s, stroke: null }, ...parts] : parts;
+  });
+  commit(next, { selection: Array.from(replaced.values()).flat().map((p) => p.id) });
   return true;
 }

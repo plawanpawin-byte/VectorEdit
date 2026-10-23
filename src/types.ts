@@ -21,6 +21,8 @@ export type BaseTool =
   | 'image'
   | 'table'
   | 'frame-rect'
+  | 'transparency'
+  | 'contour'
   | 'brush'
   | 'eraser'
   | 'bucket'
@@ -79,8 +81,30 @@ export interface Gradient {
   p2?: { x: number; y: number };
 }
 
+export type ArrowKind = '' | 'arrow' | 'open' | 'circle' | 'square' | 'diamond' | 'bar';
+export type StrokeAlign = 'center' | 'inside' | 'outside';
+
+export interface Pattern {
+  type: 'stripes' | 'dots' | 'grid' | 'cross' | 'checker';
+  color: string;
+  /** cell size in px */
+  size: number;
+  /** degrees */
+  angle: number;
+  /** line weight (or dot size) as a fraction of the cell */
+  weight: number;
+}
+
+/** A transparency gradient: opacity runs from `from` at p1 to `to` at p2. */
+export interface Fade {
+  p1: { x: number; y: number };
+  p2: { x: number; y: number };
+  from: number;
+  to: number;
+}
+
 export interface Effect {
-  type: 'shadow' | 'glow' | 'blur';
+  type: 'shadow' | 'glow' | 'blur' | 'innerShadow' | 'innerGlow' | 'outline' | 'overlay' | 'bevel';
   enabled: boolean;
   color: string;
   opacity: number;
@@ -139,8 +163,13 @@ export interface Shape {
   rh: number;
   fill: string | null;
   gradient: Gradient | null;
+  pattern: Pattern | null;
+  fade: Fade | null;
   stroke: string | null;
   strokeWidth: number;
+  strokeAlign: StrokeAlign;
+  arrowStart: ArrowKind;
+  arrowEnd: ArrowKind;
   dash: Dash;
   cap: Cap;
   join: Join;

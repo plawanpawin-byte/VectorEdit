@@ -8,6 +8,7 @@ import { eyedropperTool, fillTool, rotateTool } from './paint';
 import { cornerTool, nodeTool, selectTool } from './select';
 import { ellipseTool, lineTool, rectTool, rrectTool, shapeTools } from './shapes';
 import { pixelTools } from './pixel';
+import { contourTool, transparencyTool } from './transparency';
 import { frameTextTool, textTool } from './text';
 import type { ToolDef } from './types';
 import { handTool, measureTool, zoomTool } from './view';
@@ -30,7 +31,9 @@ export const TOOLS: ToolDef[] = [
   ...shapeTools,
   knifeTool,
   scissorsTool,
+  contourTool,
   fillTool,
+  transparencyTool,
   eyedropperTool,
   artboardTool,
   imageTool,
