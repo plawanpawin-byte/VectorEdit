@@ -1,7 +1,23 @@
 # VectorEdit
 
-A browser-based vector editor with a dense, dark, panel-driven workspace in the style of professional design tools.
-Everything (UI, tools, state) is original code: React, TypeScript and plain CSS, no UI kit.
+A free, open-source vector, pixel and layout editor with a dense, dark, panel-driven workspace in the style of professional design tools.
+It runs as a **Windows desktop app** and in any modern **web browser**. Everything (UI, tools, state) is original code: React, TypeScript and plain CSS, no UI kit.
+
+## Get it
+
+| How | Steps |
+| --- | --- |
+| **Windows app** | Open the repository's **Releases** page and download `VectorEdit-Setup-<version>.exe` (installer) or `VectorEdit-Portable-<version>.exe` (no install, just run it). The app is not code-signed, so Windows SmartScreen warns the first time: *More info → Run anyway*. |
+| **In the browser** | When the maintainer has published the web version, open the repository's GitHub Pages address. Nothing to install; your work stays in that browser. |
+| **From source** | `npm install`, then `npm run dev` (browser) or `npm run electron:start` (desktop). See below. |
+
+## Your files and privacy
+
+VectorEdit has **no accounts, no server and no sync**. Nothing you create is uploaded anywhere, and nobody else can see it.
+
+- Documents are `.vedit` files that you save where you choose; export to PNG, SVG, PDF or slices.
+- An automatic recovery copy of the page you are working on is kept **only on your own computer** (inside the browser profile or the desktop app's data folder). Every person who installs the app starts with an empty page and never sees anyone else's work.
+- The start page lists the files you recently opened or saved (desktop app, stored on your computer). Use **Discard unsaved work** on the start page to delete the recovery copy.
 
 ## Run
 
@@ -37,7 +53,7 @@ Double-clicking a `.vedit` file opens it in the running app; closing the window 
 
 ## Starting, opening and importing
 
-The app opens on a **New Document** dialog: A0–A6, Letter, Legal and Tabloid paper, screen, social and photo sizes, or a custom
+The app opens on a **start page** with **New document…** (Ctrl+N), **Open…** (Ctrl+O) and your recent files. New document offers A0–A6, Letter, Legal and Tabloid paper, screen, social and photo sizes, or a custom
 width and height in px, mm, cm, pt or in, in portrait or landscape. **File → Import images or SVG** (Ctrl+Shift+I in the desktop app),
 dragging files onto the window, and **Ctrl+V** all bring in PNG, JPG, GIF, WebP, BMP, AVIF, ICO and SVG. SVG files become editable
 shapes; pictures become image layers. Pasting a screenshot or SVG code works too.
@@ -77,7 +93,7 @@ tests/                              Vitest suites
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed.
+See [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed (see [LICENSE](LICENSE)).
 
 ## Disclaimer
 

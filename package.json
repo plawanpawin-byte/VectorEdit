@@ -1,7 +1,7 @@
 {
   "name": "vectoredit",
   "version": "0.1.0",
-  "description": "Vector graphics editor",
+  "description": "Open-source vector, pixel and layout editor for the desktop and the browser",
   "main": "electron/main.cjs",
   "scripts": {
     "test": "vitest run",
@@ -18,14 +18,20 @@
     "type": "git",
     "url": "git+https://github.com/plawanpawin-byte/VectorEdit.git"
   },
-  "keywords": [],
+  "keywords": [
+    "vector",
+    "editor",
+    "graphics",
+    "electron",
+    "svg"
+  ],
   "author": "plawanpawin-byte",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/plawanpawin-byte/vectoredit/issues"
+    "url": "https://github.com/plawanpawin-byte/VectorEdit/issues"
   },
   "homepage": "https://github.com/plawanpawin-byte/VectorEdit#readme",
-  "private": "true",
+  "private": true,
   "type": "module",
   "dependencies": {
     "clipper-lib": "^6.4.2",

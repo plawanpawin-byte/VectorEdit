@@ -83,6 +83,8 @@ export async function restoreAutosave(): Promise<boolean> {
     const raw = (await idbGet()) ?? localGet();
     if (!raw) return false;
     const d = parseDoc(raw);
+    // an empty page is not work worth restoring
+    if (!d.shapes.length) return false;
     await preloadRasters(d.shapes.map(normalizeShape).filter((x): x is Shape => x !== null));
     loadDocument(d.shapes, d.artboards, null, { guides: d.guides, slices: d.slices, snapshots: d.snapshots });
     // the canvas refits once it knows its size; the restored work has no file yet, so it counts as unsaved

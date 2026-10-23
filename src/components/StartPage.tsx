@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { openDoc, openRecent } from '../fileio';
-import { openNewDocument, setState, useStore } from '../store';
+import { clearAutosave } from '../persist';
+import { newDocument, openNewDocument, openStartPage, setState, useStore } from '../store';
 
 interface Recent {
   path: string;
@@ -23,6 +24,14 @@ export function StartPage() {
 
   if (!open) return null;
   const close = () => setState({ startOpen: false });
+  // throw away the restored work (and its autosave copy) and start from an empty page
+  const discard = () => {
+    if (!window.confirm('Discard the unsaved work, including its images, and start with an empty page?')) return;
+    void clearAutosave().then(() => {
+      newDocument();
+      openStartPage();
+    });
+  };
   // drawn on document.body so the editor's panels and menu bar can never paint over it
   return createPortal(
     <div className="startpage" role="dialog" aria-label="Start">
@@ -39,6 +48,11 @@ export function StartPage() {
           {unsaved && (
             <button className="start-secondary" onClick={close}>
               Continue unsaved work
+            </button>
+          )}
+          {unsaved && (
+            <button className="start-secondary" onClick={discard}>
+              Discard unsaved work
             </button>
           )}
         </div>
