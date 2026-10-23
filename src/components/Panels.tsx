@@ -26,13 +26,14 @@ import {
   endLive,
 } from '../store';
 import { Duplicate, Eye, I, Lock, Trash } from './Icons';
-import { NumField, Section } from './Fields';
+import { NumField, Section, UnitField } from './Fields';
 import { Artwork } from './Artwork';
 import { ShapeEl } from './ShapeEl';
 import { chooseImageInto } from '../images';
 import { shapeDef, defaultParams } from '../shapes';
 import { addPixelLayer } from '../raster/layer';
 import { cmykToRgb, rgbToCmyk } from '../cmyk';
+import { ColorWheel } from './ColorWheel';
 import { buildTree, membersOf, type TreeNode } from '../groups';
 import { defaultMesh } from '../mesh';
 import { ADJUSTMENTS, adjustDef, defaultAdjust } from '../adjustments';
@@ -130,9 +131,42 @@ export function ColorPanel() {
     setColor(target, out);
   };
 
+  const [mode, setMode] = useState<'wheel' | 'square'>('wheel');
+  const selection = useStore((st) => st.selection);
+  const shapes = useStore((st) => st.shapes);
+  const firstSel = shapes.find((x) => selection.includes(x.id));
+  const hsl = (() => {
+    const [r, g, bl] = hex2rgb(hex).map((c) => c / 255);
+    const mx = Math.max(r, g, bl), mn = Math.min(r, g, bl);
+    const l = (mx + mn) / 2;
+    const sat = mx === mn ? 0 : l > 0.5 ? (mx - mn) / (2 - mx - mn) : (mx - mn) / (mx + mn);
+    return { s: Math.round(sat * 100), l: Math.round(l * 100) };
+  })();
+
   return (
     <div className="panel-body color-panel">
       <FillStrokeChips />
+      <div className="color-modes">
+        <button className={mode === 'wheel' ? 'on' : ''} onClick={() => setMode('wheel')}>Wheel</button>
+        <button className={mode === 'square' ? 'on' : ''} onClick={() => setMode('square')}>Square</button>
+      </div>
+      {mode === 'wheel' && (
+        <div className="wheel-wrap">
+          <ColorWheel
+            hue={hue}
+            s={s0}
+            v={v0}
+            onChange={(h, s, v) => {
+              setHue(h);
+              const out = hsv2hex(h, s, v);
+              last.current = out;
+              setColor(target, out);
+            }}
+          />
+        </div>
+      )}
+      {mode === 'square' && (
+        <>
       <div
         ref={sq}
         className="sv"
@@ -161,10 +195,12 @@ export function ColorPanel() {
           setColor(target, out);
         }}
       />
+        </>
+      )}
       <div className="color-read">
         <span>H {Math.round(hue)}°</span>
-        <span>S {Math.round(s0 * 100)}%</span>
-        <span>B {Math.round(v0 * 100)}%</span>
+        <span>S {hsl.s}%</span>
+        <span>L {hsl.l}%</span>
         <input
           className="hex"
           key={hex}
@@ -172,6 +208,19 @@ export function ColorPanel() {
           onBlur={(e) => /^#[0-9a-f]{6}$/i.test(e.target.value) && setColor(target, e.target.value.toLowerCase())}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
         />
+      </div>
+      <div className="opacity-row">
+        <span>Opacity</span>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          disabled={!firstSel}
+          value={Math.round((firstSel?.opacity ?? 1) * 100)}
+          onChange={(e) => updateSelected((x) => ({ ...x, opacity: Number(e.target.value) / 100 }), 'opacity')}
+          style={{ ['--c' as string]: hex }}
+        />
+        <em>{Math.round((firstSel?.opacity ?? 1) * 100)} %</em>
       </div>
       {value && (
         <div className="cmyk-row" title="Plain conversion without a colour profile">
@@ -803,10 +852,10 @@ export function TransformPanel() {
   return (
     <div className="panel-body pad">
       <div className="grid2">
-        <NumField label="X" value={box?.x ?? null} suffix="px" disabled={!box} onCommit={(x) => box && setTransform(box, { x })} />
-        <NumField label="W" value={box?.w ?? null} suffix="px" min={0.01} disabled={!box} onCommit={(w) => box && setTransform(box, { w })} />
-        <NumField label="Y" value={box?.y ?? null} suffix="px" disabled={!box} onCommit={(y) => box && setTransform(box, { y })} />
-        <NumField label="H" value={box?.h ?? null} suffix="px" min={0.01} disabled={!box} onCommit={(h) => box && setTransform(box, { h })} />
+        <UnitField label="X" value={box?.x ?? null} disabled={!box} onCommit={(x) => box && setTransform(box, { x })} />
+        <UnitField label="W" value={box?.w ?? null} min={0.01} disabled={!box} onCommit={(w) => box && setTransform(box, { w })} />
+        <UnitField label="Y" value={box?.y ?? null} disabled={!box} onCommit={(y) => box && setTransform(box, { y })} />
+        <UnitField label="H" value={box?.h ?? null} min={0.01} disabled={!box} onCommit={(h) => box && setTransform(box, { h })} />
         <NumField label="R" value={0} suffix="°" disabled={!box} onCommit={(deg) => rotateSelection(deg)} />
         <NumField label="S" value={0} suffix="°" disabled={!box} onCommit={(deg) => shearSelection(Math.max(-80, Math.min(80, deg)))} />
       </div>

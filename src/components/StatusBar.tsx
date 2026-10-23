@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { fitArtboard, useStore, zoomTo } from '../store';
+import { fitArtboard, setActiveArtboard, useStore, zoomTo } from '../store';
 import { toolDef } from '../tools/registry';
 
 // hints come from the active tool; **word** renders bold
@@ -19,8 +19,20 @@ export function StatusBar() {
   const cursor = useStore((s) => s.cursor);
   const tool = useStore((s) => s.tool);
   const count = useStore((s) => s.shapes.length);
+  const boards = useStore((s) => s.artboards);
+  const active = useStore((s) => s.activeArtboard);
+  const idx = Math.max(0, boards.findIndex((b) => b.id === active));
+  const go = (i: number) => boards[i] && setActiveArtboard(boards[Math.max(0, Math.min(boards.length - 1, i))].id, true);
   return (
     <footer className="statusbar">
+      <div className="pagenav">
+        <button title="First page" disabled={idx === 0} onClick={() => go(0)}>⏮</button>
+        <button title="Previous page" disabled={idx === 0} onClick={() => go(idx - 1)}>◀</button>
+        <span>{idx + 1} of {boards.length}</span>
+        <button title="Next page" disabled={idx >= boards.length - 1} onClick={() => go(idx + 1)}>▶</button>
+        <button title="Last page" disabled={idx >= boards.length - 1} onClick={() => go(boards.length - 1)}>⏭</button>
+      </div>
+      <span className="sep" />
       <select
         value=""
         onChange={(e) => {

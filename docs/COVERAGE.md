@@ -89,3 +89,16 @@ Multiple pages, master pages, guides, snapshots, history panel, autosave and rec
 SVG import (shapes, paths with all commands, groups, transforms, solid colours; File → Import SVG) — 🟡: no gradients, text, images or filters.
 PDF export, one page per artboard — 🟡: pages made of plain shapes (fills, strokes, dashes, opacity, holes) are true vector; pages with text, images, gradients, effects, blend modes or masks fall back to a 2× JPEG and the app says why.
 CMYK colour entry in the Color panel (plain conversion, no profile) — 🟡; CMYK/ICC export, bleed and print marks, import of other editors' file formats — ❌.
+
+## Interface parity with the reference layout studio
+Compared against a screenshot of the reference editor's Layout studio (1911×1006).
+| Area | Reference | Here |
+| --- | --- | --- |
+| Workspace switcher with a coloured active pill | ✅ | ✅ one accent colour per workspace |
+| Context bar: selection name, Auto-select, Document Setup, App Settings | ✅ | ✅ (Auto-select changes how Move picks objects) |
+| Left panel: Pages / Assets, collapsible Master Pages and Pages sections with large page thumbnails | ✅ | ✅ (no Stock tab) |
+| Colour panel: hue ring with triangle, H/S/L readout, hex, opacity slider on a checkerboard | ✅ | ✅ (plus a square picker and CMYK fields) |
+| Layers / Character / Paragraph / Text Styles tabs | ✅ | ✅ (Text Styles is named Styles) |
+| Transform panel with X/Y/W/H/R/S in physical units | ✅ | ✅ px, mm, cm, pt or in (App Settings) |
+| Status bar with page navigation ("1 of 1") and tool hint | ✅ | ✅ |
+| Page thumbnails strip with page navigation buttons, Stock panel, anchor grid in Transform, panel icon rows | ✅ | ❌ not reproduced |

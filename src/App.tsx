@@ -277,7 +277,7 @@ export function App() {
         </main>
         <aside className="dock">
           <Dock
-            grow={1.1}
+            grow={1.6}
             tabs={[
               { id: 'color', label: 'Color', body: <ColorPanel /> },
               { id: 'swatches', label: 'Swatches', body: <Swatches /> },

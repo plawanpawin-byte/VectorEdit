@@ -1,8 +1,9 @@
 import { bbox, unionBox } from '../geometry';
 import { fitArtboard, setColor, setState, setTransform, updateArtboard, useStore } from '../store';
-import { NumField } from './Fields';
+import { NumField, UnitField } from './Fields';
 import { Popover } from './TopBar';
 import { toolDef } from '../tools/registry';
+import { UNITS, type Unit } from '../units';
 
 const PRESETS: [string, number, number][] = [
   ['A4 (72 dpi)', 595, 842],
@@ -23,6 +24,8 @@ export function ContextBar() {
   const activeId = useStore((s) => s.activeArtboard);
   const artboard = artboards.find((a) => a.id === activeId) ?? artboards[0];
   const tool = useStore((s) => s.tool);
+  const autoSelect = useStore((s) => s.autoSelect);
+  const units = useStore((s) => s.units);
   const Options = toolDef(tool)?.Options;
   const sel = shapes.filter((s) => selection.includes(s.id));
   const box = unionBox(sel.map(bbox));
@@ -30,15 +33,36 @@ export function ContextBar() {
   return (
     <div className="contextbar">
       <span className="ctx">{sel.length === 0 ? 'No Selection' : sel.length === 1 ? sel[0].name : `${sel.length} Objects`}</span>
+      {tool === 'select' && (
+        <label className="check autosel" title="When off, only the current selection can be moved; drag elsewhere to marquee-select">
+          <input type="checkbox" checked={autoSelect} onChange={(e) => setState({ autoSelect: e.target.checked })} /> Auto-select
+        </label>
+      )}
       {sel.length === 0 ? (
         <>
+          <Popover button={<span className="txtbtn">App Settings…</span>} className="left wide">
+            {() => (
+              <div className="doc-setup">
+                <h4>App Settings</h4>
+                <label className="setting">
+                  <span>Units</span>
+                  <select value={units} onChange={(e) => setState({ units: e.target.value as Unit })}>
+                    {UNITS.map((u) => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </label>
+                <p className="hint tight">Units change what fields show and accept; documents are always stored in pixels (96 per inch).</p>
+              </div>
+            )}
+          </Popover>
           <Popover button={<span className="txtbtn">Document Setup…</span>} className="left wide">
             {(close) => (
               <div className="doc-setup">
                 <h4>Document Setup</h4>
                 <div className="grid2">
-                  <NumField label="W" value={artboard.w} suffix="px" min={1} onCommit={(w) => updateArtboard(artboard.id, { w }, 'abw')} />
-                  <NumField label="H" value={artboard.h} suffix="px" min={1} onCommit={(h) => updateArtboard(artboard.id, { h }, 'abh')} />
+                  <UnitField label="W" value={artboard.w} min={1} onCommit={(w) => updateArtboard(artboard.id, { w }, 'abw')} />
+                  <UnitField label="H" value={artboard.h} min={1} onCommit={(h) => updateArtboard(artboard.id, { h }, 'abh')} />
                 </div>
                 <h5>Presets</h5>
                 <div className="presets">
@@ -88,10 +112,10 @@ export function ContextBar() {
       {box && (
         <>
           <i className="vr" />
-          <NumField label="X" value={box.x} onCommit={(x) => setTransform(box, { x })} />
-          <NumField label="Y" value={box.y} onCommit={(y) => setTransform(box, { y })} />
-          <NumField label="W" value={box.w} min={0.01} onCommit={(w) => setTransform(box, { w })} />
-          <NumField label="H" value={box.h} min={0.01} onCommit={(h) => setTransform(box, { h })} />
+          <UnitField label="X" value={box.x} onCommit={(x) => setTransform(box, { x })} />
+          <UnitField label="Y" value={box.y} onCommit={(y) => setTransform(box, { y })} />
+          <UnitField label="W" value={box.w} min={0.01} onCommit={(w) => setTransform(box, { w })} />
+          <UnitField label="H" value={box.h} min={0.01} onCommit={(h) => setTransform(box, { h })} />
         </>
       )}
     </div>

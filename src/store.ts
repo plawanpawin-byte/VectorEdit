@@ -4,6 +4,7 @@ import type { AdjustType, Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Slice
 import { bbox, rotateShape, scaleAbout, shearShape, toPath, translate, unionBox } from './geometry';
 import { type BoolOp, booleanPieces, canBoolean } from './boolean';
 import { inGroup, topGroup, unwrapGroup, wrapGroup } from './groups';
+import type { Unit } from './units';
 import { type Row, fill as fillText } from './datamerge';
 import { adjustDef, defaultAdjust } from './adjustments';
 import { blankShape, normalizeShape } from './shape';
@@ -54,6 +55,8 @@ export interface State {
   rasterDialog: import('./raster/dialog').RasterDialogState | null;
   warpGrid: number;
   blendSteps: number;
+  units: Unit;
+  autoSelect: boolean;
   pickerSize: number;
   opBrush: { filter: string; adjust: string };
   macroRecording: boolean;
@@ -138,6 +141,8 @@ let state: State = {
   rasterDialog: null,
   warpGrid: 4,
   blendSteps: 5,
+  units: 'px',
+  autoSelect: true,
   pickerSize: 5,
   opBrush: { filter: 'gaussian-blur', adjust: 'brightness-contrast' },
   macroRecording: false,

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useStore } from '../store';
+import { fromPx, toPx } from '../units';
 
 export function NumField({
   label,
@@ -64,5 +66,22 @@ export function Section({ title, children, right }: { title: string; children: R
       </header>
       {open && <div className="section-body">{children}</div>}
     </section>
+  );
+}
+
+/** A length field that shows and accepts the interface unit while the value stays in pixels. */
+export function UnitField({ label, value, onCommit, min, disabled }: { label: string; value: number | null; onCommit: (px: number) => void; min?: number; disabled?: boolean }) {
+  const unit = useStore((s) => s.units);
+  const digits = unit === 'px' ? 2 : 3;
+  const round = (v: number) => Math.round(v * 10 ** digits) / 10 ** digits;
+  return (
+    <NumField
+      label={label}
+      value={value === null ? null : round(fromPx(value, unit))}
+      suffix={unit}
+      min={min === undefined ? undefined : round(fromPx(min, unit))}
+      disabled={disabled}
+      onCommit={(v) => onCommit(toPx(v, unit))}
+    />
   );
 }

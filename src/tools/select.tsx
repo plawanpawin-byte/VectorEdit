@@ -95,8 +95,15 @@ function selectDown(c: PointerCtx): Session | void {
     const box = unionBox(sel.map(bbox));
     if (box) return resizeSession(handle, box, sel, st.shapes);
   }
-  const hit = shapeAt(st, c.raw, c.tol);
+  let hit = shapeAt(st, c.raw, c.tol);
+  if (hit && !st.autoSelect && !c.shift && !st.selection.includes(hit.id)) hit = undefined; // Auto-select off: only the current selection can be grabbed
   if (!hit) {
+    if (!st.autoSelect && !c.shift && st.selection.length) {
+      // inside the selection's box a drag still moves it; elsewhere it starts a marquee
+      const sel = editableSelection(st);
+      const box = unionBox(sel.map(bbox));
+      if (box && c.raw.x >= box.x && c.raw.x <= box.x + box.w && c.raw.y >= box.y && c.raw.y <= box.y + box.h) return moveSession(c, sel, st.shapes);
+    }
     const base = c.shift ? st.selection : [];
     setState({ selection: base });
     return marquee(c, base);

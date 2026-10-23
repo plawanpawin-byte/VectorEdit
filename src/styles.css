@@ -596,3 +596,45 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 .cmyk-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 4px 12px 10px; }
 .cmyk-row label { display: grid; grid-template-columns: 12px 1fr; align-items: center; gap: 4px; color: var(--text-dim); }
 .cmyk-row input { width: 100%; height: 20px; padding: 0 3px; }
+
+/* pages panel: collapsible sections like a page-layout app */
+.pages-section { border-bottom: 1px solid var(--line); }
+.pages-head { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; background: var(--ui-3); color: var(--text); cursor: default; }
+.pages-head span { font-weight: 600; }
+.pages-head em { font-style: normal; color: var(--text-faint); font-size: 10.5px; }
+.pages-head button { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 3px; color: var(--text-dim); }
+.pages-head button:not(:disabled):hover { background: var(--ui-4); color: var(--text); }
+.pages .page-grid { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; justify-content: flex-start; }
+.pages .page { width: 108px; text-align: center; }
+.pages .page .thumb-page { width: 100%; height: 130px; background: #fff; border: 2px solid transparent; border-radius: 2px; }
+.pages .page.on .thumb-page { border-color: #8a8f98; }
+.pages .page .pname { display: block; margin-top: 4px; color: var(--text); }
+.pages .page em { display: none; }
+.master-box { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+
+.pagenav { display: flex; align-items: center; gap: 4px; }
+.pagenav button { width: 18px; height: 18px; font-size: 9px; border-radius: 3px; color: var(--text-dim); }
+.pagenav button:not(:disabled):hover { background: var(--ui-4); color: var(--text); }
+.pagenav span { min-width: 44px; text-align: center; }
+/* each workspace has its own accent, like the reference app */
+.modes button.on { background: var(--ws, var(--brand)); color: #151515; }
+
+.wheel-wrap { display: grid; place-items: center; padding: 6px 0 2px; }
+.wheel { position: relative; touch-action: none; user-select: none; }
+.wheel canvas, .wheel svg { position: absolute; inset: 0; }
+.wheel-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+  -webkit-mask: radial-gradient(circle, transparent calc(50% - 15px), #000 calc(50% - 14px), #000 calc(50% - 1px), transparent 50%);
+  mask: radial-gradient(circle, transparent calc(50% - 15px), #000 calc(50% - 14px), #000 calc(50% - 1px), transparent 50%);
+}
+.color-modes { display: flex; gap: 2px; padding: 0 12px; }
+.color-modes button { padding: 2px 8px; border-radius: 3px; color: var(--text-faint); font-size: 10.5px; }
+.color-modes button.on { color: var(--text); background: var(--ui-0); }
+.opacity-row { display: grid; grid-template-columns: 48px 1fr 46px; align-items: center; gap: 8px; padding: 2px 12px 6px; color: var(--text-dim); }
+.opacity-row em { font-style: normal; text-align: right; color: var(--text); }
+.opacity-row input[type=range] { -webkit-appearance: none; appearance: none; height: 12px; border-radius: 6px; border: 1px solid #000; background: linear-gradient(90deg, transparent, var(--c, #888)), repeating-conic-gradient(#aaa 0 25%, #ddd 0 50%) 0 0 / 8px 8px; }
+.opacity-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; background: #1b1b1b; border: 2px solid #fff; }
+
+.autosel { margin: 0 8px; }
+.setting { display: grid; grid-template-columns: 60px 1fr; align-items: center; gap: 8px; padding: 4px 0; color: var(--text-dim); }

@@ -82,6 +82,8 @@ function Popover({ button, children, className = '', title }: { button: React.Re
   );
 }
 
+const WS_ACCENT: Record<string, string> = { vector: '#4db6ff', pixel: '#8f9bff', retouching: '#c58bff', colour: '#ffb25c', compositing: '#6fd9a0', layout: '#ff806b', typography: '#ffd45c', slice: '#ff6b6b', scripting: '#a9b4c2' };
+
 const WS_ICON: Record<string, React.ReactNode> = { vector: I.vector, pixel: I.pixel, layout: I.layout, typography: I.typo, slice: I.grid, scripting: I.code, retouching: I.retouch, colour: I.colour, compositing: I.composite };
 
 function OpMenu({ label, kind }: { label: string; kind: 'adjust' | 'filter' }) {
@@ -224,7 +226,7 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
       </div>
       <div className="modes">
         {WORKSPACES.map((m) => (
-          <button key={m.id} className={workspace === m.id ? 'on' : ''} title={m.description} onClick={() => setWorkspace(m.id)}>
+          <button key={m.id} className={workspace === m.id ? 'on' : ''} style={{ ['--ws' as string]: WS_ACCENT[m.id] }} title={m.description} onClick={() => setWorkspace(m.id)}>
             {WS_ICON[m.id]}
             <span>{m.label}</span>
           </button>
