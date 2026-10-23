@@ -57,3 +57,42 @@ export function defaultMesh(n: number, base: string | null): Mesh {
   });
   return { n, colors };
 }
+
+/** Position (0..1 box coordinates) of the grid point at column i, row j. */
+export const meshGridPoint = (mesh: Mesh, i: number, j: number): { x: number; y: number } =>
+  mesh.pts?.[j * mesh.n + i] ?? { x: i / (mesh.n - 1), y: j / (mesh.n - 1) };
+
+/** Piecewise-bilinear position of the mesh surface at parameters (u, v) in 0..1. */
+export function meshPosition(mesh: Mesh, u: number, v: number): { x: number; y: number } {
+  const n = mesh.n;
+  const gx = Math.max(0, Math.min(1, u)) * (n - 1);
+  const gy = Math.max(0, Math.min(1, v)) * (n - 1);
+  const x0 = Math.min(n - 2, Math.floor(gx));
+  const y0 = Math.min(n - 2, Math.floor(gy));
+  const tx = gx - x0;
+  const ty = gy - y0;
+  const a = meshGridPoint(mesh, x0, y0), b = meshGridPoint(mesh, x0 + 1, y0), c = meshGridPoint(mesh, x0, y0 + 1), d = meshGridPoint(mesh, x0 + 1, y0 + 1);
+  const mix = (k: 'x' | 'y') => (a[k] * (1 - tx) + b[k] * tx) * (1 - ty) + (c[k] * (1 - tx) + d[k] * tx) * ty;
+  return { x: mix('x'), y: mix('y') };
+}
+
+export interface MeshQuad {
+  /** four corners in box-relative document units */
+  d: string;
+  fill: string;
+}
+
+/** The mesh as `res`×`res` flat-coloured quads that follow the moved grid points. */
+export function meshQuads(mesh: Mesh, box: { x: number; y: number; w: number; h: number }, res = 40): MeshQuad[] {
+  const out: MeshQuad[] = [];
+  const P = (u: number, v: number) => {
+    const p = meshPosition(mesh, u, v);
+    return `${(box.x + p.x * box.w).toFixed(2)} ${(box.y + p.y * box.h).toFixed(2)}`;
+  };
+  for (let j = 0; j < res; j++)
+    for (let i = 0; i < res; i++) {
+      const u0 = i / res, u1 = (i + 1) / res, v0 = j / res, v1 = (j + 1) / res;
+      out.push({ d: `M${P(u0, v0)}L${P(u1, v0)}L${P(u1, v1)}L${P(u0, v1)}Z`, fill: meshColour(mesh, (u0 + u1) / 2, (v0 + v1) / 2) });
+    }
+  return out;
+}

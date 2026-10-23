@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { ArrowKind, Effect, Pattern, Shape } from '../types';
 import { bbox as bboxOf, isClosed, pathD, toPath } from '../geometry';
-import { meshCells } from '../mesh';
+import { meshCells, meshQuads } from '../mesh';
 import { layoutText } from '../textlayout';
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
@@ -288,9 +288,9 @@ export function ShapeEl({ shape: s, all }: { shape: Shape; all?: Shape[] }) {
     const meshFill =
       s.mesh && closedGeom ? (
         <g key="mesh" clipPath={`url(#${id.mclip})`}>
-          {meshCells(s.mesh, bboxOf(s), 48).map((c, i) => (
-            <rect key={i} x={c.x} y={c.y} width={c.w} height={c.h} fill={c.fill} />
-          ))}
+          {s.mesh.pts
+            ? meshQuads(s.mesh, bboxOf(s), 40).map((q, i) => <path key={i} d={q.d} fill={q.fill} stroke={q.fill} strokeWidth={0.6} />)
+            : meshCells(s.mesh, bboxOf(s), 48).map((c, i) => <rect key={i} x={c.x} y={c.y} width={c.w} height={c.h} fill={c.fill} />)}
         </g>
       ) : null;
     const pattern = s.pattern ? geom({ fill: `url(#${id.pat})`, stroke: 'none' }, 'pattern') : null;

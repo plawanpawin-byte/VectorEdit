@@ -72,7 +72,7 @@ export function normalizeShape(raw: unknown): Shape | null {
   if (legacy === 'polygon') return blankShape(r.id, 'shape', { ...r, kind: 'shape', shapeId: 'polygon', params: { ...defaultParams('polygon'), sides: r.sides ?? 6 } });
   if (legacy === 'star') return blankShape(r.id, 'shape', { ...r, kind: 'shape', shapeId: 'star', params: { ...defaultParams('star'), points: r.sides ?? 5, inner: r.inner ?? 0.5 } });
   const m = r.mesh as Shape['mesh'] | undefined;
-  const mesh = m && typeof m === 'object' && Number.isInteger(m.n) && m.n >= 2 && m.n <= 6 && Array.isArray(m.colors) && m.colors.length === m.n * m.n && m.colors.every((c) => typeof c === 'string') ? m : null;
+  const mesh = m && typeof m === 'object' && Number.isInteger(m.n) && m.n >= 2 && m.n <= 6 && Array.isArray(m.colors) && m.colors.length === m.n * m.n && m.colors.every((c) => typeof c === 'string') ? { ...m, pts: Array.isArray(m.pts) && m.pts.length === m.n * m.n && m.pts.every((q) => q && Number.isFinite(q.x) && Number.isFinite(q.y)) ? m.pts : undefined } : null;
   const adj = r.adjust as Shape['adjust'] | undefined;
   const adjust = adj && typeof adj === 'object' && typeof adj.type === 'string' ? { type: adj.type, a: Number(adj.a) || 0, b: Number(adj.b) || 0, region: !!adj.region } : null;
   return blankShape(r.id, r.kind as ShapeKind, { ...r, mesh, adjust, clip: typeof r.clip === 'string' ? r.clip : null, mask: typeof r.mask === 'string' ? r.mask : '' });

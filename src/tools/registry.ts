@@ -5,7 +5,7 @@ import { brushTool, penTool, pencilTool } from './draw';
 import { frameEllipseTool, frameRectTool, imageTool, tableTool } from './layout';
 import { perspectiveTool, warpTool } from './warp';
 import { pixelTools2 } from './pixel2';
-import { vectorCropTool } from './vector2';
+import { meshEditTool, vectorCropTool } from './vector2';
 import { areaMeasureTool, blendTool, shapeBuilderTool, vectorFloodTool } from './vector2';
 import { sliceTool } from './slice';
 import { knifeTool, scissorsTool } from './edit';
@@ -44,6 +44,7 @@ export const TOOLS: ToolDef[] = [
   vectorFloodTool,
   areaMeasureTool,
   vectorCropTool,
+  meshEditTool,
   fillTool,
   transparencyTool,
   eyedropperTool,

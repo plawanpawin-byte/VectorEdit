@@ -66,6 +66,7 @@ export const toolIcon: Record<string, ReactNode> = {
   rowmarquee: svg(<><path d="M2.500 10h15" strokeDasharray="2 2" /><path d="M2.500 7v6M17.500 7v6" opacity=".6" /></>),
   filterbrush: svg(<><path d="M3 4h14l-5 6v6l-4-2v-4z" /></>),
   adjustbrush: svg(<><circle cx="10" cy="10" r="6.500" /><path d="M10 3.500a6.500 6.500 0 010 13z" fill="currentColor" /></>),
+  meshedit: svg(<><path d="M3 3h14v14H3zM10 3v14M3 10h14" opacity=".6" /><circle cx="10" cy="10" r="2.200" fill="currentColor" /></>),
   slice: svg(<><path d="M2.5 6.5h15M2.5 13.5h15M6.5 2.5v15M13.5 2.5v15" opacity=".45" /><rect x="6.5" y="6.5" width="7" height="7" /></>),
   artboard: svg(
     <>

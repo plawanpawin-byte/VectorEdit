@@ -35,6 +35,7 @@ export type BaseTool =
   | 'patch'
   | 'maskbrush'
   | 'vcrop'
+  | 'meshedit'
   | 'undobrush'
   | 'pushwarp'
   | 'medianbrush'
@@ -123,6 +124,8 @@ export interface Adjust {
 export interface Mesh {
   n: number;
   colors: string[];
+  /** where each grid point sits inside the shape's box (0..1, row-major); absent = an even grid */
+  pts?: { x: number; y: number }[];
 }
 
 export interface Pattern {

@@ -24,3 +24,15 @@ describe('mesh gradient', () => {
     expect(new Set(m.colors).size).toBeGreaterThan(3);
   });
 });
+
+import { meshPosition, meshQuads } from '../src/mesh';
+describe('free-form mesh', () => {
+  it('follows moved grid points', () => {
+    const even = { n: 2, colors: ['#f00', '#0f0', '#00f', '#fff'] };
+    expect(meshPosition(even, 0.5, 0.5)).toEqual({ x: 0.5, y: 0.5 });
+    const moved = { ...even, pts: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 0.5, y: 0.5 }] };
+    const p = meshPosition(moved, 1, 1);
+    expect(p).toEqual({ x: 0.5, y: 0.5 });
+    expect(meshQuads(moved, { x: 0, y: 0, w: 100, h: 100 }, 4)).toHaveLength(16);
+  });
+});

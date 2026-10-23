@@ -1,6 +1,8 @@
 import { blendShapes } from '../blend';
 import { canBoolean } from '../boolean';
-import { commit, getState, makeShape, setState, useStore } from '../store';
+import { bbox } from '../geometry';
+import { meshGridPoint } from '../mesh';
+import { commit, endLive, getState, live, makeShape, setState, useStore } from '../store';
 import { divideRegions, multiPolygonD, regionContains, unionRegions, type Region } from '../objectops';
 import type { Pt, Shape } from '../types';
 import { NumField } from '../components/Fields';
@@ -226,6 +228,81 @@ export const vectorCropTool: ToolDef = {
         const top = Math.max(...targets.map((t) => st.shapes.indexOf(t)));
         const clipped = st.shapes.map((s) => (ids.has(s.id) ? { ...s, clip: mask.id } : s));
         commit([...clipped.slice(0, top + 1), mask, ...clipped.slice(top + 1)], { selection: targets.map((t) => t.id) });
+      },
+    };
+  },
+};
+
+/* ---------- Mesh editing: drag the grid points of a mesh fill ---------- */
+
+export const meshEditTool: ToolDef = {
+  id: 'meshedit',
+  label: 'Mesh Edit',
+  key: undefined,
+  icon: toolIcon.meshedit,
+  group: 'paint',
+  workspaces: ['vector', 'layout'],
+  cursor: 'crosshair',
+  hint: 'Select a shape with a mesh fill (Appearance → Mesh), then **drag** a grid point to bend the colours. **Alt-click** a point to reset it.',
+  chrome: 'outline',
+  down(c): Session | void {
+    const shape = c.st.shapes.find((s) => c.st.selection.includes(s.id) && s.mesh);
+    if (!shape?.mesh) return;
+    const box = bbox(shape);
+    const mesh = shape.mesh;
+    const n = mesh.n;
+    const at = (i: number, j: number) => {
+      const p = meshGridPoint(mesh, i, j);
+      return { x: box.x + p.x * box.w, y: box.y + p.y * box.h };
+    };
+    let best = -1;
+    let bd = c.tol * 3;
+    for (let j = 0; j < n; j++)
+      for (let i = 0; i < n; i++) {
+        const p = at(i, j);
+        const d = Math.hypot(p.x - c.raw.x, p.y - c.raw.y);
+        if (d < bd) (bd = d), (best = j * n + i);
+      }
+    const draw = (m: PointerCtx, pts: { x: number; y: number }[], active: number) => {
+      const k = 1 / m.zoom;
+      m.setOverlay(
+        <g pointerEvents="none">
+          {pts.map((p, i) => {
+            const x = box.x + p.x * box.w, y = box.y + p.y * box.h;
+            return (
+              <g key={i}>
+                {i % n < n - 1 && <line x1={x} y1={y} x2={box.x + pts[i + 1].x * box.w} y2={box.y + pts[i + 1].y * box.h} stroke="#fff" strokeOpacity=".6" strokeWidth={k} />}
+                {i + n < pts.length && <line x1={x} y1={y} x2={box.x + pts[i + n].x * box.w} y2={box.y + pts[i + n].y * box.h} stroke="#fff" strokeOpacity=".6" strokeWidth={k} />}
+              </g>
+            );
+          })}
+          {pts.map((p, i) => (
+            <circle key={'c' + i} cx={box.x + p.x * box.w} cy={box.y + p.y * box.h} r={5 * k} fill={i === active ? '#4aa3ff' : '#fff'} stroke="#000" strokeWidth={k} />
+          ))}
+        </g>,
+      );
+    };
+    const grid = Array.from({ length: n * n }, (_, i) => ({ ...meshGridPoint(mesh, i % n, Math.floor(i / n)) }));
+    if (best < 0) {
+      draw(c, grid, -1);
+      return { up: (m) => m.setOverlay(null) };
+    }
+    const before = c.st.shapes;
+    const apply = (pts: { x: number; y: number }[]) => live(before.map((s) => (s.id === shape.id ? { ...s, mesh: { ...mesh, pts } } : s)));
+    if (c.alt) {
+      const pts = grid.map((p, i) => (i === best ? { x: (i % n) / (n - 1), y: Math.floor(i / n) / (n - 1) } : p));
+      apply(pts);
+      return { up: (m) => (m.setOverlay(null), endLive(before)) };
+    }
+    return {
+      move(m) {
+        const pts = grid.map((p, i) => (i === best ? { x: box.w ? (m.raw.x - box.x) / box.w : p.x, y: box.h ? (m.raw.y - box.y) / box.h : p.y } : p));
+        apply(pts);
+        draw(m, pts, best);
+      },
+      up(m) {
+        m.setOverlay(null);
+        endLive(before);
       },
     };
   },
