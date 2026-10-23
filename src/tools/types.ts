@@ -15,6 +15,8 @@ export interface PointerCtx {
   raw: XY;
   /** position inside the canvas viewport, in screen pixels */
   screen: XY;
+  /** pen pressure 0..1; always 1 for a mouse */
+  pressure: number;
   shift: boolean;
   alt: boolean;
   ctrl: boolean;

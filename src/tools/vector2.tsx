@@ -193,3 +193,40 @@ export const areaMeasureTool: ToolDef = {
     areaOverlay(c);
   },
 };
+
+/* ---------- Crop (non-destructive: a clipping mask) ---------- */
+
+export const vectorCropTool: ToolDef = {
+  id: 'vcrop',
+  label: 'Crop',
+  key: undefined,
+  icon: toolIcon.crop,
+  group: 'view',
+  workspaces: ['vector', 'layout', 'typography'],
+  cursor: 'crosshair',
+  hint: 'Select objects or an image, then **drag** the area to keep. Everything outside is hidden by a clipping mask; use Release in Layers to undo it.',
+  chrome: 'outline',
+  down(c): Session | void {
+    const targets = c.st.shapes.filter((s) => c.st.selection.includes(s.id) && !s.locked && !s.adjust);
+    if (!targets.length) return;
+    const start = c.p;
+    let box = { x: start.x, y: start.y, w: 0, h: 0 };
+    return {
+      move(m) {
+        box = { x: Math.min(start.x, m.p.x), y: Math.min(start.y, m.p.y), w: Math.abs(m.p.x - start.x), h: Math.abs(m.p.y - start.y) };
+        const k = 1 / m.zoom;
+        m.setOverlay(<rect x={box.x} y={box.y} width={box.w} height={box.h} fill="rgba(255,255,255,.08)" stroke="#fff" strokeWidth={1.5 * k} strokeDasharray={`${5 * k} ${3 * k}`} pointerEvents="none" />);
+      },
+      up(m) {
+        m.setOverlay(null);
+        if (box.w < 2 || box.h < 2) return;
+        const st = getState();
+        const ids = new Set(targets.map((t) => t.id));
+        const mask = makeShape('rect', { name: 'Crop', ...box, fill: null, stroke: null });
+        const top = Math.max(...targets.map((t) => st.shapes.indexOf(t)));
+        const clipped = st.shapes.map((s) => (ids.has(s.id) ? { ...s, clip: mask.id } : s));
+        commit([...clipped.slice(0, top + 1), mask, ...clipped.slice(top + 1)], { selection: targets.map((t) => t.id) });
+      },
+    };
+  },
+};

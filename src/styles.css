@@ -586,3 +586,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 @media (max-width: 1350px) {
   .modes button span { display: none; }
 }
+
+.scope { display: block; width: calc(100% - 20px); margin: 4px 10px; border: 1px solid var(--line); border-radius: 3px; }
+.mini.on { background: var(--ui-0); box-shadow: inset 0 -2px 0 var(--brand); }
+.modes button { white-space: nowrap; }

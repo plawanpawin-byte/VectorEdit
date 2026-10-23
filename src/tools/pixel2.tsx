@@ -365,4 +365,111 @@ export const adjustBrushTool: ToolDef = {
   down: opBrush('adjust'),
 };
 
-export const pixelTools2: ToolDef[] = [medianBrushTool, colourReplaceTool, backgroundEraserTool, mixerBrushTool, pixelBrushTool, floodEraseTool, columnMarqueeTool, rowMarqueeTool, filterBrushTool, adjustBrushTool, undoBrushTool, pushWarpTool];
+/* ---------- patch ---------- */
+
+let patch: { layerId: string; poly: { x: number; y: number }[] } | null = null;
+
+const inPoly = (poly: { x: number; y: number }[], x: number, y: number) => {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    if (poly[i].y > y !== poly[j].y > y && x < ((poly[j].x - poly[i].x) * (y - poly[i].y)) / (poly[j].y - poly[i].y) + poly[i].x) inside = !inside;
+  }
+  return inside;
+};
+
+const patchOverlay = (poly: { x: number; y: number }[], dx: number, dy: number, zoom: number) => {
+  const k = 1 / zoom;
+  const d = poly.map((p, i) => `${i ? 'L' : 'M'}${p.x + dx} ${p.y + dy}`).join('') + 'Z';
+  return (
+    <g pointerEvents="none">
+      <path d={d} fill="rgba(74,163,255,.12)" stroke="#000" strokeOpacity=".6" strokeWidth={3 * k} />
+      <path d={d} fill="none" stroke="#fff" strokeWidth={1.5 * k} strokeDasharray={`${5 * k} ${3 * k}`} />
+    </g>
+  );
+};
+
+export const patchTool: ToolDef = {
+  ...base,
+  id: 'patch',
+  label: 'Patch',
+  key: undefined,
+  icon: toolIcon.patch,
+  group: 'heal',
+  hint: '**Drag** around a flaw to outline it, then **drag the outline** onto clean pixels: the flaw takes the texture of that area but keeps its own tone.',
+  down(c): Session | void {
+    const layer = activeLayerOrCreate();
+    // second gesture: carry the outline to the source area
+    if (patch && patch.layerId === layer.id && inPoly(patch.poly, c.raw.x, c.raw.y)) {
+      const outline = patch.poly;
+      const start = c.raw;
+      let off = { x: 0, y: 0 };
+      return {
+        move(m) {
+          off = { x: m.raw.x - start.x, y: m.raw.y - start.y };
+          m.setOverlay(patchOverlay(outline, off.x, off.y, m.zoom));
+        },
+        up(m) {
+          m.setOverlay(null);
+          patch = null;
+          if (Math.hypot(off.x, off.y) < 2 / m.zoom) return;
+          const before = getState().shapes;
+          const sc = pixelScale(layer);
+          const dx = off.x * sc.sx;
+          const dy = off.y * sc.sy;
+          void Promise.resolve(workingCanvas(layer)).then((canvas) => {
+            const ctx = canvas.getContext('2d')!;
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const w = canvas.width;
+            const h = canvas.height;
+            const src: Buf = { width: w, height: h, data: new Uint8ClampedArray(img.data) };
+            const region = maskFromDraw(layer, (g) => {
+              g.beginPath();
+              outline.forEach((p, i) => {
+                const q = toPixel(layer, p.x, p.y);
+                if (i) g.lineTo(q.x, q.y);
+                else g.moveTo(q.x, q.y);
+              });
+              g.closePath();
+              g.fillStyle = '#fff';
+              g.fill();
+            });
+            const sel = selectionFor(layer)?.mask ?? null;
+            const low = (x: number, y: number, c: number, ox: number, oy: number) => {
+              let a = 0;
+              for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) a += sample(src, x + i + ox, y + j + oy, c);
+              return a / 25;
+            };
+            for (let y = 0; y < h; y++)
+              for (let x = 0; x < w; x++) {
+                const k = (region[y * w + x] / 255) * (sel ? sel[y * w + x] / 255 : 1);
+                if (!k) continue;
+                const i = (y * w + x) * 4;
+                for (let ch = 0; ch < 3; ch++) {
+                  const v = low(x, y, ch, 0, 0) + sample(src, x + dx, y + dy, ch) - low(x, y, ch, dx, dy);
+                  img.data[i + ch] = img.data[i + ch] + (Math.min(255, Math.max(0, v)) - img.data[i + ch]) * k;
+                }
+              }
+            ctx.putImageData(img, 0, 0);
+            commitPixels(layer.id, canvas, before);
+          });
+        },
+      };
+    }
+    // first gesture: outline the flaw
+    patch = null;
+    const pts = [{ x: c.raw.x, y: c.raw.y }];
+    return {
+      move(m) {
+        pts.push({ x: m.raw.x, y: m.raw.y });
+        m.setOverlay(patchOverlay(pts, 0, 0, m.zoom));
+      },
+      up(m) {
+        if (pts.length < 3) return m.setOverlay(null);
+        patch = { layerId: layer.id, poly: pts };
+        m.setOverlay(patchOverlay(pts, 0, 0, m.zoom));
+      },
+    };
+  },
+};
+
+export const pixelTools2: ToolDef[] = [medianBrushTool, colourReplaceTool, backgroundEraserTool, mixerBrushTool, pixelBrushTool, floodEraseTool, columnMarqueeTool, rowMarqueeTool, filterBrushTool, adjustBrushTool, undoBrushTool, pushWarpTool, patchTool];

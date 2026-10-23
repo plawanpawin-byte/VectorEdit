@@ -18,6 +18,8 @@ export interface BrushParams {
   texture: Texture;
   /** random scatter of dabs as a fraction of the size */
   jitter: number;
+  /** what pen pressure controls (a mouse always reports full pressure) */
+  dynamics?: 'none' | 'size' | 'opacity' | 'both';
 }
 
 export interface BrushPreset {
@@ -143,10 +145,14 @@ export class Stroke {
     this.tips = Array.from({ length: variants }, (_, i) => makeTip(this.diameter, { ...p, flow: 1 }, colour, i));
   }
 
+  private pressure = 1;
+
   private stamp(x: number, y: number) {
     const ctx = this.strokeCanvas.getContext('2d')!;
     const tip = this.tips[this.dabCount++ % this.tips.length];
-    ctx.globalAlpha = this.p.flow;
+    const dyn = this.p.dynamics ?? 'none';
+    const sizeK = dyn === 'size' || dyn === 'both' ? Math.max(0.08, this.pressure) : 1;
+    ctx.globalAlpha = this.p.flow * (dyn === 'opacity' || dyn === 'both' ? Math.max(0.05, this.pressure) : 1);
     let px = x;
     let py = y;
     if (this.p.jitter > 0) {
@@ -155,17 +161,21 @@ export class Stroke {
       px += Math.cos(a) * d;
       py += Math.sin(a) * d;
     }
-    ctx.drawImage(tip, px - tip.width / 2, py - tip.height / 2);
+    ctx.drawImage(tip, px - (tip.width * sizeK) / 2, py - (tip.height * sizeK) / 2, tip.width * sizeK, tip.height * sizeK);
   }
 
-  begin(x: number, y: number) {
+  begin(x: number, y: number, pressure = 1) {
+    this.pressure = pressure;
     this.stamp(x, y);
     this.last = { x, y };
     this.render();
   }
 
-  lineTo(x: number, y: number) {
-    if (!this.last) return this.begin(x, y);
+  lineTo(x: number, y: number, pressure = 1) {
+    if (!this.last) return this.begin(x, y, pressure);
+    const p0 = this.pressure;
+    const total = Math.hypot(x - this.last.x, y - this.last.y) || 1;
+    const from = { x: this.last.x, y: this.last.y };
     const step = Math.max(0.75, this.diameter * this.p.spacing);
     let { x: lx, y: ly } = this.last;
     let dist = Math.hypot(x - lx, y - ly);
@@ -173,11 +183,13 @@ export class Stroke {
       const t = (step - this.carry) / dist;
       lx += (x - lx) * t;
       ly += (y - ly) * t;
+      this.pressure = p0 + (pressure - p0) * Math.min(1, Math.hypot(lx - from.x, ly - from.y) / total);
       this.stamp(lx, ly);
       dist = Math.hypot(x - lx, y - ly);
       this.carry = 0;
     }
     this.carry += dist;
+    this.pressure = pressure;
     this.last = { x, y };
     this.render();
   }

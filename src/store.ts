@@ -4,6 +4,7 @@ import type { AdjustType, Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Slice
 import { bbox, rotateShape, scaleAbout, shearShape, toPath, translate, unionBox } from './geometry';
 import { type BoolOp, booleanPieces, canBoolean } from './boolean';
 import { inGroup, topGroup, unwrapGroup, wrapGroup } from './groups';
+import { type Row, fill as fillText } from './datamerge';
 import { adjustDef, defaultAdjust } from './adjustments';
 import { blankShape, normalizeShape } from './shape';
 import { strokeOutline } from './offset';
@@ -53,6 +54,7 @@ export interface State {
   rasterDialog: import('./raster/dialog').RasterDialogState | null;
   warpGrid: number;
   blendSteps: number;
+  pickerSize: number;
   opBrush: { filter: string; adjust: string };
   macroRecording: boolean;
   macroSteps: number;
@@ -136,6 +138,7 @@ let state: State = {
   rasterDialog: null,
   warpGrid: 4,
   blendSteps: 5,
+  pickerSize: 5,
   opBrush: { filter: 'gaussian-blur', adjust: 'brightness-contrast' },
   macroRecording: false,
   macroSteps: 0,
@@ -838,4 +841,30 @@ export function releaseClippingMask() {
   const sel = new Set(state.selection);
   if (!state.shapes.some((s) => s.clip && (sel.has(s.id) || sel.has(s.clip)))) return;
   commit(state.shapes.map((s) => (s.clip && (sel.has(s.id) || sel.has(s.clip)) ? { ...s, clip: null } : s)));
+}
+
+/* ---------- data merge ---------- */
+
+/** One new page per row: a copy of the active page whose `{{Field}}` text is filled from the row. */
+export function mergeRows(rows: Row[]): number {
+  const src = activeBoard();
+  const template = shapesOn(src);
+  if (!rows.length || !template.length) return 0;
+  const boards: Artboard[] = [];
+  const shapes: Shape[] = [];
+  let x = state.artboards.reduce((m, a) => Math.max(m, a.x + a.w), 0) + 60;
+  rows.forEach((row, i) => {
+    const board: Artboard = { ...src, id: `a${Date.now().toString(36)}m${i}`, name: `${src.name} ${i + 1}`, x, isMaster: false };
+    const gmap = new Map<string, string>();
+    for (const s of template) {
+      const moved = translate(s, x - src.x, 0);
+      const group = s.group ? (gmap.get(s.group) ?? gmap.set(s.group, `g${Date.now().toString(36)}m${i}${gmap.size}`).get(s.group)!) : null;
+      shapes.push({ ...moved, id: `s${++counter}`, group, text: s.kind === 'text' ? fillText(s.text, row) : s.text });
+    }
+    boards.push(board);
+    x += src.w + 60;
+  });
+  commitDoc({ artboards: [...state.artboards, ...boards], shapes: [...state.shapes, ...shapes] });
+  setState({ activeArtboard: boards[0].id });
+  return boards.length;
 }

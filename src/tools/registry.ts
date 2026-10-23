@@ -5,10 +5,11 @@ import { brushTool, penTool, pencilTool } from './draw';
 import { frameEllipseTool, frameRectTool, imageTool, tableTool } from './layout';
 import { perspectiveTool, warpTool } from './warp';
 import { pixelTools2 } from './pixel2';
+import { vectorCropTool } from './vector2';
 import { areaMeasureTool, blendTool, shapeBuilderTool, vectorFloodTool } from './vector2';
 import { sliceTool } from './slice';
 import { knifeTool, scissorsTool } from './edit';
-import { eyedropperTool, fillTool, rotateTool } from './paint';
+import { colourPickerTool, eyedropperTool, fillTool, rotateTool } from './paint';
 import { cornerTool, nodeTool, selectTool } from './select';
 import { ellipseTool, lineTool, rectTool, rrectTool, shapeTools } from './shapes';
 import { pixelTools } from './pixel';
@@ -42,9 +43,11 @@ export const TOOLS: ToolDef[] = [
   shapeBuilderTool,
   vectorFloodTool,
   areaMeasureTool,
+  vectorCropTool,
   fillTool,
   transparencyTool,
   eyedropperTool,
+  colourPickerTool,
   artboardTool,
   imageTool,
   frameRectTool,
@@ -60,7 +63,7 @@ export const TOOLS: ToolDef[] = [
 
 /** Studios that reuse tools defined for other workspaces. */
 const STUDIO_TOOLS: Partial<Record<Workspace, Tool[]>> = {
-  retouching: ['select', 'crop', 'marquee', 'marquee-ellipse', 'lasso', 'wand', 'selbrush', 'brush', 'eraser', 'adjustbrush', 'filterbrush', 'dodge', 'burn', 'saturate', 'desaturate', 'clone', 'heal', 'smudge', 'blurbrush', 'sharpenbrush', 'medianbrush', 'blemish', 'redeye', 'picker', 'hand', 'zoom'],
+  retouching: ['select', 'crop', 'marquee', 'marquee-ellipse', 'lasso', 'wand', 'selbrush', 'brush', 'eraser', 'adjustbrush', 'filterbrush', 'dodge', 'burn', 'saturate', 'desaturate', 'clone', 'heal', 'patch', 'smudge', 'blurbrush', 'sharpenbrush', 'medianbrush', 'blemish', 'redeye', 'picker', 'hand', 'zoom'],
   colour: ['select', 'crop', 'marquee', 'marquee-ellipse', 'lasso', 'wand', 'selbrush', 'brush', 'adjustbrush', 'filterbrush', 'colourreplace', 'bucket', 'pgradient', 'eraser', 'picker', 'hand', 'zoom'],
   compositing: ['select', 'crop', 'frame-rect', 'frame-ellipse', 'marquee', 'marquee-ellipse', 'colmarquee', 'rowmarquee', 'lasso', 'wand', 'selbrush', 'brush', 'eraser', 'bgeraser', 'floderase', 'perspective', 'warp', 'hand', 'zoom'],
 };

@@ -1,3 +1,4 @@
+import { renderBoardPixels } from '../components/exporter';
 import { bbox, rotateShape, unionBox } from '../geometry';
 import { commit, endLive, getState, live, makeShape, setColor, setState, updateSelected, useStore } from '../store';
 import { hitTest } from '../geometry';
@@ -9,7 +10,7 @@ import { editableSelection } from './util';
 
 export const eyedropperTool: ToolDef = {
   id: 'eyedropper',
-  label: 'Eyedropper',
+  label: 'Dropper',
   key: 'i',
   icon: toolIcon.eyedropper,
   group: 'paint',
@@ -28,6 +29,56 @@ export const eyedropperTool: ToolDef = {
         return;
       }
     }
+  },
+};
+
+/* ---------- Colour picker (samples the rendered page) ---------- */
+
+function PickerOptions() {
+  const n = useStore((s) => s.pickerSize);
+  return (
+    <>
+      <span className="dim">Sample</span>
+      <select value={n} onChange={(e) => setState({ pickerSize: Number(e.target.value) })}>
+        {[1, 3, 5, 11, 31].map((v) => (
+          <option key={v} value={v}>{v === 1 ? 'Point' : `${v} × ${v} average`}</option>
+        ))}
+      </select>
+    </>
+  );
+}
+
+export const colourPickerTool: ToolDef = {
+  id: 'colourpicker',
+  label: 'Colour Picker',
+  key: undefined,
+  icon: toolIcon.colourpicker,
+  group: 'paint',
+  workspaces: ['vector', 'layout', 'typography'],
+  cursor: 'crosshair',
+  hint: '**Click** anywhere on the page to take the colour you see (effects, blends and all) as the fill. **Alt-click** sets the stroke. Set the sample size in the context bar.',
+  chrome: 'outline',
+  Options: PickerOptions,
+  down(c) {
+    const board = c.st.artboards.find((a) => c.raw.x >= a.x && c.raw.x <= a.x + a.w && c.raw.y >= a.y && c.raw.y <= a.y + a.h);
+    if (!board) return;
+    const n = c.st.pickerSize;
+    const target = c.alt ? 'stroke' : 'fill';
+    void renderBoardPixels(c.st.shapes, board, 2400).then((img) => {
+      const k = img.width / board.w;
+      const cx = Math.floor((c.raw.x - board.x) * k);
+      const cy = Math.floor((c.raw.y - board.y) * k);
+      const r = (n - 1) / 2;
+      let sr = 0, sg = 0, sb = 0, cnt = 0;
+      for (let y = Math.max(0, cy - r); y <= Math.min(img.height - 1, cy + r); y++)
+        for (let x = Math.max(0, cx - r); x <= Math.min(img.width - 1, cx + r); x++) {
+          const i = (y * img.width + x) * 4;
+          sr += img.data[i]; sg += img.data[i + 1]; sb += img.data[i + 2]; cnt++;
+        }
+      if (!cnt) return;
+      const hex = '#' + [sr, sg, sb].map((v) => Math.round(v / cnt).toString(16).padStart(2, '0')).join('');
+      setColor(target, hex);
+    });
   },
 };
 

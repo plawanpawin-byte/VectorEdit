@@ -135,7 +135,7 @@ export function Canvas() {
     };
   }, []);
 
-  function ctxFor(e: { clientX: number; clientY: number; shiftKey: boolean; altKey: boolean; ctrlKey: boolean; metaKey: boolean; target: EventTarget }): PointerCtx {
+  function ctxFor(e: { clientX: number; clientY: number; shiftKey: boolean; altKey: boolean; ctrlKey: boolean; metaKey: boolean; target: EventTarget; pressure?: number; pointerType?: string }): PointerCtx {
     const rect = ref.current!.getBoundingClientRect();
     const st = getState();
     const sx = e.clientX - rect.left;
@@ -145,6 +145,7 @@ export function Canvas() {
       p: { x: snapV(raw.x, 'x', st.zoom), y: snapV(raw.y, 'y', st.zoom) },
       raw,
       screen: { x: sx, y: sy },
+      pressure: e.pointerType === 'pen' || e.pointerType === 'touch' ? Math.max(0.02, e.pressure ?? 1) : 1,
       shift: e.shiftKey,
       alt: e.altKey,
       ctrl: e.ctrlKey || e.metaKey,

@@ -26,9 +26,11 @@ import { I } from './components/Icons';
 import { Appearance, ColorPanel, History, Layers, Navigator, StrokePanel, Swatches, TransformPanel } from './components/Panels';
 import { TopBar, doExport } from './components/TopBar';
 import { AssetsPanel, PagesPanel } from './components/PagesPanel';
+import { DataPanel } from './components/DataPanel';
 import { ScriptPanel } from './components/ScriptPanel';
 import { SlicesPanel } from './components/SlicesPanel';
 import { MacroPanel } from './components/PixelPanels';
+import { ScopesPanel } from './components/ScopesPanel';
 import { AdjustmentsPanel, BrushPanel, FiltersPanel, RasterDialog, SelectionPanel } from './components/PixelPanels';
 import { CharacterPanel, ParagraphPanel, TextStylesPanel } from './components/TextPanels';
 import { isDesktop, openDoc, saveDoc } from './fileio';
@@ -286,6 +288,7 @@ export function App() {
                     { id: 'filters', label: 'Filters', body: <FiltersPanel /> },
                     { id: 'selection', label: 'Selection', body: <SelectionPanel /> },
                     { id: 'macros', label: 'Macros', body: <MacroPanel /> },
+                    { id: 'scopes', label: 'Scopes', body: <ScopesPanel /> },
                   ]
                 : [
                     { id: 'stroke', label: 'Stroke', body: <StrokePanel /> },
@@ -296,6 +299,7 @@ export function App() {
           <Dock
             grow={1.2}
             tabs={[
+              ...(workspace === 'layout' || workspace === 'typography' ? [{ id: 'data', label: 'Data', body: <DataPanel /> }] : []),
               ...(workspace === 'scripting' ? [{ id: 'script', label: 'Script', body: <ScriptPanel /> }] : []),
               ...(workspace === 'slice' ? [{ id: 'slices', label: 'Slices', body: <SlicesPanel /> }] : []),
               { id: 'layers', label: 'Layers', body: <Layers /> },

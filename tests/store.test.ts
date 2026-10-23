@@ -281,3 +281,20 @@ describe('slices and batches', () => {
     expect(getState().past.length).toBe(before);
   });
 });
+
+import { mergeRows } from '../src/store';
+describe('data merge', () => {
+  it('creates one page per row with filled text and fresh ids', () => {
+    reset();
+    const t = makeShape('text', { x: 20, y: 20, w: 200, h: 30, text: 'Hello {{Name}}' });
+    commit([t]);
+    expect(mergeRows([{ Name: 'Ada' }, { Name: 'Grace' }])).toBe(2);
+    const s = getState();
+    expect(s.artboards).toHaveLength(3);
+    const texts = s.shapes.filter((x) => x.kind === 'text').map((x) => x.text);
+    expect(texts).toEqual(['Hello {{Name}}', 'Hello Ada', 'Hello Grace']);
+    expect(new Set(s.shapes.map((x) => x.id)).size).toBe(3);
+    expect(s.shapes[2].x).toBeGreaterThan(s.shapes[1].x);
+    expect(mergeRows([])).toBe(0);
+  });
+});

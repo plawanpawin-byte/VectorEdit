@@ -74,12 +74,12 @@ export function paintDown(mode: 'paint' | 'erase') {
       const stroke = new Stroke(canvas, params, pixelScale(layer).sx, colour, mode, mask);
       const preview = makePreview(layer.id, () => stroke.result);
       const p0 = toPixel(layer, c.raw.x, c.raw.y);
-      stroke.begin(p0.x, p0.y);
+      stroke.begin(p0.x, p0.y, c.pressure);
       preview.schedule();
       return {
         move(m) {
           const p = toPixel(layer, m.raw.x, m.raw.y);
-          stroke.lineTo(p.x, p.y);
+          stroke.lineTo(p.x, p.y, m.pressure);
           preview.schedule();
         },
         up() {
@@ -118,6 +118,13 @@ export function BrushOptions() {
       <NumField label="Hard" value={Math.round(b.hardness * 100)} suffix="%" min={0} onCommit={(v) => set({ hardness: Math.max(0, Math.min(1, v / 100)) })} />
       <NumField label="Opacity" value={Math.round(b.opacity * 100)} suffix="%" min={1} onCommit={(v) => set({ opacity: Math.max(0.01, Math.min(1, v / 100)) })} />
       <NumField label="Flow" value={Math.round(b.flow * 100)} suffix="%" min={1} onCommit={(v) => set({ flow: Math.max(0.01, Math.min(1, v / 100)) })} />
+      <span className="dim" title="What pen pressure controls">Pressure</span>
+      <select value={b.dynamics ?? 'none'} onChange={(e) => set({ dynamics: e.target.value as typeof b.dynamics })}>
+        <option value="none">Off</option>
+        <option value="size">Size</option>
+        <option value="opacity">Opacity</option>
+        <option value="both">Size + opacity</option>
+      </select>
     </>
   );
 }

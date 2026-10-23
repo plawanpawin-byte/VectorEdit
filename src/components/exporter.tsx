@@ -55,3 +55,29 @@ export function exportPng(shapes: Shape[], board: Artboard, scale = 2) {
   };
   img.src = url;
 }
+
+/** The artboard as pixels (white page), scaled down so its longest side is at most `maxSize`. */
+export function renderBoardPixels(shapes: Shape[], board: Artboard, maxSize = 480): Promise<ImageData> {
+  const k = Math.min(1, maxSize / Math.max(board.w, board.h));
+  const w = Math.max(1, Math.round(board.w * k));
+  const h = Math.max(1, Math.round(board.h * k));
+  const url = URL.createObjectURL(new Blob([toSvg(shapes, board, false)], { type: 'image/svg+xml' }));
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext('2d');
+      URL.revokeObjectURL(url);
+      if (!ctx) return reject(new Error('No canvas'));
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(ctx.getImageData(0, 0, w, h));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not render the page'));
+    };
+    img.src = url;
+  });
+}
