@@ -9,6 +9,7 @@ import {
   flip,
   getState,
   groupSelected,
+  openStartPage,
   redo,
   setState,
   undo,
@@ -18,7 +19,7 @@ import {
 import type { Artboard } from '../types';
 import { exportPdf, exportPng, exportSvg } from './exporter';
 import { divideSelected, joinSelected, reverseSelected, separateSelected, setAll, smoothSelected, stepRepeatSelected, strokeWeight, traceSelected } from '../objectcmds';
-import { I, Logo } from './Icons';
+import { I } from './Icons';
 
 export const runPdf = (boards: Artboard[], name: string) =>
   exportPdf(getState().shapes, boards, name).then((r) => {
@@ -129,9 +130,16 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
 
   return (
     <header className="topbar">
-      <div className="brand" title="VectorEdit">
-        <Logo />
+      <div className="brand" title="vectorDesign">
+        <img src="./logo.png" alt="vectorDesign" />
       </div>
+      <button className="home-btn" title="Home: start page" aria-label="Home" onClick={openStartPage}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 11.5 12 4l9 7.5" />
+          <path d="M5.5 10v9.5h13V10" />
+          <path d="M10 19.5v-5h4v5" />
+        </svg>
+      </button>
       <div className="modes">
         {WORKSPACES.filter((m) => PRIMARY.includes(m.id) || m.id === workspace).map((m) => (
           <button key={m.id} className={workspace === m.id ? 'on' : ''} style={{ ['--ws' as string]: WS_ACCENT[m.id] }} title={m.description} onClick={() => setWorkspace(m.id)}>

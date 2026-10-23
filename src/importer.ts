@@ -28,7 +28,7 @@ export function kindOf(name: string, type: string): Kind {
 }
 
 /** Give a file without a MIME type the one its extension implies, so the browser can decode it. */
-function typed(file: File): File {
+export function typed(file: File): File {
   if (file.type.startsWith('image/')) return file;
   const mime = RASTER[extOf(file.name)];
   return mime ? new File([file], file.name, { type: mime }) : file;

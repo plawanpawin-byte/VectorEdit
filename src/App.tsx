@@ -365,7 +365,7 @@ function useDesktopBridge() {
   }, []);
   useEffect(() => {
     const name = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled';
-    window.desktop?.setTitle(`${name} - VectorEdit`);
+    window.desktop?.setTitle(`${name} - vectorDesign`);
   }, [filePath]);
 }
 

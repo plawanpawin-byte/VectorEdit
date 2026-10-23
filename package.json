@@ -1,7 +1,7 @@
 {
   "name": "vectoredit",
   "version": "0.1.0",
-  "description": "Open-source vector, pixel and layout editor for the desktop and the browser",
+  "description": "vectorDesign: open-source vector, pixel and layout editor for the desktop and the browser",
   "main": "electron/main.cjs",
   "scripts": {
     "test": "vitest run",
@@ -55,7 +55,7 @@
   },
   "build": {
     "appId": "com.plawanpawin.vectoredit",
-    "productName": "VectorEdit",
+    "productName": "vectorDesign",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -99,21 +99,21 @@
     "fileAssociations": [
       {
         "ext": "vedit",
-        "name": "VectorEdit document",
+        "name": "vectorDesign document",
         "role": "Editor"
       }
     ],
-    "artifactName": "VectorEdit-${version}-${os}-${arch}.${ext}",
+    "artifactName": "vectorDesign-${version}-${os}-${arch}.${ext}",
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "perMachine": false,
-      "artifactName": "VectorEdit-Setup-${version}.${ext}"
+      "artifactName": "vectorDesign-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "VectorEdit-Portable-${version}.${ext}"
+      "artifactName": "vectorDesign-Portable-${version}.${ext}"
     }
   }
 }

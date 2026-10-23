@@ -2,13 +2,23 @@ import { parseDoc, serializeDoc } from './document';
 import { download } from './components/exporter';
 import { preloadRasters } from './raster/cache';
 import { translate } from './geometry';
-import { activeBoard, commit, confirmDiscard, getState, loadDocument, makeShape, markClean, notify, setState } from './store';
+import { activeBoard, commit, confirmDiscard, getState, loadDocument, makeShape, markClean, newDocument, notify, setState } from './store';
 import { importSvg } from './svgimport';
+import { readImageFile } from './images';
+import { ACCEPT, importFiles, kindOf, reportImport, typed } from './importer';
 import { normalizeShape } from './shape';
 import type { Shape } from './types';
 
+/** One file picked in Open: a document arrives as text, a picture as bytes. */
+export interface OpenedFile {
+  path: string | null;
+  name: string;
+  text?: string;
+  bytes?: Uint8Array;
+}
+
 interface DesktopApi {
-  openFile(): Promise<{ path: string; text: string } | null>;
+  openFile(): Promise<OpenedFile[] | null>;
   saveFile(p: { path: string | null; text: string; saveAs: boolean }): Promise<{ path: string } | null>;
   exportFile(p: { name: string; ext: string; data: Uint8Array }): Promise<{ path: string } | null>;
   setTitle(title: string): void;
@@ -16,6 +26,7 @@ interface DesktopApi {
   takePendingFile(): Promise<{ path: string; text: string } | null>;
   recentFiles(): Promise<{ path: string; name: string; dir: string }[]>;
   openRecent(path: string): Promise<{ path: string; text: string } | null>;
+  removeRecent(path: string): Promise<void>;
   onOpenFile(handler: (file: { path: string; text: string }) => void): () => void;
 }
 
@@ -39,21 +50,45 @@ async function load(text: string, path: string | null) {
   loadDocument(d.shapes, d.artboards, path, { guides: d.guides, slices: d.slices, snapshots: d.snapshots });
 }
 
+/** Open documents and pictures chosen by the user. Pictures start a new page sized to the first one. */
+export async function openFiles(files: File[]) {
+  const docs = files.filter((f) => f.name.toLowerCase().endsWith('.vedit'));
+  if (docs.length === 1 && files.length === 1) return load(await docs[0].text(), null).catch((e) => alert(`Could not open the file.\n${(e as Error).message}`));
+  const pictures = files.filter((f) => kindOf(f.name, f.type) !== 'other');
+  if (!pictures.length) return alert('Choose a vectorDesign document, or a PNG, JPG, GIF, WebP, BMP, AVIF, ICO or SVG image.');
+  const size = await pageSizeFor(pictures[0]);
+  newDocument({ ...size, name: pictures[0].name.replace(/\.[^.]+$/, '') || 'Page 1' });
+  await importFiles(pictures).then(reportImport);
+}
+
+/** Pixel size of a picture, so the new page fits it. */
+async function pageSizeFor(file: File): Promise<{ w: number; h: number }> {
+  if (kindOf(file.name, file.type) === 'svg') {
+    const svg = importSvg(await file.text());
+    if (svg && svg.width > 0 && svg.height > 0) return { w: Math.round(svg.width), h: Math.round(svg.height) };
+    return { w: 800, h: 600 };
+  }
+  const img = await readImageFile(typed(file));
+  return { w: img.w, h: img.h };
+}
+
 export async function openDoc() {
   try {
+    if (!confirmDiscard()) return;
     if (window.desktop) {
-      if (!confirmDiscard()) return;
-      const r = await window.desktop.openFile();
-      if (r) await load(r.text, r.path);
+      const picked = await window.desktop.openFile();
+      if (!picked?.length) return;
+      if (picked.length === 1 && picked[0].text !== undefined) return load(picked[0].text, picked[0].path).catch((e) => alert(`Could not open the file.\n${(e as Error).message}`));
+      await openFiles(picked.map((f) => new File([(f.bytes ?? new Uint8Array(0)) as unknown as BlobPart], f.name)));
       return;
     }
-    if (!confirmDiscard()) return;
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.vedit,application/json';
-    input.onchange = async () => {
-      const f = input.files?.[0];
-      if (f) await load(await f.text(), null).catch((e) => alert(`Could not open the file.\n${(e as Error).message}`));
+    input.multiple = true;
+    input.accept = `.vedit,application/json,${ACCEPT}`;
+    input.onchange = () => {
+      const files = Array.from(input.files ?? []);
+      if (files.length) void openFiles(files);
     };
     input.click();
   } catch (e) {

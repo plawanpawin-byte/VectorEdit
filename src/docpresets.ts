@@ -3,7 +3,7 @@ import { toPx, type Unit } from './units';
 export interface DocPreset {
   id: string;
   label: string;
-  group: 'Paper' | 'Screen' | 'Social' | 'Photo';
+  group: 'Page sizes' | 'Photo' | 'Canvases' | 'Video and Web' | 'Devices';
   /** size in `unit`, portrait for paper */
   w: number;
   h: number;
@@ -13,9 +13,14 @@ export interface DocPreset {
 /** Size in pixels at 96 per inch, rounded to whole pixels. */
 export const presetPx = (p: Pick<DocPreset, 'w' | 'h' | 'unit'>) => ({ w: Math.round(toPx(p.w, p.unit)), h: Math.round(toPx(p.h, p.unit)) });
 
-const paper = (id: string, label: string, w: number, h: number): DocPreset => ({ id, label, group: 'Paper', w, h, unit: 'mm' });
+const paper = (id: string, label: string, w: number, h: number, unit: Unit = 'mm'): DocPreset => ({ id, label, group: 'Page sizes', w, h, unit });
+const photo = (id: string, label: string, w: number, h: number): DocPreset => ({ id, label, group: 'Photo', w, h, unit: 'in' });
+const canvas = (id: string, label: string, w: number, h: number, unit: Unit = 'px'): DocPreset => ({ id, label, group: 'Canvases', w, h, unit });
+const web = (id: string, label: string, w: number, h: number): DocPreset => ({ id, label, group: 'Video and Web', w, h, unit: 'px' });
+const device = (id: string, label: string, w: number, h: number): DocPreset => ({ id, label, group: 'Devices', w, h, unit: 'pt' });
 
 export const DOC_PRESETS: DocPreset[] = [
+  // Page sizes
   paper('a0', 'A0', 841, 1189),
   paper('a1', 'A1', 594, 841),
   paper('a2', 'A2', 420, 594),
@@ -23,21 +28,54 @@ export const DOC_PRESETS: DocPreset[] = [
   paper('a4', 'A4', 210, 297),
   paper('a5', 'A5', 148, 210),
   paper('a6', 'A6', 105, 148),
-  { id: 'letter', label: 'US Letter', group: 'Paper', w: 8.5, h: 11, unit: 'in' },
-  { id: 'legal', label: 'US Legal', group: 'Paper', w: 8.5, h: 14, unit: 'in' },
-  { id: 'tabloid', label: 'Tabloid', group: 'Paper', w: 11, h: 17, unit: 'in' },
-  { id: 'hd', label: 'Full HD', group: 'Screen', w: 1920, h: 1080, unit: 'px' },
-  { id: 'qhd', label: 'QHD', group: 'Screen', w: 2560, h: 1440, unit: 'px' },
-  { id: '4k', label: '4K', group: 'Screen', w: 3840, h: 2160, unit: 'px' },
-  { id: 'web', label: 'Web page', group: 'Screen', w: 1440, h: 900, unit: 'px' },
-  { id: 'phone', label: 'Phone', group: 'Screen', w: 390, h: 844, unit: 'px' },
-  { id: 'square', label: 'Square post', group: 'Social', w: 1080, h: 1080, unit: 'px' },
-  { id: 'portrait', label: 'Portrait post', group: 'Social', w: 1080, h: 1350, unit: 'px' },
-  { id: 'story', label: 'Story', group: 'Social', w: 1080, h: 1920, unit: 'px' },
-  { id: 'banner', label: 'Banner', group: 'Social', w: 1500, h: 500, unit: 'px' },
-  { id: 'p4x6', label: 'Photo 4 × 6', group: 'Photo', w: 4, h: 6, unit: 'in' },
-  { id: 'p5x7', label: 'Photo 5 × 7', group: 'Photo', w: 5, h: 7, unit: 'in' },
-  { id: 'p8x10', label: 'Photo 8 × 10', group: 'Photo', w: 8, h: 10, unit: 'in' },
+  paper('letter', 'Letter (ANSI A)', 8.5, 11, 'in'),
+  paper('legal', 'Legal', 8.5, 14, 'in'),
+  paper('ledger', 'Ledger (ANSI B)', 11, 17, 'in'),
+  paper('trade', 'US Trade Paperback', 6, 9, 'in'),
+  paper('half', 'Half Letter', 5.5, 8.5, 'in'),
+  paper('oversize', 'Oversize Magazine', 9, 12, 'in'),
+  // Photo prints (landscape size shown on each card)
+  photo('p4r', '4R', 6, 4),
+  photo('p5r', '5R', 7, 5),
+  photo('p6r', '6R', 8, 6),
+  photo('p8r', '8R', 10, 8),
+  photo('p10r', '10R', 12, 10),
+  photo('p11r', '11R', 14, 11),
+  photo('p12r', '12R', 15, 12),
+  photo('p16r', '16R', 20, 16),
+  photo('p20r', '20R', 24, 20),
+  photo('p24r', '24R', 31.5, 24),
+  // Canvases and posters
+  canvas('study', 'Study Canvas', 3000, 2000),
+  canvas('illustration', 'Illustration Canvas', 4000, 3000),
+  canvas('master', 'Master Canvas', 6000, 4000),
+  canvas('us-poster-m', 'Medium US Poster', 18, 24, 'in'),
+  canvas('us-poster-l', 'Large US Poster', 24, 36, 'in'),
+  canvas('eu-poster-a1', 'Medium EU Poster (A1)', 594, 841, 'mm'),
+  canvas('eu-poster-b1', 'Large EU Poster (B1)', 707, 1000, 'mm'),
+  canvas('comic', 'Comic', 6, 9.5, 'in'),
+  canvas('grid-1000', '1000-pixel grid (1:1)', 1000, 1000),
+  canvas('grid-2000', '2000-pixel grid (1:1)', 2000, 2000),
+  // Video and web
+  web('social-portrait', 'Social Media Portrait Post', 1080, 1350),
+  web('vertical-video', 'Vertical Video (9:16)', 1080, 1920),
+  web('legacy-pc', 'Legacy PC (4:3)', 1024, 768),
+  web('hd720', 'HD 720p', 1280, 720),
+  web('laptop', 'Laptop', 1536, 864),
+  web('fhd', 'FHD 1080p', 1920, 1080),
+  web('qhd', 'QHD 1440p', 2560, 1440),
+  web('uhd', 'UHD 4K', 3840, 2160),
+  web('dci4k', 'DCI 4K', 4096, 2160),
+  web('5k2k', '5K2K Video', 5120, 2160),
+  // Devices (points, as iOS and iPadOS list them)
+  device('iphone17pm', 'iPhone 17 Pro Max', 440, 956),
+  device('iphone17', 'iPhone 17', 402, 874),
+  device('iphone16e', 'iPhone 16e/17e', 390, 844),
+  device('iphone15pm', 'iPhone 15 Pro Max/16 Plus', 430, 932),
+  device('iphone15', 'iPhone 15/16', 393, 852),
+  device('iphoneair', 'iPhone Air', 420, 912),
+  device('ipad109', 'iPad 10.9"', 820, 1180),
+  device('ipadpro13', 'iPad Pro 13"', 1032, 1376),
 ];
 
 /** Largest page edge the editor accepts, in pixels. Bigger pages exhaust memory when exported. */

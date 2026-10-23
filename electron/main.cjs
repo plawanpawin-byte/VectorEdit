@@ -12,7 +12,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     backgroundColor: '#222222',
-    title: 'VectorEdit',
+    title: 'vectorDesign',
     // The renderer draws its own menu bar; the native one stays (hidden) so its accelerators keep working.
     autoHideMenuBar: process.platform !== 'darwin',
     webPreferences: {
@@ -133,14 +133,28 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-const FILTERS = [{ name: 'VectorEdit document', extensions: ['vedit'] }];
+const FILTERS = [{ name: 'vectorDesign document', extensions: ['vedit'] }];
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif', 'ico', 'svg'];
+// Open accepts documents and pictures; the first filter is the one shown by default
+const OPEN_FILTERS = [
+  { name: 'All supported files', extensions: ['vedit', ...IMAGE_EXTENSIONS] },
+  FILTERS[0],
+  { name: 'Images and SVG', extensions: IMAGE_EXTENSIONS },
+];
+
+/** A document is read as text; a picture is read as bytes and imported by the page. */
+async function readEntry(file) {
+  if (path.extname(file).toLowerCase() === '.vedit') {
+    await remember(file);
+    return { path: file, name: path.basename(file), text: await fs.readFile(file, 'utf8') };
+  }
+  return { path: null, name: path.basename(file), bytes: new Uint8Array(await fs.readFile(file)) };
+}
 
 ipcMain.handle('file:open', async () => {
-  const r = await dialog.showOpenDialog(win, { filters: FILTERS, properties: ['openFile'] });
-  if (r.canceled || !r.filePaths[0]) return null;
-  const text = await fs.readFile(r.filePaths[0], 'utf8');
-  await remember(r.filePaths[0]);
-  return { path: r.filePaths[0], text };
+  const r = await dialog.showOpenDialog(win, { filters: OPEN_FILTERS, properties: ['openFile', 'multiSelections'] });
+  if (r.canceled || !r.filePaths.length) return null;
+  return Promise.all(r.filePaths.map(readEntry));
 });
 
 ipcMain.handle('file:save', async (_e, { path: target, text, saveAs }) => {
@@ -191,6 +205,10 @@ ipcMain.handle('recent:list', async () => {
   }
   if (alive.length !== list.length) await writeRecent(alive).catch(() => {});
   return alive.map((f) => ({ path: f, name: path.basename(f), dir: path.dirname(f) }));
+});
+
+ipcMain.handle('recent:remove', async (_e, file) => {
+  await writeRecent((await readRecent()).filter((f) => f !== file)).catch(() => {});
 });
 
 // only paths already in the recent list can be opened this way, so the page cannot read arbitrary files

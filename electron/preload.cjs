@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('desktop', {
   takePendingFile: () => ipcRenderer.invoke('file:pending'),
   recentFiles: () => ipcRenderer.invoke('recent:list'),
   openRecent: (file) => ipcRenderer.invoke('recent:open', file),
+  removeRecent: (file) => ipcRenderer.invoke('recent:remove', file),
   onOpenFile: (handler) => {
     const fn = (_e, payload) => handler(payload);
     ipcRenderer.on('open-file', fn);

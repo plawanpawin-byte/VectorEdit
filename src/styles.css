@@ -812,7 +812,14 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']), select, te
 .start-recent { margin-top: 36px; text-align: left; }
 .start-recent h2 { font-size: 13px; font-weight: 600; margin: 0 0 8px; color: #ddd; }
 .start-recent ul { list-style: none; margin: 0; padding: 0; }
-.start-recent li button { width: 100%; display: flex; gap: 12px; align-items: baseline; background: none; border: 0; border-radius: 6px; padding: 7px 10px; color: #eee; font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
-.start-recent li button:hover { background: #3a3a3a; }
+.start-recent li { display: flex; align-items: center; border-radius: 6px; }
+.start-recent li:hover { background: #3a3a3a; }
+.start-recent li .start-open { flex: 1 1 auto; min-width: 0; display: flex; gap: 12px; align-items: baseline; background: none; border: 0; padding: 7px 10px; color: #eee; font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.start-recent li .start-remove { flex: 0 0 auto; width: 26px; height: 26px; margin-right: 6px; border: 0; border-radius: 50%; background: none; color: #9a9a9a; font: inherit; font-size: 18px; line-height: 1; cursor: pointer; }
+.start-recent li .start-remove:hover { background: #4a4a4a; color: #fff; }
+.start-logo { width: 88px; height: auto; border-radius: 14px; margin-bottom: 14px; }
+.home-btn { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+.home-btn:hover { background: rgba(255,255,255,.08); }
+.brand img { width: 26px; height: 26px; border-radius: 6px; display: block; }
 .start-name { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .start-dir { max-width: 55%; color: #8c8c8c; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

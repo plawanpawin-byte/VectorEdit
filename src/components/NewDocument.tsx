@@ -7,16 +7,16 @@ import { importFilesDialog } from '../importer';
 import { openDoc } from '../fileio';
 import { I } from './Icons';
 
-const GROUPS: DocPreset['group'][] = ['Paper', 'Screen', 'Social', 'Photo'];
+const GROUPS: DocPreset['group'][] = ['Page sizes', 'Photo', 'Canvases', 'Video and Web', 'Devices'];
 const round = (n: number) => Math.round(n * 100) / 100;
 
 /** New Document dialog: page size presets (A-series, screens, social), custom size and orientation. */
 export function NewDocument() {
   const open = useStore((s) => s.newDocOpen);
-  const [presetId, setPresetId] = useState('a4');
+  const [presetId, setPresetId] = useState('a3');
   const [unit, setUnit] = useState<Unit>('mm');
-  const [w, setW] = useState('210');
-  const [h, setH] = useState('297');
+  const [w, setW] = useState('297');
+  const [h, setH] = useState('420');
   const [error, setError] = useState<string | null>(null);
 
   const close = () => setState({ newDocOpen: false });
