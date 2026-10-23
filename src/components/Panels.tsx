@@ -692,6 +692,12 @@ export function Layers() {
         </select>
       </div>
       {one?.adjust && <AdjustControls s={one} />}
+      {one?.raster && one.mask && (
+        <div className="adjust-box">
+          <span>This layer has a mask (Mask Brush paints it).</span>
+          <button className="mini wide" onClick={() => updateShape(one.id, { mask: '' })}>Remove mask</button>
+        </div>
+      )}
       <div className="layer-list">
         {list.length === 0 && <p className="hint">No objects yet.</p>}
         {rows}

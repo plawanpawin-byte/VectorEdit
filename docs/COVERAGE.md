@@ -13,7 +13,7 @@ meaning could not be established with confidence are marked ❓ and are not clai
 | Studio | Tools in the studio | Status here |
 | --- | --- | --- |
 | Vector (19 slots) | Move, Artboard, Node, Corner, Contour, Pen, Pencil, Vector Brush, Knife, Fill, Transparency, 24 shapes, Blend, Shape Builder, Vector Flood Fill, Artistic Text, Frame Text, Image Placement, Measure, Area Measure, Colour Picker/Dropper, View, Zoom | ✅ all present. Gaps: `form` (a second tool next to Node ❓) and `strk` (stroke tool ❓). Crop is a non-destructive clipping mask; Dropper copies an object's style, Colour Picker samples the rendered page |
-| Pixel | Move, Perspective, Mesh Warp, Warp, Crop, Object/Flood/Freehand selection, 5 marquees (rect, ellipse, column, row), Fill, Flood Fill, Paint, Mask, Mixer, Colour Replacement, Pixel brush, Erase, Background Erase, Flood Erase, Adjustment brush, Burn, Dodge, Sponge, Filter brush, Blur, Sharpen, Median, Smudge, Clone, Undo brush, Inpainting, Heal, Patch, Blemish, Red eye | ✅ except: Object selection and Inpainting (AI), Mask brush (needs layer masks), `tnbr` ❓. Patch outlines a flaw and drags it onto clean pixels. Warp is implemented as Push Warp; Undo brush restores the layer's state before its last change |
+| Pixel | Move, Perspective, Mesh Warp, Warp, Crop, Object/Flood/Freehand selection, 5 marquees (rect, ellipse, column, row), Fill, Flood Fill, Paint, Mask, Mixer, Colour Replacement, Pixel brush, Erase, Background Erase, Flood Erase, Adjustment brush, Burn, Dodge, Sponge, Filter brush, Blur, Sharpen, Median, Smudge, Clone, Undo brush, Inpainting, Heal, Patch, Blemish, Red eye | ✅ except: Object selection and Inpainting (AI), `tnbr` ❓. Mask brush paints a non-destructive layer mask (removable; not yet baked or linked to selections). Patch outlines a flaw and drags it onto clean pixels. Warp is implemented as Push Warp; Undo brush restores the layer's state before its last change |
 | Retouching | selection tools + Paint, Adjust, Filter, Erase, Dodge, Burn, Sponge | ✅ |
 | Colour Grading | selection tools + Paint, Adjust, Filter, Colour Replacement, Fill, Erase (+ scopes panel) | ✅ tools and scopes (histogram, waveform, vectorscope) |
 | Compositing | Crop, picture frames, selection tools (+ equalizer panel) | ✅ tools |
@@ -77,6 +77,7 @@ Triangle, diamond, trapezoid, parallelogram, polygon, star, double star, square 
 | Filters (30): Gaussian, box, bilateral, median, maximum, minimum, motion, radial, lens blur; unsharp, clarity, high pass; add noise, denoise, dust & scratches; ripple, twirl, spherical, pinch/punch, polar↔rectangular; pixelate, halftone, voronoi, bloom, diffuse glow, vignette, diffuse, edge detect, emboss | ✅ |
 | Field blur, depth of field, defringe | ❌ |
 | Macros: record filters, replay as one undo step, import/export | ✅ |
+| Layer masks (Mask Brush) | ✅ |
 | Non-destructive filter/adjustment layers on pixel layers, live masks | ❌ |
 | Brush dynamics: pen pressure → size and/or opacity | 🟡 (no tilt, velocity or custom curves) |
 | ~200 brush presets | ❌ (15 presets) |

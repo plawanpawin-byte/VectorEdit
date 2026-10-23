@@ -54,6 +54,6 @@ export function encodeCanvas(canvas: HTMLCanvasElement): string {
 }
 
 /** Decode every raster layer of a document so tools can start without waiting. */
-export async function preloadRasters(shapes: { raster: boolean; src: string }[]) {
-  await Promise.all(shapes.filter((s) => s.raster && s.src).map((s) => loadCanvas(s.src).catch(() => null)));
+export async function preloadRasters(shapes: { raster: boolean; src: string; mask?: string }[]) {
+  await Promise.all(shapes.filter((s) => s.raster).flatMap((s) => [s.src, s.mask ?? ''].filter(Boolean)).map((src) => loadCanvas(src).catch(() => null)));
 }

@@ -33,6 +33,7 @@ export type BaseTool =
   | 'heal'
   | 'colourpicker'
   | 'patch'
+  | 'maskbrush'
   | 'vcrop'
   | 'undobrush'
   | 'pushwarp'
@@ -195,6 +196,8 @@ export interface Shape {
   raster: boolean;
   rw: number;
   rh: number;
+  /** pixel layer: PNG data URL whose alpha says where the layer shows (a layer mask); empty = fully visible */
+  mask: string;
   fill: string | null;
   gradient: Gradient | null;
   pattern: Pattern | null;

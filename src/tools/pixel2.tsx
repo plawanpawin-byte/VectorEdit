@@ -1,12 +1,13 @@
 import { NumField } from '../components/Fields';
-import { cloneCanvas } from '../raster/cache';
+import { Stroke } from '../raster/brush';
+import { cloneCanvas, encodeCanvas, makeCanvas } from '../raster/cache';
 import { commitPixels, pixelScale, toPixel, workingCanvas } from '../raster/layer';
 import { RASTER_OPS, applyOp, defaultOpParams, rasterOp } from '../raster/ops';
 import { type Buf, floodMask, sample } from '../raster/pixels';
 import { applySelection, deselect, maskFromDraw, modeFromKeys, selectionFor } from '../raster/selection';
-import { getState, setState, useStore } from '../store';
+import { commit, getState, setState, useStore } from '../store';
 import { toolIcon } from './icons';
-import { RetouchOptions, activeLayerOrCreate, base, lazy, makePreview, paintDown, retouch, selLayer } from './pixel';
+import { BrushOptions, RetouchOptions, activeLayerOrCreate, base, lazy, makePreview, paintDown, retouch, selLayer } from './pixel';
 import type { Shape } from '../types';
 import type { PointerCtx, Session, ToolDef } from './types';
 
@@ -365,6 +366,53 @@ export const adjustBrushTool: ToolDef = {
   down: opBrush('adjust'),
 };
 
+/* ---------- mask brush (layer masks) ---------- */
+
+/** Paint the layer's mask: drag hides what you touch, Alt-drag reveals it again. */
+export const maskBrushTool: ToolDef = {
+  ...base,
+  id: 'maskbrush',
+  label: 'Mask Brush',
+  key: undefined,
+  icon: toolIcon.maskbrush,
+  group: 'paint',
+  hint: '**Drag** to hide parts of the layer without erasing them; **Alt-drag** reveals them again. Remove the mask from the layer options.',
+  Options: BrushOptions,
+  down(c): Session | void {
+    const layer = activeLayerOrCreate();
+    const st = getState();
+    const before = st.shapes;
+    const reveal = c.alt;
+    const work = layer.mask ? workingCanvas({ ...layer, src: layer.mask }) : null;
+    return lazy(Promise.resolve(work).then((existing) => {
+      if (existing) return existing;
+      const fresh = makeCanvas(layer.rw, layer.rh); // a new mask starts fully visible
+      const g = fresh.getContext('2d')!;
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, fresh.width, fresh.height);
+      return fresh;
+    }), (canvas) => {
+      const stroke = new Stroke(canvas, st.pbrush, pixelScale(layer).sx, [255, 255, 255], reveal ? 'paint' : 'erase', null);
+      const p0 = toPixel(layer, c.raw.x, c.raw.y);
+      stroke.begin(p0.x, p0.y, c.pressure);
+      const commitMask = () => {
+        const src = encodeCanvas(stroke.result);
+        commit(getState().shapes.map((s) => (s.id === layer.id ? { ...s, mask: src } : s)), { before });
+      };
+      return {
+        move(m) {
+          const p = toPixel(layer, m.raw.x, m.raw.y);
+          stroke.lineTo(p.x, p.y, m.pressure);
+          setState({ shapes: getState().shapes.map((s) => (s.id === layer.id ? { ...s, mask: stroke.result.toDataURL('image/png') } : s)) });
+        },
+        up() {
+          commitMask();
+        },
+      };
+    });
+  },
+};
+
 /* ---------- patch ---------- */
 
 let patch: { layerId: string; poly: { x: number; y: number }[] } | null = null;
@@ -472,4 +520,4 @@ export const patchTool: ToolDef = {
   },
 };
 
-export const pixelTools2: ToolDef[] = [medianBrushTool, colourReplaceTool, backgroundEraserTool, mixerBrushTool, pixelBrushTool, floodEraseTool, columnMarqueeTool, rowMarqueeTool, filterBrushTool, adjustBrushTool, undoBrushTool, pushWarpTool, patchTool];
+export const pixelTools2: ToolDef[] = [medianBrushTool, colourReplaceTool, backgroundEraserTool, mixerBrushTool, pixelBrushTool, floodEraseTool, columnMarqueeTool, rowMarqueeTool, filterBrushTool, adjustBrushTool, undoBrushTool, pushWarpTool, patchTool, maskBrushTool];

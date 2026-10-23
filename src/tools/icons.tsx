@@ -51,6 +51,7 @@ export const toolIcon: Record<string, ReactNode> = {
   vflood: svg(<><path d="M4 9l5-5 7 7-5 5z" /><path d="M16.500 13.500c0 1.300-.8 2-1.500 2s-1.500-.7-1.500-2l1.500-2z" /></>),
   areameasure: svg(<><path d="M3.500 14l3-9 8 2 2 7z" /><path d="M3.500 17.500h13" opacity=".5" /></>),
   colourpicker: svg(<><path d="M13.500 3.500l3 3-2 2-3-3z" /><path d="M11 6l-6.500 6.500V16H8l6.500-6.500" /><circle cx="15.500" cy="15.500" r="1.500" opacity=".7" /></>),
+  maskbrush: svg(<><rect x="3" y="3" width="14" height="14" rx="2" /><circle cx="10" cy="10" r="3.500" fill="currentColor" /></>),
   patch: svg(<><rect x="3" y="3" width="9" height="9" rx="1.500" strokeDasharray="2 1.500" /><rect x="8" y="8" width="9" height="9" rx="1.500" /></>),
   undobrush: svg(<><path d="M5 8h7a3.500 3.500 0 010 7H7" /><path d="M7.500 5.500L5 8l2.500 2.500" /></>),
   pushwarp: svg(<><path d="M3 13c3-5 6 1 9-3s3-3 5-4" /><path d="M14 4h3v3" opacity=".6" /></>),

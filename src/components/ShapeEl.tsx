@@ -315,6 +315,7 @@ export function ShapeEl({ shape: s, all }: { shape: Shape; all?: Shape[] }) {
   }
 
   const f = s.fade;
+  const lm = s.raster && s.mask ? s.mask : '';
   const needsWrap = s.opacity < 1 || !!style || fx.length > 0 || !!f;
   const defs = (
     <defs>
@@ -344,6 +345,11 @@ export function ShapeEl({ shape: s, all }: { shape: Shape; all?: Shape[] }) {
       )}
       {s.pattern && <PatternDef id={id.pat} p={s.pattern} />}
       {fx.length > 0 && <Filter id={id.fx} effects={fx} />}
+      {lm && (
+        <mask id={`lmask-${s.id}`} maskUnits="userSpaceOnUse" x={s.x} y={s.y} width={s.w} height={s.h} style={{ maskType: 'alpha' }}>
+          <image href={lm} x={s.x} y={s.y} width={s.w} height={s.h} preserveAspectRatio="none" />
+        </mask>
+      )}
       {f && (
         <>
           <linearGradient id={id.fadeG} gradientUnits="userSpaceOnUse" x1={f.p1.x} y1={f.p1.y} x2={f.p2.x} y2={f.p2.y}>
@@ -379,7 +385,7 @@ export function ShapeEl({ shape: s, all }: { shape: Shape; all?: Shape[] }) {
   return (
     <>
       {defs}
-      {content}
+      {lm ? <g mask={`url(#lmask-${s.id})`}>{content}</g> : content}
     </>
   );
 }

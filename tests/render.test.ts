@@ -83,3 +83,14 @@ describe('shape rendering', () => {
     expect(out).toContain('gradientUnits="userSpaceOnUse"');
   });
 });
+
+describe('layer masks', () => {
+  it('wraps a masked pixel layer in an alpha mask built from the mask image', () => {
+    const layer = blankShape('px', 'rect', { x: 0, y: 0, w: 10, h: 10, raster: true, rw: 10, rh: 10, src: 'data:image/png;base64,AAAA', mask: 'data:image/png;base64,BBBB' });
+    const out = html(layer);
+    expect(out).toContain('<mask id="lmask-px"');
+    expect(out).toContain('mask-type:alpha');
+    expect(out).toContain('mask="url(#lmask-px)"');
+    expect(html({ ...layer, mask: '' })).not.toContain('lmask');
+  });
+});

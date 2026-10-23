@@ -34,6 +34,7 @@ export function blankShape(id: string, kind: ShapeKind, p: Partial<Shape> = {}):
     raster: false,
     rw: 0,
     rh: 0,
+    mask: '',
     fill: null,
     gradient: null,
     pattern: null,
@@ -71,5 +72,5 @@ export function normalizeShape(raw: unknown): Shape | null {
   if (legacy === 'star') return blankShape(r.id, 'shape', { ...r, kind: 'shape', shapeId: 'star', params: { ...defaultParams('star'), points: r.sides ?? 5, inner: r.inner ?? 0.5 } });
   const adj = r.adjust as Shape['adjust'] | undefined;
   const adjust = adj && typeof adj === 'object' && typeof adj.type === 'string' ? { type: adj.type, a: Number(adj.a) || 0, b: Number(adj.b) || 0, region: !!adj.region } : null;
-  return blankShape(r.id, r.kind as ShapeKind, { ...r, adjust, clip: typeof r.clip === 'string' ? r.clip : null });
+  return blankShape(r.id, r.kind as ShapeKind, { ...r, adjust, clip: typeof r.clip === 'string' ? r.clip : null, mask: typeof r.mask === 'string' ? r.mask : '' });
 }
