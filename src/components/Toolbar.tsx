@@ -21,7 +21,7 @@ const ARRANGE: Partial<Record<Workspace, (string[] | '|')[]>> = {
   layout: [
     ['select'], ['direct'], '|',
     ['frametext', 'text'], ['table'], ['pen', 'pencil'], ['g:shapes'], ['frame-rect', 'frame-ellipse'], ['image'],
-    ['vcrop'], ['fill', 'transparency', 'meshedit'], ['rotate'], ['measure', 'areameasure'], ['eyedropper', 'colourpicker'], '|',
+    ['vcrop'], ['fill', 'transparency', 'meshedit', 'rotate', 'measure', 'areameasure'], ['eyedropper', 'colourpicker'], '|',
     ['hand'], ['zoom'], ['artboard'],
   ],
 };
