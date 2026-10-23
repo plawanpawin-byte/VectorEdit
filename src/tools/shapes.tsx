@@ -34,7 +34,8 @@ function boxDraw(c: PointerCtx, make: (x: number, y: number) => Shape): Session 
     up(m) {
       const made = getState().shapes.find((s) => s.id === shape.id);
       const b = made ? bbox(made) : null;
-      if (!b || (b.w < 2 && b.h < 2)) live(before, []);
+      // a click or a drag along one axis only leaves an invisible sliver, so it creates nothing
+      if (!b || b.w < 2 || b.h < 2) live(before, []);
       else endLive(before);
       void m;
     },

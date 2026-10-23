@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { Box } from '../types';
 import { bbox, inCtl, outCtl, pathD, unionBox } from '../geometry';
-import { commit, endLiveDoc, fitArtboard, getState, liveDoc, docOf, removeGuide, setState, snapV, updateShape, useStore, zoomAt } from '../store';
+import { commit, endLiveDoc, fitArtboard, getState, liveDoc, docOf, notify, removeGuide, setState, snapV, updateShape, useStore, zoomAt } from '../store';
 import { toolDef } from '../tools/registry';
 import type { PointerCtx } from '../tools/types';
 import { panSession } from '../tools/view';
@@ -177,7 +177,22 @@ export function Canvas() {
       const hit = c.st.artboards.find((a) => c.raw.x >= a.x && c.raw.x <= a.x + a.w && c.raw.y >= a.y && c.raw.y <= a.y + a.h);
       if (hit && hit.id !== c.st.activeArtboard) setState({ activeArtboard: hit.id });
     }
-    session.current = toolDef(c.st.tool)?.down?.(c) ?? null;
+    guard('The tool', () => {
+      session.current = toolDef(c.st.tool)?.down?.(c) ?? null;
+    });
+  }
+
+  /** A tool that throws must not leave the canvas stuck in a half-finished gesture. */
+  function guard(what: string, fn: () => void) {
+    try {
+      fn();
+    } catch (err) {
+      console.error(err);
+      session.current = null;
+      setOverlay(null);
+      setPanning(false);
+      notify(`${what} hit a problem and was stopped: ${(err as Error).message}`);
+    }
   }
 
   function guideDrag(id: string, c: PointerCtx): Session {
@@ -201,14 +216,14 @@ export function Canvas() {
   function onMove(e: React.PointerEvent) {
     const c = ctxFor(e);
     setState({ cursor: { x: Math.round(c.raw.x), y: Math.round(c.raw.y) } });
-    session.current?.move?.(c);
+    guard('The tool', () => session.current?.move?.(c));
   }
 
   function onUp(e: React.PointerEvent) {
     const s = session.current;
     session.current = null;
     setPanning(false);
-    s?.up?.(ctxFor(e));
+    guard('The tool', () => s?.up?.(ctxFor(e)));
   }
 
   const k = 1 / zoom;

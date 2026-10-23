@@ -399,13 +399,20 @@ export const maskBrushTool: ToolDef = {
         const src = encodeCanvas(stroke.result);
         commit(getState().shapes.map((s) => (s.id === layer.id ? { ...s, mask: src } : s)), { before });
       };
+      // encoding the whole mask as a PNG is slow, so the preview updates at most about 10 times a second
+      let timer: ReturnType<typeof setTimeout> | undefined;
       return {
         move(m) {
           const p = toPixel(layer, m.raw.x, m.raw.y);
           stroke.lineTo(p.x, p.y, m.pressure, m.tilt);
-          setState({ shapes: getState().shapes.map((s) => (s.id === layer.id ? { ...s, mask: stroke.result.toDataURL('image/png') } : s)) });
+          if (!timer)
+            timer = setTimeout(() => {
+              timer = undefined;
+              setState({ shapes: getState().shapes.map((s) => (s.id === layer.id ? { ...s, mask: stroke.result.toDataURL('image/png') } : s)) });
+            }, 90);
         },
         up() {
+          clearTimeout(timer);
           commitMask();
         },
       };

@@ -1,4 +1,4 @@
-import { commit, getState, setState } from '../store';
+import { commit, getState, notify, setState } from '../store';
 import type { Shape } from '../types';
 import { cloneCanvas } from './cache';
 import { commitPixels, previewCanvas, targetLayer, workingCanvas } from './layer';
@@ -30,7 +30,7 @@ export async function openRasterOp(opId: string) {
   const layer = targetLayer();
   if (!op) return;
   if (!layer) {
-    alert('Select a pixel layer first (or add one in the Layers panel).');
+    notify('Select a pixel layer first (or add one in the Layers panel).');
     return;
   }
   cancelRasterDialog();

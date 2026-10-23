@@ -19,6 +19,7 @@ export function StatusBar() {
   const cursor = useStore((s) => s.cursor);
   const tool = useStore((s) => s.tool);
   const count = useStore((s) => s.shapes.length);
+  const notice = useStore((s) => s.notice);
   const boards = useStore((s) => s.artboards);
   const active = useStore((s) => s.activeArtboard);
   const idx = Math.max(0, boards.findIndex((b) => b.id === active));
@@ -51,8 +52,8 @@ export function StatusBar() {
       </select>
       <span className="dim">{count} objects</span>
       <span className="sep" />
-      <span className="hint-text">
-        <Rich text={toolDef(tool)?.hint ?? ''} />
+      <span className={'hint-text' + (notice ? ' notice' : '')} role={notice ? 'alert' : undefined}>
+        {notice ?? <Rich text={toolDef(tool)?.hint ?? ''} />}
       </span>
       <div className="grow" />
       <span className="mono">

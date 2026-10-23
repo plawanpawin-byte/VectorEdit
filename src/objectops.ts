@@ -89,6 +89,39 @@ export function divideRegions(ordered: Shape[]): Region[] {
   return regions;
 }
 
+const polyBox = (poly: Polygon) => {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of poly[0]) (x0 = Math.min(x0, x)), (y0 = Math.min(y0, y)), (x1 = Math.max(x1, x)), (y1 = Math.max(y1, y));
+  return { x0, y0, x1, y1 };
+};
+
+/**
+ * The single area at (x, y) enclosed by overlapping shapes: where every shape under the point
+ * overlaps, minus every other shape that cuts into that. Only the clicked area is computed, so it
+ * stays fast however many shapes the page holds. `owner` is the top-most shape under the point.
+ */
+export function floodRegion(ordered: Shape[], x: number, y: number): Region | null {
+  const polys = ordered.map(toPolygon);
+  const under = polys.map((p, i) => (p.length && regionContains([p], x, y) ? i : -1)).filter((i) => i >= 0);
+  if (!under.length) return null;
+  let box = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity };
+  for (const i of under) {
+    const b = polyBox(polys[i]);
+    box = { x0: Math.max(box.x0, b.x0), y0: Math.max(box.y0, b.y0), x1: Math.min(box.x1, b.x1), y1: Math.min(box.y1, b.y1) };
+  }
+  const near = polys.filter((p, i) => {
+    if (under.includes(i) || !p.length) return false;
+    const b = polyBox(p);
+    return b.x0 <= box.x1 && b.x1 >= box.x0 && b.y0 <= box.y1 && b.y1 >= box.y0;
+  });
+  let mp: MP = polys[under[0]].length ? [polys[under[0]]] : [];
+  for (const i of under.slice(1)) mp = polygonClipping.intersection(mp, polys[i]);
+  if (near.length && mp.length) mp = polygonClipping.difference(mp, ...near);
+  // the pieces can fall apart; the one under the click is the area
+  const piece = mp.filter((poly) => regionContains([poly], x, y));
+  return piece.length ? { mp: piece, owner: under[under.length - 1] } : null;
+}
+
 /** Copies of `shape` laid out with a constant offset, rotation and scale step. */
 export function stepRepeat(shape: Shape, count: number, dx: number, dy: number): Shape[] {
   return Array.from({ length: Math.max(0, Math.floor(count)) }, (_, i) => ({ ...shape, x: shape.x + dx * (i + 1), y: shape.y + dy * (i + 1), pts: shape.pts.map((p) => ({ ...p, x: p.x + dx * (i + 1), y: p.y + dy * (i + 1) })), extra: shape.extra.map((r) => r.map((p) => ({ ...p, x: p.x + dx * (i + 1), y: p.y + dy * (i + 1) }))) }));

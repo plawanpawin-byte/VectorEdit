@@ -623,8 +623,9 @@ export function buildShape(s: Shape): Built {
   const hit = cache.get(s);
   if (hit) return hit;
   const def = shapeDef(s.shapeId);
-  const w = Math.max(0, s.w);
-  const h = Math.max(0, s.h);
+  // a shape being dragged out starts at 0 x 0; shape formulas divide by their size, so never hand them zero
+  const w = Math.max(0.01, s.w);
+  const h = Math.max(0.01, s.h);
   const raw = def ? def.build(w, h, { ...defaultParams(s.shapeId), ...s.params }, s.text) : { pts: [], closed: true };
   const move = (p: Pt): Pt => ({ ...p, x: p.x + s.x, y: p.y + s.y });
   const built: Built = { closed: raw.closed, pts: raw.pts.map(move), extra: raw.extra?.map((r) => r.map(move)) };

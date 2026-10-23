@@ -1,4 +1,4 @@
-import { beginBatch, endBatch, getState, setState } from '../store';
+import { beginBatch, endBatch, getState, notify, setState } from '../store';
 import { cloneCanvas } from './cache';
 import { commitPixels, targetLayer, workingCanvas } from './layer';
 import { applyOp, rasterOp } from './ops';
@@ -44,7 +44,7 @@ export function recordStep(op: string, params: Record<string, number>) {
 export async function playMacro(list: MacroStep[]): Promise<number> {
   const layer = targetLayer();
   if (!layer) {
-    alert('Select a pixel layer first (or add one in the Layers panel).');
+    notify('Select a pixel layer first (or add one in the Layers panel).');
     return 0;
   }
   let done = 0;

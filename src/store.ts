@@ -33,6 +33,8 @@ export interface State {
   rulers: boolean;
   /** the New Document dialog is open */
   newDocOpen: boolean;
+  /** a short message shown in the status bar for a few seconds */
+  notice: string | null;
   /** undo depth at the last save or load; the document has unsaved changes when it differs */
   cleanMark: number;
   grid: boolean;
@@ -128,6 +130,7 @@ let state: State = {
   colorTarget: 'fill',
   rulers: false,
   newDocOpen: false,
+  notice: null,
   cleanMark: 0,
   grid: false,
   snap: false,
@@ -489,6 +492,14 @@ export function newDocument(size: { w?: number; h?: number; name?: string } = {}
     cleanMark: 0,
   });
   fitArtboard();
+}
+
+let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+/** Show a message in the status bar; it clears itself. */
+export function notify(text: string, ms = 5000) {
+  setState({ notice: text });
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => setState({ notice: null }), ms);
 }
 
 /** True when the document has changes since it was last saved, opened or created. */

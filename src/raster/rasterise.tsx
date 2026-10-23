@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ShapeEl } from '../components/ShapeEl';
 import { bbox } from '../geometry';
-import { commit, getState } from '../store';
+import { commit, getState, notify } from '../store';
 import type { Shape } from '../types';
 import { cloneCanvas, encodeCanvas, makeCanvas } from './cache';
 import { rasteriseShapeToLayer, workingCanvas } from './layer';
@@ -11,7 +11,7 @@ export async function rasteriseSelection() {
   const st = getState();
   const targets = st.shapes.filter((s) => st.selection.includes(s.id) && !s.raster && !s.locked && s.kind !== 'text');
   if (!targets.length) {
-    alert('Select one or more vector shapes to rasterise.');
+    notify('Select one or more vector shapes to rasterise.');
     return;
   }
   const results = new Map<string, Shape>();
@@ -24,7 +24,7 @@ export async function rasteriseSelection() {
     try {
       results.set(s.id, { ...(await rasteriseShapeToLayer(frame, markup)), id: s.id, name: `${s.name} (pixels)`, group: s.group });
     } catch (e) {
-      alert(`Could not rasterise ${s.name}: ${(e as Error).message}`);
+      notify(`Could not rasterise ${s.name}: ${(e as Error).message}`);
     }
   }
   if (!results.size) return;
@@ -35,10 +35,10 @@ export async function rasteriseSelection() {
 export async function mergeDown() {
   const st = getState();
   const idx = st.shapes.findIndex((s) => s.raster && st.selection.includes(s.id));
-  if (idx < 0) return alert('Select a pixel layer to merge down.');
+  if (idx < 0) return notify('Select a pixel layer to merge down.');
   let below = -1;
   for (let i = idx - 1; i >= 0; i--) if (st.shapes[i].raster) (below = i, (i = -1));
-  if (below < 0) return alert('There is no pixel layer below the selected one.');
+  if (below < 0) return notify('There is no pixel layer below the selected one.');
   const top = st.shapes[idx];
   const bottom = st.shapes[below];
   const ca = await workingCanvas(bottom);

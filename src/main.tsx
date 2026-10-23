@@ -4,12 +4,15 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { restoreAutosave, startAutosave } from './persist';
 import * as store from './store';
 import * as registry from './tools/registry';
+import * as docfile from './document';
+import * as exporter from './components/exporter';
+import * as rasterLayer from './raster/layer';
 import { newDocument, openNewDocument } from './store';
 import './styles.css';
 
 async function main() {
   // automated tests drive the app through this handle; it only exists with ?e2e in the address
-  if (new URLSearchParams(location.search).has('e2e')) (window as unknown as { __ve: unknown }).__ve = { store, registry };
+  if (new URLSearchParams(location.search).has('e2e')) (window as unknown as { __ve: unknown }).__ve = { store, registry, docfile, exporter, rasterLayer };
   const restored = await restoreAutosave();
   startAutosave();
   // a fresh launch starts from an empty page and the New Document dialog; ?e2e keeps the sample page for automated tests

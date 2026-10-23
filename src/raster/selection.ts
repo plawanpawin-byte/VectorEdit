@@ -29,8 +29,9 @@ export function selectionFor(layer: Shape): PixelSel | null {
   return s && s.layerId === layer.id && s.w === layer.rw && s.h === layer.rh ? s : null;
 }
 
-export function setSelection(layer: Shape, mask: Uint8Array) {
-  const any = mask.some((v) => v > 0);
+export function setSelection(layer: Shape, mask: Uint8Array, anySelected?: boolean) {
+  // callers that already know whether anything is selected skip the scan of the whole mask
+  const any = anySelected ?? mask.some((v) => v > 0);
   setState({ pixelSel: any ? { layerId: layer.id, w: layer.rw, h: layer.rh, mask, version: ++versionCounter } : null });
 }
 
@@ -110,23 +111,31 @@ export function smoothSelection(layer: Shape, radius: number) {
 }
 
 /** A tinted overlay (with a crisp outline) for showing the selection on the canvas. */
+/** The overlay is only a picture of the selection, so it is drawn at most this many pixels on the long side. */
+const OVERLAY_EDGE = 1024;
+
 export function overlayDataUrl(sel: PixelSel): string {
-  const c = makeCanvas(sel.w, sel.h);
-  const ctx = c.getContext('2d')!;
-  const img = ctx.createImageData(sel.w, sel.h);
   const { w, h, mask } = sel;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      const on = mask[i] > 127;
-      const edge =
-        on && ((x > 0 && mask[i - 1] <= 127) || (x < w - 1 && mask[i + 1] <= 127) || (y > 0 && mask[i - w] <= 127) || (y < h - 1 && mask[i + w] <= 127));
-      const o = i * 4;
-      if (edge) {
-        // alternating dashes read as marching ants
-        const dash = (x + y) % 8 < 4;
-        img.data.set(dash ? [255, 255, 255, 255] : [0, 0, 0, 255], o);
-      } else if (mask[i] > 0) img.data.set([45, 140, 240, Math.round(mask[i] * 0.22)], o);
+  const k = Math.min(1, OVERLAY_EDGE / Math.max(w, h));
+  const ow = Math.max(1, Math.round(w * k));
+  const oh = Math.max(1, Math.round(h * k));
+  const c = makeCanvas(ow, oh);
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(ow, oh);
+  const px = new Uint32Array(img.data.buffer);
+  // mask value at an overlay pixel, sampled from the nearest source pixel
+  const at = (x: number, y: number) => mask[Math.min(h - 1, Math.floor((y / oh) * h)) * w + Math.min(w - 1, Math.floor((x / ow) * w))];
+  const WHITE = 0xffffffff;
+  const BLACK = 0xff000000;
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      const m = at(x, y);
+      if (m === 0) continue;
+      const on = m > 127;
+      const edge = on && ((x > 0 && at(x - 1, y) <= 127) || (x < ow - 1 && at(x + 1, y) <= 127) || (y > 0 && at(x, y - 1) <= 127) || (y < oh - 1 && at(x, y + 1) <= 127));
+      // alternating dashes read as marching ants; little-endian ABGR
+      if (edge) px[y * ow + x] = (x + y) % 8 < 4 ? WHITE : BLACK;
+      else px[y * ow + x] = ((Math.round(m * 0.22) << 24) | (240 << 16) | (140 << 8) | 45) >>> 0;
     }
   }
   ctx.putImageData(img, 0, 0);

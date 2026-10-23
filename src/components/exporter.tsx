@@ -18,7 +18,9 @@ export function toSvg(shapes: Shape[], board: Artboard, transparent = true, boar
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${board.w}" height="${board.h}" viewBox="${board.x} ${board.y} ${board.w} ${board.h}">${bg}\n  ${body}\n</svg>\n`;
 }
 
-const fileName = (board: Artboard, ext: string) => `${board.name.replace(/[^\w.-]+/g, '_') || 'artboard'}.${ext}`;
+/** A file name for a page: only characters Windows forbids are replaced, so Thai and other non-Latin names survive. */
+export const fileNameOf = (name: string, ext: string) => `${name.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').replace(/^[.\s]+|[.\s]+$/g, '') || 'artboard'}.${ext}`;
+const fileName = (board: Artboard, ext: string) => fileNameOf(board.name, ext);
 
 export function download(blob: Blob, name: string) {
   if (window.desktop) {
@@ -38,21 +40,36 @@ export function exportSvg(shapes: Shape[], board: Artboard) {
   download(new Blob([toSvg(shapes, board)], { type: 'image/svg+xml' }), fileName(board, 'svg'));
 }
 
+/** Browsers refuse canvases past about 16384 px on a side or 268 million pixels, so very large pages are scaled down to fit. */
+const MAX_DIM = 16384;
+const MAX_AREA = 120_000_000;
+
+/** The scale to render a page at: the wanted one, reduced so the picture stays within what a canvas can hold. */
+export function safeScale(w: number, h: number, wanted = 2): number {
+  return Math.min(wanted, MAX_DIM / Math.max(w, h), Math.sqrt(MAX_AREA / (w * h)));
+}
+
 export function exportPng(shapes: Shape[], board: Artboard, scale = 2) {
   const { w, h } = board;
+  const k = safeScale(w, h, scale);
   const svg = toSvg(shapes, board, false);
   const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  const fail = (why: string) => {
+    URL.revokeObjectURL(url);
+    alert(`Could not export ${board.name} as PNG. ${why}`);
+  };
   const img = new Image();
   img.onload = () => {
     const c = document.createElement('canvas');
-    c.width = w * scale;
-    c.height = h * scale;
+    c.width = Math.max(1, Math.floor(w * k));
+    c.height = Math.max(1, Math.floor(h * k));
     const ctx = c.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) return fail('The page is too large for this computer to render.');
     ctx.drawImage(img, 0, 0, c.width, c.height);
     URL.revokeObjectURL(url);
-    c.toBlob((b) => b && download(b, fileName(board, 'png')));
+    c.toBlob((b) => (b ? download(b, fileName(board, 'png')) : fail('The picture could not be encoded.')));
   };
+  img.onerror = () => fail('The page could not be drawn (an image or font in it may be damaged).');
   img.src = url;
 }
 

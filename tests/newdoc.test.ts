@@ -73,3 +73,24 @@ describe('import file kinds', () => {
     expect(looksLikeSvg('<div></div>')).toBe(false);
   });
 });
+
+import { fileNameOf, safeScale } from '../src/components/exporter';
+
+describe('export file names and sizes', () => {
+  it('keeps Thai and other non-Latin page names', () => {
+    expect(fileNameOf('หน้า 1', 'png')).toBe('หน้า 1.png');
+    expect(fileNameOf('ページ', 'svg')).toBe('ページ.svg');
+  });
+  it('replaces only characters Windows forbids and never returns an empty name', () => {
+    expect(fileNameOf('a/b:c*d?.e', 'png')).toBe('a_b_c_d_.e.png');
+    expect(fileNameOf('  ..  ', 'png')).toBe('artboard.png');
+    expect(fileNameOf('', 'pdf')).toBe('artboard.pdf');
+  });
+  it('scales very large pages down so a canvas can hold them', () => {
+    expect(safeScale(800, 600, 2)).toBe(2);
+    const k = safeScale(16000, 16000, 2);
+    expect(k).toBeLessThan(1);
+    expect(16000 * k * 16000 * k).toBeLessThanOrEqual(120_000_000 + 1);
+    expect(safeScale(20000, 100, 2) * 20000).toBeLessThanOrEqual(16384 + 1);
+  });
+});

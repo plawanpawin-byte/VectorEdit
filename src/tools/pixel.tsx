@@ -5,7 +5,7 @@ import { ensureLayer, commitPixels, pixelScale, previewCanvas, targetLayer, toPi
 import { floodMask } from '../raster/pixels';
 import { type RetouchKind, dab } from '../raster/retouch';
 import { applySelection, deselect, maskFromDraw, modeFromKeys, selectionFor, setSelection } from '../raster/selection';
-import { commit, getState, setColor, setState, useStore } from '../store';
+import { commit, getState, notify, setColor, setState, useStore } from '../store';
 import type { Shape } from '../types';
 import { toolIcon } from './icons';
 import type { PointerCtx, Session, ToolDef } from './types';
@@ -31,13 +31,16 @@ export function lazy(work: HTMLCanvasElement | Promise<HTMLCanvasElement>, build
 /** Show intermediate pixels at a modest rate; encoding a big canvas on every pointer move is slow. */
 export function makePreview(layerId: string, canvas: () => HTMLCanvasElement) {
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let spent = 0; // how long the last update took, so a slow one is not followed straight away by another
   const run = () => {
     timer = null;
+    const t = performance.now();
     previewCanvas(layerId, canvas());
+    spent = performance.now() - t;
   };
   return {
     schedule() {
-      if (!timer) timer = setTimeout(run, 40);
+      if (!timer) timer = setTimeout(run, Math.max(40, spent * 2));
     },
     flush() {
       if (timer) clearTimeout(timer);
@@ -184,7 +187,7 @@ export function retouchDown(kind: RetouchKind) {
     }
     const start = toPixel(layer, c.raw.x, c.raw.y);
     if ((kind === 'clone' || kind === 'heal') && !cloneSource) {
-      alert('Alt-click on the image first to choose where to copy from.');
+      notify('Alt-click on the image first to choose where to copy from.');
       return;
     }
     const before = st.shapes;
@@ -468,9 +471,14 @@ export const selectionBrushTool: ToolDef = {
     const sc = pixelScale(layer).sx;
     const radius = Math.max(1, (st.pbrush.size * sc) / 2);
     const startMask = selectionFor(layer)?.mask ?? new Uint8Array(layer.rw * layer.rh);
+    const startAny = startMask.some((v) => v > 0);
+    const work = startMask.slice();
     const paint = makeCanvas(layer.rw, layer.rh);
     const ctx = paint.getContext('2d')!;
     let last: { x: number; y: number } | null = null;
+    // only the part of the layer touched since the last update is recomputed
+    let dirty: { x0: number; y0: number; x1: number; y1: number } | null = null;
+    let frame = 0;
     const stamp = (x: number, y: number) => {
       const g = ctx.createRadialGradient(x, y, radius * st.pbrush.hardness, x, y, radius);
       g.addColorStop(0, 'rgba(255,255,255,1)');
@@ -479,15 +487,25 @@ export const selectionBrushTool: ToolDef = {
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
+      const x0 = Math.max(0, Math.floor(x - radius) - 1), y0 = Math.max(0, Math.floor(y - radius) - 1);
+      const x1 = Math.min(layer.rw, Math.ceil(x + radius) + 1), y1 = Math.min(layer.rh, Math.ceil(y + radius) + 1);
+      dirty = dirty ? { x0: Math.min(dirty.x0, x0), y0: Math.min(dirty.y0, y0), x1: Math.max(dirty.x1, x1), y1: Math.max(dirty.y1, y1) } : { x0, y0, x1, y1 };
     };
-    const apply = () => {
-      const img = ctx.getImageData(0, 0, paint.width, paint.height);
-      const m = new Uint8Array(startMask.length);
-      for (let i = 0; i < m.length; i++) {
-        const a = img.data[i * 4 + 3];
-        m[i] = sub ? Math.round((startMask[i] * (255 - a)) / 255) : Math.max(startMask[i], a);
+    const flush = () => {
+      frame = 0;
+      const d = dirty;
+      dirty = null;
+      if (!d || d.x1 <= d.x0 || d.y1 <= d.y0) return;
+      const img = ctx.getImageData(d.x0, d.y0, d.x1 - d.x0, d.y1 - d.y0);
+      for (let y = d.y0; y < d.y1; y++) {
+        for (let x = d.x0; x < d.x1; x++) {
+          const i = y * layer.rw + x;
+          const a = img.data[((y - d.y0) * (d.x1 - d.x0) + (x - d.x0)) * 4 + 3];
+          work[i] = sub ? Math.round((startMask[i] * (255 - a)) / 255) : Math.max(startMask[i], a);
+        }
       }
-      setSelection(layer, m);
+      // adding always selects something; removing can only empty a selection that existed
+      setSelection(layer, work.slice(), sub ? startAny : true);
     };
     const move = (x: number, y: number) => {
       const p = toPixel(layer, x, y);
@@ -498,10 +516,19 @@ export const selectionBrushTool: ToolDef = {
         for (let i = 1; i <= n; i++) stamp(last.x + ((p.x - last.x) * i) / n, last.y + ((p.y - last.y) * i) / n);
       }
       last = p;
-      apply();
+      // many pointer events arrive per frame; update the selection once per frame
+      if (!frame) frame = requestAnimationFrame(flush);
     };
     move(c.raw.x, c.raw.y);
-    return { move: (m) => move(m.raw.x, m.raw.y) };
+    return {
+      move: (m) => move(m.raw.x, m.raw.y),
+      up() {
+        if (frame) cancelAnimationFrame(frame);
+        flush();
+        // removing may have emptied the selection: say so exactly once, at the end
+        if (sub) setSelection(layer, work.slice());
+      },
+    };
   },
 };
 
@@ -561,7 +588,9 @@ export const pixelGradientTool: ToolDef = {
       const original = cloneCanvas(canvas);
       const result = cloneCanvas(canvas);
       const mask = selectionFor(layer)?.mask ?? null;
-      const preview = makePreview(layer.id, () => result);
+      let latest = a;
+      // the gradient is only redrawn when the preview is refreshed, not on every pointer event
+      const preview = makePreview(layer.id, () => (draw(latest.x, latest.y), result));
       const draw = (bx: number, by: number) => {
         const ctx = result.getContext('2d')!;
         ctx.clearRect(0, 0, result.width, result.height);
@@ -582,14 +611,17 @@ export const pixelGradientTool: ToolDef = {
       };
       return {
         move(m) {
-          const b = toPixel(layer, m.raw.x, m.raw.y);
-          draw(b.x, b.y);
+          latest = toPixel(layer, m.raw.x, m.raw.y);
           preview.schedule();
         },
         up(m) {
           const b = toPixel(layer, m.raw.x, m.raw.y);
-          if (Math.hypot(b.x - a.x, b.y - a.y) < 2) return;
-          draw(b.x, b.y);
+          if (Math.hypot(b.x - a.x, b.y - a.y) < 2) {
+            // too short to be a gradient: put back the pixels the live preview may already have replaced
+            previewCanvas(layer.id, original);
+            return;
+          }
+          latest = b;
           preview.flush();
           commitPixels(layer.id, result, before);
         },

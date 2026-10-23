@@ -3,7 +3,7 @@ import { canBoolean } from '../boolean';
 import { bbox } from '../geometry';
 import { meshGridPoint } from '../mesh';
 import { commit, endLive, getState, live, makeShape, setState, useStore } from '../store';
-import { divideRegions, multiPolygonD, regionContains, unionRegions, type Region } from '../objectops';
+import { divideRegions, floodRegion, multiPolygonD, regionContains, unionRegions, type Region } from '../objectops';
 import type { Pt, Shape } from '../types';
 import { NumField } from '../components/Fields';
 import { toolIcon } from './icons';
@@ -135,8 +135,7 @@ export const vectorFloodTool: ToolDef = {
   down(c): Session | void {
     const closed = c.st.shapes.filter((s) => s.kind !== 'text' && canBoolean(s));
     if (!closed.length) return;
-    const regions = divideRegions(closed);
-    const hit = regions.find((r) => regionContains(r.mp, c.raw.x, c.raw.y));
+    const hit = floodRegion(closed, c.raw.x, c.raw.y);
     if (!hit) return;
     const style: Shape = { ...closed[hit.owner], fill: c.st.fill ?? closed[hit.owner].fill, gradient: null, stroke: null };
     const made = regionShape(hit.mp, style, 'Flood fill');
