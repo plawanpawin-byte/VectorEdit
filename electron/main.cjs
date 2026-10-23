@@ -13,7 +13,8 @@ function createWindow() {
     minHeight: 600,
     backgroundColor: '#222222',
     title: 'VectorEdit',
-    autoHideMenuBar: false,
+    // The renderer draws its own menu bar; the native one stays (hidden) so its accelerators keep working.
+    autoHideMenuBar: process.platform !== 'darwin',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

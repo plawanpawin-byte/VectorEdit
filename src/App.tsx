@@ -38,6 +38,7 @@ import { isDesktop, openDoc, saveDoc } from './fileio';
 import { placeFiles } from './images';
 import { RulerH, RulerV, RULER } from './components/Rulers';
 import { StatusBar } from './components/StatusBar';
+import { MenuBar } from './components/MenuBar';
 import { Toolbar } from './components/Toolbar';
 
 import { TOOLS, activateTool, isPixelWorkspace, toolDef, toolInWorkspace } from './tools/registry';
@@ -242,6 +243,7 @@ export function App() {
 
   return (
     <div className="app">
+      <MenuBar onHelp={() => setHelp(true)} />
       <TopBar onHelp={() => setHelp(true)} />
       <ContextBar />
       <div className={'workspace-row' + (workspace === 'layout' ? ' with-left' : '')}>

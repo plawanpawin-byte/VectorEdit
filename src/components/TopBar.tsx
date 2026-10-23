@@ -1,54 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
-import { WORKSPACES, isPixelWorkspace, setWorkspace } from '../tools/registry';
+import { WORKSPACES, setWorkspace } from '../tools/registry';
 import {
   align,
   arrange,
-  deleteSelected,
-  duplicateSelected,
   activeBoard,
   booleanOp,
   convertToCurves,
-  expandStroke,
-  fitArtboard,
   flip,
   getState,
   groupSelected,
-  newDocument,
   redo,
-  rotateSelection,
-  selectAll,
   setState,
   undo,
   ungroupSelected,
-  updateSelected,
   useStore,
-  zoomAt,
-  zoomTo,
 } from '../store';
 import type { Artboard } from '../types';
 import { exportPdf, exportPng, exportSvg } from './exporter';
-import { importSvgFile, openDoc, saveDoc } from '../fileio';
-import { openRasterOp } from '../raster/dialog';
 import { divideSelected, joinSelected, reverseSelected, separateSelected, setAll, smoothSelected, stepRepeatSelected, strokeWeight, traceSelected } from '../objectcmds';
-import { mergeDown, rasteriseSelection } from '../raster/rasterise';
-import { targetLayer } from '../raster/layer';
-import { RASTER_OPS } from '../raster/ops';
-import { deselect, featherSelection, growSelection, invertSelection, selectAll as selectAllPixels, smoothSelection } from '../raster/selection';
 import { I, Logo } from './Icons';
 
-interface Item {
-  label?: string;
-  shortcut?: string;
-  action?: () => void;
-  head?: boolean;
-  checked?: boolean;
-}
-
-const zoomBy = (f: number) => {
-  const { viewport } = getState();
-  zoomAt(f, viewport.w / 2, viewport.h / 2);
-};
-const runPdf = (boards: Artboard[], name: string) =>
+export const runPdf = (boards: Artboard[], name: string) =>
   exportPdf(getState().shapes, boards, name).then((r) => {
     if (r.raster.length) alert(`Exported. ${r.vector} page(s) are vector; the rest were saved as images because they use features PDF export cannot draw as vectors yet:\n\n${r.raster.join('\n')}`);
   });
@@ -82,36 +54,11 @@ function Popover({ button, children, className = '', title }: { button: React.Re
   );
 }
 
+const PRIMARY = ['vector', 'pixel', 'layout'];
+
 const WS_ACCENT: Record<string, string> = { vector: '#4db6ff', pixel: '#8f9bff', retouching: '#c58bff', colour: '#ffb25c', compositing: '#6fd9a0', layout: '#ff806b', typography: '#ffd45c', slice: '#ff6b6b', scripting: '#a9b4c2' };
 
 const WS_ICON: Record<string, React.ReactNode> = { vector: I.vector, pixel: I.pixel, layout: I.layout, typography: I.typo, slice: I.grid, scripting: I.code, retouching: I.retouch, colour: I.colour, compositing: I.composite };
-
-function OpMenu({ label, kind }: { label: string; kind: 'adjust' | 'filter' }) {
-  const ops = RASTER_OPS.filter((o) => o.kind === kind);
-  const cats = Array.from(new Set(ops.map((o) => o.category)));
-  return (
-    <Popover button={<span className="txtbtn">{label}</span>} className="left">
-      {(close) => (
-        <div className="menu-list">
-          {cats.map((cat) => (
-            <div key={cat}>
-              <div className="menu-head">{cat}</div>
-              {ops
-                .filter((o) => o.category === cat)
-                .map((o) => (
-                  <button key={o.id} onClick={() => (close(), void openRasterOp(o.id))}>
-                    <span className="chk" />
-                    <span>{o.name}{o.params.length ? '…' : ''}</span>
-                    <span className="sc" />
-                  </button>
-                ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </Popover>
-  );
-}
 
 function ObjectMenu() {
   const [rep, setRep] = useState({ count: 3, dx: 40, dy: 0 });
@@ -172,7 +119,6 @@ function ObjectMenu() {
 
 export function TopBar({ onHelp }: { onHelp: () => void }) {
   const workspace = useStore((s) => s.workspace);
-  const rulers = useStore((s) => s.rulers);
   const grid = useStore((s) => s.grid);
   const snap = useStore((s) => s.snap);
   const hasSel = useStore((s) => s.selection.length > 0);
@@ -180,44 +126,6 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
 
-  const menu: Item[] = [
-    { label: 'File', head: true },
-    { label: 'New Document', shortcut: 'Ctrl+N', action: newDocument },
-    { label: 'Open…', shortcut: 'Ctrl+O', action: openDoc },
-    { label: 'Import SVG…', action: importSvgFile },
-    { label: 'Save', shortcut: 'Ctrl+S', action: () => saveDoc(false) },
-    { label: 'Save As…', shortcut: 'Ctrl+Shift+S', action: () => saveDoc(true) },
-    { label: 'Export artboard as SVG…', action: () => doExport('svg') },
-    { label: 'Export artboard as PNG…', action: () => doExport('png') },
-    { label: 'Export artboard as PDF…', action: () => void runPdf([activeBoard()], activeBoard().name) },
-    { label: 'Export all artboards as PDF…', action: () => void runPdf(getState().artboards, 'document') },
-    { label: 'Export all artboards as PNG…', action: () => doExport('png', true) },
-    { label: 'Export all artboards as SVG…', action: () => doExport('svg', true) },
-    { label: 'Edit', head: true },
-    { label: 'Duplicate', shortcut: 'Ctrl+D', action: duplicateSelected },
-    { label: 'Delete', shortcut: 'Del', action: deleteSelected },
-    { label: 'Select All', shortcut: 'Ctrl+A', action: selectAll },
-    { label: 'Deselect', shortcut: 'Esc', action: () => setState({ selection: [] }) },
-    { label: 'Object', head: true },
-    { label: 'Group', shortcut: 'Ctrl+G', action: groupSelected },
-    { label: 'Ungroup', shortcut: 'Shift+Ctrl+G', action: ungroupSelected },
-    { label: 'Convert to Curves', action: convertToCurves },
-    { label: 'Expand Stroke', action: () => void expandStroke() },
-    { label: 'Rasterise Selection', action: () => void rasteriseSelection() },
-    { label: 'Merge Down (pixel layers)', action: () => void mergeDown() },
-    { label: 'Rotate 90° Clockwise', action: () => rotateSelection(90) },
-    { label: 'Rotate 90° Counter-clockwise', action: () => rotateSelection(-90) },
-    { label: 'Lock Selection', action: () => (updateSelected((s) => ({ ...s, locked: true })), setState({ selection: [] })) },
-    { label: 'Unlock All', action: () => setState({ shapes: getState().shapes.map((s) => ({ ...s, locked: false })) }) },
-    { label: 'Hide Selection', action: () => (updateSelected((s) => ({ ...s, visible: false })), setState({ selection: [] })) },
-    { label: 'Show All', action: () => setState({ shapes: getState().shapes.map((s) => ({ ...s, visible: true })) }) },
-    { label: 'View', head: true },
-    { label: 'Zoom In', shortcut: 'Ctrl++', action: () => zoomBy(1.25) },
-    { label: 'Zoom Out', shortcut: 'Ctrl+−', action: () => zoomBy(0.8) },
-    { label: 'Fit Artboard', shortcut: 'Ctrl+0', action: fitArtboard },
-    { label: 'Actual Size', shortcut: 'Ctrl+1', action: () => zoomTo(1) },
-    { label: 'Rulers', shortcut: 'Ctrl+R', checked: rulers, action: () => setState({ rulers: !getState().rulers }) },
-  ];
 
   return (
     <header className="topbar">
@@ -225,27 +133,24 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
         <Logo />
       </div>
       <div className="modes">
-        {WORKSPACES.map((m) => (
+        {WORKSPACES.filter((m) => PRIMARY.includes(m.id) || m.id === workspace).map((m) => (
           <button key={m.id} className={workspace === m.id ? 'on' : ''} style={{ ['--ws' as string]: WS_ACCENT[m.id] }} title={m.description} onClick={() => setWorkspace(m.id)}>
             {WS_ICON[m.id]}
             <span>{m.label}</span>
           </button>
         ))}
       </div>
-      <Popover button={I.more} title="Menu" className="left">
+      <Popover button={I.more} title="More studios" className="left">
         {(close) => (
           <div className="menu-list">
-            {menu.map((it, i) =>
-              it.head ? (
-                <div key={i} className="menu-head">{it.label}</div>
-              ) : (
-                <button key={i} onClick={() => (close(), it.action?.())}>
-                  <span className="chk">{it.checked ? '✓' : ''}</span>
-                  <span>{it.label}</span>
-                  <span className="sc">{it.shortcut}</span>
-                </button>
-              ),
-            )}
+            <div className="menu-head">More studios</div>
+            {WORKSPACES.filter((m) => !PRIMARY.includes(m.id)).map((m) => (
+              <button key={m.id} onClick={() => (close(), setWorkspace(m.id))}>
+                <span className="chk">{workspace === m.id ? '✓' : ''}</span>
+                <span>{m.label}</span>
+                <span className="sc" />
+              </button>
+            ))}
           </div>
         )}
       </Popover>
@@ -253,34 +158,6 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
         <button className="ibtn" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo}>{I.undo}</button>
         <button className="ibtn" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo}>{I.redo}</button>
       </div>
-
-      {isPixelWorkspace(workspace) && (
-        <>
-          <OpMenu label="Adjust" kind="adjust" />
-          <OpMenu label="Filter" kind="filter" />
-          <Popover button={<span className="txtbtn">Select</span>} className="left">
-            {(close) => {
-              const l = () => targetLayer();
-              const act = (f: (layer: NonNullable<ReturnType<typeof l>>) => void) => () => {
-                close();
-                const layer = l();
-                if (layer) f(layer);
-              };
-              return (
-                <div className="menu-list">
-                  <button onClick={act(selectAllPixels)}><span className="chk" /><span>Select All</span><span className="sc">Ctrl+A</span></button>
-                  <button onClick={() => (close(), deselect())}><span className="chk" /><span>Deselect</span><span className="sc">Shift+Ctrl+A</span></button>
-                  <button onClick={act(invertSelection)}><span className="chk" /><span>Invert</span><span className="sc">Ctrl+I</span></button>
-                  <button onClick={act((x) => growSelection(x, 4))}><span className="chk" /><span>Grow 4 px</span><span className="sc" /></button>
-                  <button onClick={act((x) => growSelection(x, -4))}><span className="chk" /><span>Shrink 4 px</span><span className="sc" /></button>
-                  <button onClick={act((x) => featherSelection(x, 8))}><span className="chk" /><span>Feather 8 px</span><span className="sc" /></button>
-                  <button onClick={act((x) => smoothSelection(x, 5))}><span className="chk" /><span>Smooth</span><span className="sc" /></button>
-                </div>
-              );
-            }}
-          </Popover>
-        </>
-      )}
 
       <div className="grow" />
 

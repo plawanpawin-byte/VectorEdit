@@ -122,7 +122,7 @@ let state: State = {
   stroke: '#1c1c1c',
   strokeWidth: 2,
   colorTarget: 'fill',
-  rulers: true,
+  rulers: false,
   grid: false,
   snap: false,
   workspace: 'vector',
