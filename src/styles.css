@@ -192,7 +192,7 @@ select {
 .num em { font-style: normal; color: var(--text-faint); font-size: 11px; }
 
 /* ---------- workspace ---------- */
-.workspace-row { display: grid; grid-template-columns: 54px 1fr 272px; min-height: 0; }
+.workspace-row { display: grid; grid-template-columns: 40px 1fr 272px; min-height: 0; }
 
 .toolbar {
   display: flex;
@@ -438,7 +438,7 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; background: #ec
 .contextbar select { height: 20px; }
 
 /* ---------- pages, assets, snapshots ---------- */
-.workspace-row.with-left { grid-template-columns: 54px 232px 1fr 272px; }
+.workspace-row.with-left { grid-template-columns: 40px 232px 1fr 272px; }
 .leftdock { display: flex; flex-direction: column; background: var(--ui-2); border-right: 1px solid var(--line); min-height: 0; }
 .leftdock .dock-group { flex: 1; }
 .pages { display: flex; flex-direction: column; height: 100%; }
@@ -651,43 +651,31 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 .library-card:hover { border-color: var(--brand); }
 .library-card canvas, .library-card .ph { width: 100%; height: 74px; object-fit: cover; border-radius: 2px; background: #333; }
 
-/* ---------- high-contrast pass: deeper blacks, pure white text, heavier lines ---------- */
+/* ---------- Affinity-matched pass: values sampled from the reference screenshots ---------- */
 :root {
-  --ui-0: #0b0b0b;
-  --ui-1: #151515;
-  --ui-2: #202020;
-  --ui-3: #2a2a2a;
-  --ui-4: #3d3d3d;
-  --line: #000;
-  --line-soft: #4a4a4a;
-  --text: #fff;
-  --text-dim: #f2f2f2;
-  --text-faint: #b4b4b4;
-  --brand: #12c2ae;
-  --brand-hi: #36f0d8;
-  --sel: #2f95ff;
-  --sel-soft: rgba(47, 149, 255, 0.28);
+  --ui-0: #161616; /* inputs */
+  --ui-1: #222222; /* canvas surround */
+  --ui-2: #1f1f1f; /* panels */
+  --ui-3: #404040; /* top bar, toolbox, status bar */
+  --ui-4: #4d4d4d; /* hover */
+  --line: #161616;
+  --line-soft: #363636;
+  --text: #ffffff;
+  --text-dim: #d9d9d9;
+  --text-faint: #9a9a9a;
 }
-body { font-weight: 500; -webkit-font-smoothing: auto; text-rendering: geometricPrecision; }
-input, select, textarea { background: var(--ui-0); border-color: #000; }
-input:focus, select:focus, textarea:focus { outline: 1px solid var(--sel); }
-.toolbar { padding: 10px 0; gap: 3px; border-right: 2px solid #000; }
-.tool { width: 42px; height: 42px; border-radius: 7px; color: #fff; }
-.tool svg { width: 26px; height: 26px; stroke-width: 1.9; }
-.tool.gap, .slot[data-group='draw'], .slot[data-group='text'], .slot[data-group='shapes'],
-.slot[data-group='edit'], .slot[data-group='paint'], .slot[data-group='view'] { margin-top: 10px; }
-.tool:hover { background: #4a4a4a; color: #fff; }
-.tool.on { background: #000; color: #fff; box-shadow: inset 0 0 0 2px var(--brand-hi); }
-.tool .more { border-left-width: 5px; border-bottom: 5px solid #d8d8d8; right: 3px; bottom: 3px; }
-.ibtn { color: #fff; }
-.ibtn svg { stroke-width: 1.8; }
-.ibtn.on { background: #0f5f57; color: #fff; }
-.fillstroke { width: 44px; height: 50px; }
-.fs { width: 24px; height: 24px; border: 2px solid #000; }
-.fs.stroke { left: 15px; top: 15px; outline: 2px solid #fff; }
-.flyout, .pop-panel { border: 2px solid #000; background: #232323; }
-.flyout button { height: 32px; color: #fff; }
+body { font-size: 11.5px; }
+.toolbar { padding: 6px 0; gap: 1px; border-right: 1px solid var(--line); }
+.tool { width: 32px; height: 32px; border-radius: 4px; color: #d9d9d9; }
+.tool svg { width: 20px; height: 20px; stroke-width: 1.3; }
+.tool:hover { background: var(--ui-4); color: #fff; }
+.tool.on { background: #2a2a2a; color: #fff; box-shadow: inset 0 0 0 1px #5c5c5c; }
+.tool .more { border-left-width: 3px; border-bottom: 3px solid #9a9a9a; right: 2px; bottom: 2px; }
+.ibtn { color: #d9d9d9; }
+.ibtn:not(:disabled):hover { color: #fff; }
+.flyout, .pop-panel { background: #2b2b2b; border-color: #111; }
 .menu-list button:hover, .flyout button:hover { background: var(--sel); color: #fff; }
-.panel, .dock, .dock-tabs { border-color: #000; }
-.statusbar, .topbar, .ctxbar { border-color: #000; }
-hr, .sep { border-color: #4a4a4a; }
+.contextbar { background: #3b3b3b; }
+.doc-tabs, .ruler, .corner { background: #363636; }
+.toolbar { gap: 2px; }
+.tool { width: 34px; height: 34px; }
