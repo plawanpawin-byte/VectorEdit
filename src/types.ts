@@ -87,6 +87,15 @@ export interface Gradient {
 export type ArrowKind = '' | 'arrow' | 'open' | 'circle' | 'square' | 'diamond' | 'bar';
 export type StrokeAlign = 'center' | 'inside' | 'outside';
 
+export type AdjustType = 'brightness' | 'huesat' | 'invert' | 'grayscale' | 'sepia' | 'blur' | 'posterize' | 'threshold';
+
+/** A non-destructive adjustment layer: filters everything stacked below it. */
+export interface Adjust {
+  type: AdjustType;
+  a: number;
+  b: number;
+}
+
 export interface Pattern {
   type: 'stripes' | 'dots' | 'grid' | 'cross' | 'checker' | 'waves' | 'bricks' | 'diamonds' | 'zigzag';
   color: string;
@@ -168,6 +177,8 @@ export interface Shape {
   gradient: Gradient | null;
   pattern: Pattern | null;
   fade: Fade | null;
+  /** set on adjustment layers */
+  adjust: Adjust | null;
   stroke: string | null;
   strokeWidth: number;
   strokeAlign: StrokeAlign;

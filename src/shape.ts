@@ -38,6 +38,7 @@ export function blankShape(id: string, kind: ShapeKind, p: Partial<Shape> = {}):
     gradient: null,
     pattern: null,
     fade: null,
+    adjust: null,
     stroke: null,
     strokeWidth: 1,
     strokeAlign: 'center',
@@ -67,5 +68,7 @@ export function normalizeShape(raw: unknown): Shape | null {
   // documents from before the shape registry stored polygons and stars as their own kinds
   if (legacy === 'polygon') return blankShape(r.id, 'shape', { ...r, kind: 'shape', shapeId: 'polygon', params: { ...defaultParams('polygon'), sides: r.sides ?? 6 } });
   if (legacy === 'star') return blankShape(r.id, 'shape', { ...r, kind: 'shape', shapeId: 'star', params: { ...defaultParams('star'), points: r.sides ?? 5, inner: r.inner ?? 0.5 } });
-  return blankShape(r.id, r.kind as ShapeKind, r);
+  const adj = r.adjust as Shape['adjust'] | undefined;
+  const adjust = adj && typeof adj === 'object' && typeof adj.type === 'string' ? { type: adj.type, a: Number(adj.a) || 0, b: Number(adj.b) || 0 } : null;
+  return blankShape(r.id, r.kind as ShapeKind, { ...r, adjust });
 }

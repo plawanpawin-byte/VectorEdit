@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from 'react';
 import type { PixelSel } from './raster/selection';
-import type { Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Slice, Snapshot, Tool, Workspace } from './types';
+import type { AdjustType, Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Slice, Snapshot, Tool, Workspace } from './types';
 import { bbox, rotateShape, scaleAbout, shearShape, toPath, translate, unionBox } from './geometry';
 import { type BoolOp, booleanPieces, canBoolean } from './boolean';
+import { adjustDef, defaultAdjust } from './adjustments';
 import { blankShape, normalizeShape } from './shape';
 import { strokeOutline } from './offset';
 import { defaultParams, shapeDef } from './shapes';
@@ -784,4 +785,28 @@ export function endBatch() {
     lastKey = '';
     setState({ past: [...state.past, start].slice(-MAX_HISTORY), future: [] });
   }
+}
+
+/* ---------- adjustment layers ---------- */
+
+export function addAdjustment(type: AdjustType): Shape {
+  const board = activeBoard();
+  const def = adjustDef(type)!;
+  const sh = makeShape('rect', {
+    name: def.label,
+    x: board.x,
+    y: board.y,
+    w: board.w,
+    h: board.h,
+    fill: null,
+    stroke: null,
+    adjust: defaultAdjust(type),
+  });
+  commit([...state.shapes, sh], { selection: [sh.id] });
+  return sh;
+}
+
+/** Toggle visibility or lock for every member of a group at once. */
+export function setGroupFlag(gid: string, flag: 'visible' | 'locked', value: boolean) {
+  commit(state.shapes.map((s) => (s.group === gid ? { ...s, [flag]: value } : s)));
 }

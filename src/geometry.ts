@@ -213,7 +213,7 @@ function inPolygon(px: number, py: number, poly: P2[]): boolean {
 }
 
 export function hitTest(s: Shape, x: number, y: number, tol: number): boolean {
-  if (!s.visible) return false;
+  if (!s.visible || s.adjust) return false;
   const half = (s.stroke ? s.strokeWidth : 0) / 2 + tol;
   if (s.kind === 'rect') {
     const inOuter = x >= s.x - half && x <= s.x + s.w + half && y >= s.y - half && y <= s.y + s.h + half;

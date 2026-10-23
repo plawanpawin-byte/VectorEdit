@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { bbox, unionBox } from '../geometry';
 import {
   activeBoard,
+  addAdjustment,
+  setGroupFlag,
   deleteSelected,
   duplicateSelected,
   getState,
@@ -23,11 +25,13 @@ import {
 } from '../store';
 import { Duplicate, Eye, I, Lock, Trash } from './Icons';
 import { NumField, Section } from './Fields';
+import { Artwork } from './Artwork';
 import { ShapeEl } from './ShapeEl';
 import { chooseImageInto } from '../images';
 import { shapeDef, defaultParams } from '../shapes';
 import { addPixelLayer } from '../raster/layer';
-import type { ArrowKind, Effect, Pattern, Shape } from '../types';
+import { ADJUSTMENTS, adjustDef, defaultAdjust } from '../adjustments';
+import type { AdjustType, ArrowKind, Effect, Pattern, Shape } from '../types';
 
 const SWATCHES = [
   '#000000', '#262626', '#4d4d4d', '#808080', '#b3b3b3', '#d9d9d9', '#f2efe8', '#ffffff',
@@ -504,12 +508,136 @@ export function Appearance() {
 
 /* ---------- layers ---------- */
 
+function LayerRow({ s, depth, editing, setEditing }: { s: Shape; depth: number; editing: string | null; setEditing: (id: string | null) => void }) {
+  const selected = useStore((st) => st.selection.includes(s.id));
+  return (
+    <div
+      className={'layer' + (selected ? ' sel' : '') + (s.visible ? '' : ' hidden')}
+      style={{ paddingLeft: 8 + depth * 14 }}
+      onClick={(e) => {
+        if (s.locked) return;
+        const sl = getState().selection;
+        setState({ selection: e.shiftKey ? (sl.includes(s.id) ? sl.filter((i) => i !== s.id) : [...sl, s.id]) : [s.id] });
+      }}
+    >
+      <span className={'thumb' + (s.adjust ? ' adj' : '')}>
+        {s.adjust ? (
+          <svg viewBox="0 0 20 20" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.4">
+            <circle cx="10" cy="10" r="6.5" />
+            <path d="M10 3.5v13" />
+            <path d="M10 3.5a6.5 6.5 0 010 13z" fill="currentColor" />
+          </svg>
+        ) : (
+          <svg viewBox={(() => { const b = bbox(s); const pad = Math.max(b.w, b.h) * 0.08 + 1; return `${b.x - pad} ${b.y - pad} ${b.w + pad * 2} ${b.h + pad * 2}`; })()} width="22" height="22" preserveAspectRatio="xMidYMid meet">
+            <ShapeEl shape={{ ...s, visible: true, blend: 'normal' }} />
+          </svg>
+        )}
+      </span>
+      {editing === s.id ? (
+        <input
+          className="rename"
+          autoFocus
+          defaultValue={s.name}
+          onBlur={(e) => (updateShape(s.id, { name: e.target.value || s.name }), setEditing(null))}
+          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <span className="name" onDoubleClick={() => setEditing(s.id)}>
+          {s.name}
+          <em>{s.adjust ? 'Adjustment' : s.kind === 'shape' ? (shapeDef(s.shapeId)?.name ?? 'Shape') : KIND_LABEL[s.kind]}</em>
+        </span>
+      )}
+      <button className={'ic' + (s.locked ? ' on' : ' faint')} title="Lock" onClick={(e) => (e.stopPropagation(), updateShape(s.id, { locked: !s.locked }))}>
+        <Lock on={s.locked} />
+      </button>
+      <button className={'ic' + (s.visible ? '' : ' off')} title="Visibility" onClick={(e) => (e.stopPropagation(), updateShape(s.id, { visible: !s.visible }))}>
+        <Eye off={!s.visible} />
+      </button>
+    </div>
+  );
+}
+
+function AdjustControls({ s }: { s: Shape }) {
+  const adj = s.adjust!;
+  const def = adjustDef(adj.type)!;
+  const set = (patch: Partial<typeof adj>, key: string) => updateShape(s.id, { adjust: { ...adj, ...patch } }, key);
+  return (
+    <div className="adjust-box">
+      <select value={adj.type} onChange={(e) => updateShape(s.id, { adjust: defaultAdjust(e.target.value as AdjustType), name: adjustDef(e.target.value as AdjustType)!.label })}>
+        {ADJUSTMENTS.map((d) => (
+          <option key={d.type} value={d.type}>{d.label}</option>
+        ))}
+      </select>
+      {(['a', 'b'] as const).map((k) => {
+        const f = def[k];
+        if (!f) return null;
+        return (
+          <label key={k} className="adj-row">
+            <span>{f.label}</span>
+            <input type="range" min={f.min} max={f.max} value={adj[k]} onChange={(e) => set({ [k]: Number(e.target.value) }, 'adj' + k + s.id)} />
+            <em>{Math.round(adj[k])}</em>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Layers() {
   const shapes = useStore((s) => s.shapes);
   const selection = useStore((s) => s.selection);
   const [editing, setEditing] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [adjMenu, setAdjMenu] = useState(false);
   const one = shapes.find((s) => selection.includes(s.id));
   const list = [...shapes].reverse();
+
+  // rows: groups become a header followed by their (indented) members
+  const rows: ReactNode[] = [];
+  const seen = new Set<string>();
+  let groupNo = 0;
+  for (const s of list) {
+    if (!s.group) {
+      rows.push(<LayerRow key={s.id} s={s} depth={0} editing={editing} setEditing={setEditing} />);
+      continue;
+    }
+    if (seen.has(s.group)) continue;
+    seen.add(s.group);
+    const gid = s.group;
+    const members = list.filter((m) => m.group === gid);
+    const open = !collapsed.has(gid);
+    const allVisible = members.every((m) => m.visible);
+    const allLocked = members.every((m) => m.locked);
+    const groupSel = members.every((m) => selection.includes(m.id));
+    groupNo++;
+    rows.push(
+      <div key={gid} className={'layer group-row' + (groupSel ? ' sel' : '') + (allVisible ? '' : ' hidden')} onClick={() => setState({ selection: members.filter((m) => !m.locked).map((m) => m.id) })}>
+        <button className="ic chev" title={open ? 'Collapse' : 'Expand'} onClick={(e) => (e.stopPropagation(), setCollapsed((c) => { const n = new Set(c); open ? n.add(gid) : n.delete(gid); return n; }))}>
+          <svg viewBox="0 0 10 10" width="9" height="9" fill="currentColor" style={{ transform: open ? 'rotate(90deg)' : undefined }}>
+            <path d="M3 1.5l4 3.5-4 3.5z" />
+          </svg>
+        </button>
+        <span className="thumb folder">
+          <svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.3">
+            <path d="M2.5 5.5h5l1.5 2h8.500v8h-15z" />
+          </svg>
+        </span>
+        <span className="name">
+          Group {groupNo}
+          <em>{members.length} {members.length === 1 ? 'layer' : 'layers'}</em>
+        </span>
+        <button className={'ic' + (allLocked ? ' on' : ' faint')} title="Lock group" onClick={(e) => (e.stopPropagation(), setGroupFlag(gid, 'locked', !allLocked))}>
+          <Lock on={allLocked} />
+        </button>
+        <button className={'ic' + (allVisible ? '' : ' off')} title="Group visibility" onClick={(e) => (e.stopPropagation(), setGroupFlag(gid, 'visible', !allVisible))}>
+          <Eye off={!allVisible} />
+        </button>
+      </div>,
+    );
+    if (open) for (const m of members) rows.push(<LayerRow key={m.id} s={m} depth={1} editing={editing} setEditing={setEditing} />);
+  }
+
   return (
     <div className="layers">
       <div className="layer-opts">
@@ -523,52 +651,16 @@ export function Layers() {
             <option key={v} value={v}>{v} %</option>
           ))}
         </select>
-        <select disabled={!one} value={one?.blend ?? 'normal'} onChange={(e) => updateSelected((s) => ({ ...s, blend: e.target.value }))}>
+        <select disabled={!one || !!one.adjust} value={one?.blend ?? 'normal'} onChange={(e) => updateSelected((s) => ({ ...s, blend: e.target.value }))}>
           {BLENDS.map((b) => (
             <option key={b} value={b}>{label(b)}</option>
           ))}
         </select>
       </div>
+      {one?.adjust && <AdjustControls s={one} />}
       <div className="layer-list">
         {list.length === 0 && <p className="hint">No objects yet.</p>}
-        {list.map((s) => (
-          <div
-            key={s.id}
-            className={'layer' + (selection.includes(s.id) ? ' sel' : '') + (s.visible ? '' : ' hidden')}
-            onClick={(e) => {
-              if (s.locked) return;
-              const sl = getState().selection;
-              setState({ selection: e.shiftKey ? (sl.includes(s.id) ? sl.filter((i) => i !== s.id) : [...sl, s.id]) : [s.id] });
-            }}
-          >
-            <span className="thumb">
-              <svg viewBox={(() => { const b = bbox(s); const pad = Math.max(b.w, b.h) * 0.08 + 1; return `${b.x - pad} ${b.y - pad} ${b.w + pad * 2} ${b.h + pad * 2}`; })()} width="22" height="22" preserveAspectRatio="xMidYMid meet">
-                <ShapeEl shape={{ ...s, visible: true, blend: 'normal' }} />
-              </svg>
-            </span>
-            {editing === s.id ? (
-              <input
-                className="rename"
-                autoFocus
-                defaultValue={s.name}
-                onBlur={(e) => (updateShape(s.id, { name: e.target.value || s.name }), setEditing(null))}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <span className="name" onDoubleClick={() => setEditing(s.id)}>
-                {s.name}{s.group && <span className="gchip">grp</span>}
-                <em>{s.kind === 'shape' ? (shapeDef(s.shapeId)?.name ?? 'Shape') : KIND_LABEL[s.kind]}</em>
-              </span>
-            )}
-            <button className={'ic' + (s.locked ? ' on' : ' faint')} title="Lock" onClick={(e) => (e.stopPropagation(), updateShape(s.id, { locked: !s.locked }))}>
-              <Lock on={s.locked} />
-            </button>
-            <button className={'ic' + (s.visible ? '' : ' off')} title="Visibility" onClick={(e) => (e.stopPropagation(), updateShape(s.id, { visible: !s.visible }))}>
-              <Eye off={!s.visible} />
-            </button>
-          </div>
-        ))}
+        {rows}
       </div>
       <footer className="layer-foot">
         <button
@@ -585,6 +677,18 @@ export function Layers() {
           {I.plusRect}
         </button>
         <button title="New pixel layer" className="txt" onClick={() => addPixelLayer()}>+ Pixel</button>
+        <div className="pop">
+          <button title="New adjustment layer: filters everything below it, non-destructively" className="txt" onClick={() => setAdjMenu(!adjMenu)}>
+            + Adjust
+          </button>
+          {adjMenu && (
+            <div className="menu-pop up" onMouseLeave={() => setAdjMenu(false)}>
+              {ADJUSTMENTS.map((d) => (
+                <button key={d.type} onClick={() => (addAdjustment(d.type), setAdjMenu(false))}>{d.label}</button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="grow" />
         <button title="Duplicate (Ctrl+D)" onClick={duplicateSelected}><Duplicate /></button>
         <button title="Delete" onClick={deleteSelected}><Trash /></button>
@@ -646,9 +750,7 @@ export function Navigator() {
         {artboards.map((a) => (
           <rect key={a.id} x={a.x} y={a.y} width={a.w} height={a.h} fill="#fff" />
         ))}
-        {shapes.map((s) => (
-          <ShapeEl key={s.id} shape={s} />
-        ))}
+        <Artwork shapes={shapes} />
         <rect x={-panX / zoom} y={-panY / zoom} width={viewport.w / zoom} height={viewport.h / zoom} fill="none" stroke="#ff5a4e" strokeWidth={vb.w / 120} />
       </svg>
       <div className="row">

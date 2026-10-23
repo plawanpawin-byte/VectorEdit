@@ -6,7 +6,7 @@ import { toolDef } from '../tools/registry';
 import type { PointerCtx } from '../tools/types';
 import { panSession } from '../tools/view';
 import type { Session } from '../tools/types';
-import { ShapeEl } from './ShapeEl';
+import { Artwork } from './Artwork';
 import { blankShape } from '../shape';
 import { layoutText } from '../textlayout';
 import { placeFiles } from '../images';
@@ -243,7 +243,7 @@ export function Canvas() {
               </text>
             </g>
           ))}
-          <g>{shapes.map((s) => (s.id === editingText ? null : <ShapeEl key={s.id} shape={s} all={shapes} />))}</g>
+          <g><Artwork shapes={shapes} hide={editingText} /></g>
 
           {selOverlay && selLayerShape && (
             <image href={selOverlay} x={selLayerShape.x} y={selLayerShape.y} width={selLayerShape.w} height={selLayerShape.h} preserveAspectRatio="none" pointerEvents="none" />

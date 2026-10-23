@@ -546,3 +546,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 *::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 0; border: 2px solid transparent; background-clip: content-box; }
 *::-webkit-scrollbar-thumb:hover { background: #666; background-clip: content-box; }
 .hint { color: var(--text-faint); font-size: 11px; padding: 8px 10px; margin: 0; line-height: 1.45; }
+
+.layer .thumb.adj, .layer .thumb.folder { color: var(--brand-hi); display: grid; place-items: center; }
+.layer.group-row { background: rgba(255, 255, 255, 0.03); }
+.layer.group-row .name { font-weight: 600; }
+.layer .chev { width: 14px; color: var(--text-dim); }
+.menu-pop { position: absolute; z-index: 30; min-width: 170px; background: var(--ui-3); border: 1px solid #000; box-shadow: 0 6px 18px rgba(0,0,0,.5); padding: 3px; display: grid; }
+.menu-pop.up { bottom: calc(100% + 4px); left: 0; }
+.menu-pop button { text-align: left; padding: 5px 9px; border-radius: 2px; }
+.menu-pop button:hover { background: var(--sel); }
+.adjust-box { padding: 6px 10px 8px; display: grid; gap: 6px; border-bottom: 1px solid var(--line); background: rgba(23, 179, 163, .06); }
+.adj-row { display: grid; grid-template-columns: 74px 1fr 34px; align-items: center; gap: 8px; color: var(--text-dim); }
+.adj-row em { font-style: normal; text-align: right; color: var(--text); }

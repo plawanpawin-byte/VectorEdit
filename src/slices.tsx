@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { ShapeEl } from './components/ShapeEl';
+import { Artwork } from './components/Artwork';
 import { bbox, boxesIntersect } from './geometry';
 import { download } from './components/exporter';
 import type { Shape, Slice } from './types';
@@ -9,10 +9,8 @@ const fileName = (s: Slice) => `${s.name.replace(/[^\w.-]+/g, '_') || 'slice'}${
 /** SVG markup of everything inside a slice, cropped to it. */
 export function sliceSvg(shapes: Shape[], s: Slice, background?: string): string {
   const box = { x: s.x, y: s.y, w: s.w, h: s.h };
-  const body = shapes
-    .filter((sh) => sh.visible && boxesIntersect(bbox(sh), box))
-    .map((sh) => renderToStaticMarkup(<ShapeEl shape={sh} all={shapes} />))
-    .join('\n  ');
+  const visible = shapes.filter((sh) => sh.visible && boxesIntersect(bbox(sh), box));
+  const body = renderToStaticMarkup(<Artwork shapes={visible} all={shapes} />);
   const bg = background ? `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" fill="${background}"/>` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${s.w}" height="${s.h}" viewBox="${s.x} ${s.y} ${s.w} ${s.h}">${bg}\n  ${body}\n</svg>\n`;
 }

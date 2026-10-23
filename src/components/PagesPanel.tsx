@@ -15,6 +15,7 @@ import {
 } from '../store';
 import { shapeIcon } from '../tools/icons';
 import { Duplicate, I, Trash } from './Icons';
+import { Artwork } from './Artwork';
 import { ShapeEl } from './ShapeEl';
 
 export function PagesPanel() {
@@ -36,9 +37,7 @@ export function PagesPanel() {
           <div key={b.id} className={'page' + (b.id === active ? ' on' : '')} onClick={() => setActiveArtboard(b.id, true)}>
             <svg className="thumb-page" viewBox={`${b.x} ${b.y} ${b.w} ${b.h}`} preserveAspectRatio="xMidYMid meet">
               <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="#fff" />
-              {shapes.map((s) => (
-                <ShapeEl key={s.id} shape={s} all={shapes} />
-              ))}
+              <Artwork shapes={shapes} />
             </svg>
             {editing === b.id ? (
               <input
