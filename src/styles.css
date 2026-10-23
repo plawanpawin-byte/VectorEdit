@@ -713,3 +713,24 @@ body { font-size: 11.5px; }
 .toolbar { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
 .toolbar .slot { flex: none; }
 .tsep { flex: none; width: 22px; height: 0; margin: 5px 0; border: 0; border-top: 1px solid #5a5a5a; }
+
+/* ---------- softer corners throughout ---------- */
+.tool { border-radius: 8px; }
+.tool.on { box-shadow: inset 0 0 0 1px #6a6a6a; }
+.ibtn, .txtbtn, .mini, .layer-foot button, .layer .ic { border-radius: 6px; }
+.dock-tabs button { border-radius: 6px; }
+.modes { border-radius: 14px; }
+.modes button { border-radius: 11px; }
+.seg { border-radius: 9px; }
+.export { border-radius: 8px; }
+.pop-panel, .flyout { border-radius: 10px; }
+.menu-list button, .flyout button { border-radius: 6px; }
+.menubar-item > button { border-radius: 5px; }
+input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea { border-radius: 5px; }
+.modal { border-radius: 12px; }
+.layer { border-radius: 6px; margin: 1px 4px; border-bottom: 0; }
+.fs { border-radius: 6px; }
+.doc-tab { border-radius: 6px 6px 0 0; }
+.anchor-grid { border-radius: 6px; }
+.anchor-grid button, .anchor-grid > * { border-radius: 3px; }
+.layer.sel { box-shadow: inset 0 0 0 1px rgba(47,149,255,.7); }
