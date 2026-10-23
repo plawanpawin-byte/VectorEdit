@@ -7,7 +7,13 @@ export type Tool =
   | 'line'
   | 'text'
   | 'hand'
-  | 'zoom';
+  | 'zoom'
+  | 'pencil'
+  | 'rrect'
+  | 'polygon'
+  | 'star'
+  | 'rotate'
+  | 'eyedropper';
 
 /** Anchor point; (hx, hy) is the outgoing handle offset, the incoming handle is its mirror. */
 export interface Pt {
@@ -29,6 +35,7 @@ export interface Shape {
   y: number;
   w: number;
   h: number;
+  radius: number;
   pts: Pt[];
   closed: boolean;
   text: string;

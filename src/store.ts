@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { Box, Mode, Pt, Shape, ShapeKind, Tool } from './types';
-import { bbox, scaleAbout, translate, unionBox } from './geometry';
+import { bbox, rotateShape, scaleAbout, translate, unionBox } from './geometry';
 
 export interface State {
   shapes: Shape[];
@@ -25,6 +25,8 @@ export interface State {
   pen: Pt[] | null;
   editingText: string | null;
   filePath: string | null;
+  sides: number;
+  starPoints: number;
 }
 
 let counter = 0;
@@ -38,6 +40,7 @@ function seed(): Shape[] {
     y: 0,
     w: 0,
     h: 0,
+    radius: 0,
     pts: [],
     closed: false,
     text: '',
@@ -106,6 +109,8 @@ let state: State = {
   pen: null,
   editingText: null,
   filePath: null,
+  sides: 6,
+  starPoints: 5,
 };
 
 const listeners = new Set<() => void>();
@@ -207,6 +212,7 @@ export function makeShape(kind: ShapeKind, p: Partial<Shape> = {}): Shape {
     y: 0,
     w: 0,
     h: 0,
+    radius: 0,
     pts: [],
     closed: false,
     text: 'Type here',
@@ -430,10 +436,22 @@ export function historyJump(target: number) {
 }
 
 export const MODE_TOOLS: Record<Mode, Tool[]> = {
-  vector: ['select', 'direct', 'pen', 'text', 'line', 'rect', 'ellipse', 'hand', 'zoom'],
-  layout: ['select', 'text', 'rect', 'line', 'hand', 'zoom'],
-  draw: ['select', 'pen', 'line', 'ellipse', 'rect', 'hand', 'zoom'],
+  vector: ['select', 'direct', 'pen', 'pencil', 'text', 'line', 'rect', 'rrect', 'ellipse', 'polygon', 'star', 'rotate', 'eyedropper', 'hand', 'zoom'],
+  layout: ['select', 'text', 'rect', 'rrect', 'line', 'eyedropper', 'hand', 'zoom'],
+  draw: ['select', 'direct', 'pen', 'pencil', 'line', 'rect', 'ellipse', 'polygon', 'star', 'rotate', 'eyedropper', 'hand', 'zoom'],
 };
+
+export function rotateSelection(deg: number) {
+  const box = selectionBox();
+  if (!box) return;
+  const cx = box.x + box.w / 2;
+  const cy = box.y + box.h / 2;
+  updateSelected((s) => rotateShape(s, deg, cx, cy));
+}
+
+export function updateRadius(r: number) {
+  updateSelected((s) => (s.kind === 'rect' ? { ...s, radius: Math.max(0, Math.min(r, Math.min(s.w, s.h) / 2)) } : s), 'radius');
+}
 
 export function setMode(mode: Mode) {
   if (!MODE_TOOLS[mode].includes(state.tool)) setTool('select');

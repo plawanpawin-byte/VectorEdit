@@ -14,7 +14,7 @@ export function ShapeEl({ shape: s }: { shape: Shape }) {
   };
   switch (s.kind) {
     case 'rect':
-      return <rect x={s.x} y={s.y} width={s.w} height={s.h} {...common} />;
+      return <rect x={s.x} y={s.y} width={s.w} height={s.h} rx={s.radius ?? 0} {...common} />;
     case 'ellipse':
       return <ellipse cx={s.x + s.w / 2} cy={s.y + s.h / 2} rx={s.w / 2} ry={s.h / 2} {...common} />;
     case 'line':

@@ -187,3 +187,96 @@ export function hitTest(s: Shape, x: number, y: number, tol: number): boolean {
 export function boxesIntersect(a: Box, b: Box): boolean {
   return a.x <= b.x + b.w && a.x + a.w >= b.x && a.y <= b.y + b.h && a.y + a.h >= b.y;
 }
+
+const KAPPA = 0.5522847498;
+
+/** Turn rectangles and ellipses into editable paths; other kinds are returned unchanged. */
+export function toPath(s: Shape): Shape {
+  if (s.kind === 'rect') {
+    const { x, y, w, h } = s;
+    const pt = (px: number, py: number) => ({ x: px, y: py, hx: 0, hy: 0 });
+    return { ...s, kind: 'path', closed: true, pts: [pt(x, y), pt(x + w, y), pt(x + w, y + h), pt(x, y + h)], radius: 0 };
+  }
+  if (s.kind === 'ellipse') {
+    const rx = s.w / 2;
+    const ry = s.h / 2;
+    const cx = s.x + rx;
+    const cy = s.y + ry;
+    return {
+      ...s,
+      kind: 'path',
+      closed: true,
+      pts: [
+        { x: cx, y: cy - ry, hx: rx * KAPPA, hy: 0 },
+        { x: cx + rx, y: cy, hx: 0, hy: ry * KAPPA },
+        { x: cx, y: cy + ry, hx: -rx * KAPPA, hy: 0 },
+        { x: cx - rx, y: cy, hx: 0, hy: -ry * KAPPA },
+      ],
+    };
+  }
+  return s;
+}
+
+export function rotateShape(s: Shape, deg: number, cx: number, cy: number): Shape {
+  if (s.kind === 'text') return s;
+  const a = (deg * Math.PI) / 180;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  const p = toPath(s);
+  return {
+    ...p,
+    pts: p.pts.map((q) => ({
+      x: cx + (q.x - cx) * cos - (q.y - cy) * sin,
+      y: cy + (q.x - cx) * sin + (q.y - cy) * cos,
+      hx: q.hx * cos - q.hy * sin,
+      hy: q.hx * sin + q.hy * cos,
+    })),
+  };
+}
+
+/** Regular polygon or star inscribed in the box. */
+export function ngonPts(b: Box, points: number, inner: number | null) {
+  const rx = b.w / 2;
+  const ry = b.h / 2;
+  const cx = b.x + rx;
+  const cy = b.y + ry;
+  const out = [];
+  const n = inner === null ? points : points * 2;
+  for (let i = 0; i < n; i++) {
+    const k = inner === null ? 1 : i % 2 === 0 ? 1 : inner;
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+    out.push({ x: cx + Math.cos(a) * rx * k, y: cy + Math.sin(a) * ry * k, hx: 0, hy: 0 });
+  }
+  return out;
+}
+
+function rdp(pts: { x: number; y: number }[], eps: number): { x: number; y: number }[] {
+  if (pts.length < 3) return pts;
+  const a = pts[0];
+  const b = pts[pts.length - 1];
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  let idx = 0;
+  let max = 0;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = Math.abs(dy * pts[i].x - dx * pts[i].y + b.x * a.y - b.y * a.x) / len;
+    if (d > max) {
+      max = d;
+      idx = i;
+    }
+  }
+  if (max <= eps) return [a, b];
+  return [...rdp(pts.slice(0, idx + 1), eps).slice(0, -1), ...rdp(pts.slice(idx), eps)];
+}
+
+/** Simplify a freehand stroke and smooth it into Bezier anchors (Catmull-Rom). */
+export function smoothStroke(raw: { x: number; y: number }[], eps: number) {
+  const pts = rdp(raw, eps);
+  return pts.map((p, i) => {
+    const prev = pts[Math.max(0, i - 1)];
+    const next = pts[Math.min(pts.length - 1, i + 1)];
+    const end = i === 0 || i === pts.length - 1;
+    return { x: p.x, y: p.y, hx: end ? 0 : (next.x - prev.x) / 6, hy: end ? 0 : (next.y - prev.y) / 6 };
+  });
+}
