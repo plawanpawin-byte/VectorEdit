@@ -921,10 +921,33 @@ export function Navigator() {
   );
 }
 
+export function SnapshotsPanel() {
+  const snapshots = useStore((s) => s.snapshots);
+  return (
+    <>
+      <div className="snap-head">
+          <span>Snapshots</span>
+          <button className="mini wide" onClick={() => takeSnapshot()}>+ Take snapshot</button>
+        </div>
+        <div className="snap-list">
+          {snapshots.length === 0 && <p className="hint tight">A snapshot saves the whole document so you can return to it later.</p>}
+          {snapshots.map((sn) => (
+            <div key={sn.id} className="snap">
+              <button onClick={() => restoreSnapshot(sn.id)} title="Restore this snapshot (undoable)">
+                <b>{sn.name}</b>
+                <em>{new Date(sn.time).toLocaleTimeString()} · {sn.shapes.length} objects</em>
+              </button>
+              <i title="Delete snapshot" onClick={() => deleteSnapshot(sn.id)}>×</i>
+            </div>
+          ))}
+        </div>
+    </>
+  );
+}
+
 export function History() {
   const past = useStore((s) => s.past.length);
   const future = useStore((s) => s.future.length);
-  const snapshots = useStore((s) => s.snapshots);
   const total = past + future;
   return (
     <div className="panel-body pad">
@@ -940,22 +963,7 @@ export function History() {
           </button>
         )).reverse()}
       </div>
-      <div className="snap-head">
-        <span>Snapshots</span>
-        <button className="mini wide" onClick={() => takeSnapshot()}>+ Take snapshot</button>
-      </div>
-      <div className="snap-list">
-        {snapshots.length === 0 && <p className="hint tight">A snapshot saves the whole document so you can return to it later.</p>}
-        {snapshots.map((sn) => (
-          <div key={sn.id} className="snap">
-            <button onClick={() => restoreSnapshot(sn.id)} title="Restore this snapshot (undoable)">
-              <b>{sn.name}</b>
-              <em>{new Date(sn.time).toLocaleTimeString()} · {sn.shapes.length} objects</em>
-            </button>
-            <i title="Delete snapshot" onClick={() => deleteSnapshot(sn.id)}>×</i>
-          </div>
-        ))}
-      </div>
+      <SnapshotsPanel />
     </div>
   );
 }

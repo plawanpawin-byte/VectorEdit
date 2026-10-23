@@ -23,7 +23,7 @@ import {
 import { Canvas } from './components/Canvas';
 import { ContextBar } from './components/ContextBar';
 import { I } from './components/Icons';
-import { Appearance, ColorPanel, History, Layers, Navigator, StrokePanel, Swatches, TransformPanel } from './components/Panels';
+import { Appearance, ColorPanel, History, Layers, Navigator, SnapshotsPanel, StrokePanel, Swatches, TransformPanel } from './components/Panels';
 import { TopBar, doExport } from './components/TopBar';
 import { AssetsPanel, PagesPanel } from './components/PagesPanel';
 import { DataPanel } from './components/DataPanel';
@@ -289,6 +289,7 @@ export function App() {
                     { id: 'selection', label: 'Selection', body: <SelectionPanel /> },
                     { id: 'macros', label: 'Macros', body: <MacroPanel /> },
                     { id: 'scopes', label: 'Scopes', body: <ScopesPanel /> },
+                    ...(workspace === 'retouching' ? [{ id: 'snapshots', label: 'Snapshots', body: <div className="panel-body pad"><SnapshotsPanel /></div> }] : []),
                   ]
                 : [
                     { id: 'stroke', label: 'Stroke', body: <StrokePanel /> },

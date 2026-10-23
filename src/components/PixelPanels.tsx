@@ -3,6 +3,7 @@ import { BRUSH_PRESETS, Stroke, parseColour, presetById } from '../raster/brush'
 import { makeCanvas } from '../raster/cache';
 import { applyRasterDialog, cancelRasterDialog, openRasterOp, setRasterPreview, updateRasterParams } from '../raster/dialog';
 import { commitPixels, targetLayer, workingCanvas } from '../raster/layer';
+import { QUICK_PRESETS } from '../raster/presets';
 import { loadMacros, playMacro, saveMacros, startRecording, stopRecording, type PixelMacro } from '../raster/macro';
 import { RASTER_OPS, rasterOp } from '../raster/ops';
 import { RANGE_LABELS, outlineSelection, selectRange, type RangeKind } from '../raster/range';
@@ -279,6 +280,14 @@ export function MacroPanel() {
         <button className="mini wide" disabled={!macros.length} onClick={exportAll}>Export</button>
       </div>
       {msg && <p className="hint">{msg}</p>}
+      <div className="menu-head">Quick presets</div>
+      <div className="range-grid">
+        {QUICK_PRESETS.map((q) => (
+          <button key={q.id} className="mini wide" title={q.steps.map((s) => rasterOp(s.op)?.name ?? s.op).join(' → ')} onClick={() => void play({ id: q.id, name: q.name, steps: q.steps })}>
+            {q.name}
+          </button>
+        ))}
+      </div>
       <div className="slice-list">
         {macros.map((m) => (
           <div key={m.id} className="slice">
