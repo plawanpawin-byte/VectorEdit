@@ -31,9 +31,9 @@ Six workspaces, each with its own toolbox and panels:
 
 | Workspace | Highlights |
 | --- | --- |
-| **Vector** | Pen, Pencil, Vector Brush, Node/Corner tools, Knife, Scissors, 21 parametric shapes (star, cog, spiral, heart…), Transparency, Contour, Perspective and Envelope Warp tools, 9 pattern fills, boolean ops, Expand Stroke, grouped Layers tree, non-destructive adjustment layers, gradients and patterns, stroke alignment and arrowheads, 8 stackable effects, blend modes, multiple artboards, guides, snapshots |
+| **Vector** | Pen, Pencil, Vector Brush, Node/Corner tools, Knife, Scissors, 21 parametric shapes (star, cog, spiral, heart…), Transparency, Contour, Perspective and Envelope Warp (3×3 to 6×6 mesh) tools, 9 pattern fills, boolean ops, Expand Stroke, nested groups in a Layers tree, clipping masks, adjustment layers that can be limited to an outline, non-destructive adjustment layers, gradients and patterns, stroke alignment and arrowheads, 8 stackable effects, blend modes, multiple artboards, guides, snapshots |
 | **Pixel** | Macro recorder (record filters, replay in one undo step, import/export JSON), raster layers, 14 brush presets, selection tools (marquee, lasso, magic wand, colour range), clone/heal/dodge/burn/blur/smudge, fill and gradient, 45 live-preview adjustments and filters, merge down |
-| **Layout** | Pages panel, image and picture frames, tables, text frames, grid |
+| **Layout** | Master pages (content repeats behind every page that uses it), Pages panel, image and picture frames, tables, text frames, grid |
 | **Typography** | Artistic and frame text, Character / Paragraph / Text Styles panels, wrapping, alignment and justify |
 | **Slice** | Slice tool, Slices panel, per-slice format (PNG/JPEG/SVG) and scale, export all |
 | **Scripting** | JavaScript `app` API (add, update, remove, group, select, pages, undo), saved macros; a whole script is one undo step |
@@ -42,19 +42,7 @@ Also: autosave (IndexedDB) with crash recovery, `.vedit` documents, SVG/PNG expo
 
 ## Limitations
 
-VectorEdit is a young project and does **not** have everything Affinity has. Missing today: non-destructive *filter* layers for pixel layers and live masks (vector adjustment layers cover brightness, hue, B&W, sepia, blur, posterize, threshold and invert), AI features, true master pages and spreads, pressure dynamics for brushes, free-form mesh warp (Envelope Warp uses a 3×3 net) and gradient-mesh fills. Text styles are stored per browser. Scripts are not sandboxed, so only run code you trust.
-
-### Shortcuts
-
-| Key | Action |
-| --- | --- |
-| `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
-| `Ctrl+D` | Duplicate |
-| `Ctrl+A` | Select all |
-| `Ctrl+0` / `Ctrl+1` | Fit artboard / 100% |
-| `Ctrl+]` / `Ctrl+[` | Bring forward / send backward (add Shift for front / back) |
-| `Ctrl+R` / `Ctrl+'` | Toggle rulers / grid |
-| `X` / `Shift+X` / `D` | Switch fill-stroke target / swap / reset colors |
+VectorEdit is a young project and does **not** have everything Affinity has. Missing today: AI features, filter layers and live masks for pixel layers, pressure dynamics for brushes, gradient-mesh fills, and Affinity file-format import. Master pages repeat content but have no page numbering or spreads yet. Text styles are stored per browser. Scripts are not sandboxed, so only run code you trust.
 
 ## Layout
 

@@ -94,6 +94,8 @@ export interface Adjust {
   type: AdjustType;
   a: number;
   b: number;
+  /** limit the effect to the layer's own outline instead of the whole page */
+  region?: boolean;
 }
 
 export interface Pattern {
@@ -179,6 +181,8 @@ export interface Shape {
   fade: Fade | null;
   /** set on adjustment layers */
   adjust: Adjust | null;
+  /** id of the shape whose outline clips this one (clipping mask) */
+  clip: string | null;
   stroke: string | null;
   strokeWidth: number;
   strokeAlign: StrokeAlign;
@@ -205,6 +209,10 @@ export interface Box {
 export interface Artboard {
   id: string;
   name: string;
+  /** this page is a master: its content repeats behind every page that picks it */
+  isMaster?: boolean;
+  /** id of the master page applied to this page */
+  master?: string | null;
   x: number;
   y: number;
   w: number;

@@ -30,3 +30,24 @@ describe('adjustment layers', () => {
     expect(normalizeShape({ ...base, adjust: 'junk' })?.adjust).toBeNull();
   });
 });
+
+describe('clipping masks and regions', () => {
+  it('clips a shape to its mask and hides the mask', () => {
+    const mask = blankShape('m', 'ellipse', { w: 20, h: 20, fill: '#00f' });
+    const art = blankShape('a2', 'rect', { w: 50, h: 50, fill: '#ff0', clip: 'm' });
+    const html = out([art, mask]);
+    expect(html).toContain('<clipPath id="clip-a2">');
+    expect(html).toContain('clip-path="url(#clip-a2)"');
+    expect(html).not.toContain('#00f');
+  });
+  it('ignores a clip whose mask is gone', () => {
+    const art = blankShape('a3', 'rect', { w: 5, h: 5, fill: '#ff0', clip: 'gone' });
+    expect(out([art])).not.toContain('clip-path');
+  });
+  it('limits an adjustment to its outline', () => {
+    const region = blankShape('r2', 'rect', { x: 0, y: 0, w: 5, h: 5, adjust: { ...defaultAdjust('invert'), region: true } });
+    const html = out([base, region]);
+    expect(html).toContain('<clipPath id="adjclip-r2">');
+    expect(html.match(/#f00/g)).toHaveLength(2); // untouched base plus the filtered, clipped copy
+  });
+});

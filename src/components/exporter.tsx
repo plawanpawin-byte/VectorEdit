@@ -1,13 +1,19 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { bbox, boxesIntersect } from '../geometry';
 import type { Artboard, Shape } from '../types';
-import { Artwork } from './Artwork';
+import { getState } from '../store';
+import { Artwork, MasterArtwork } from './Artwork';
 
 /** SVG of one artboard: every shape that touches it, cropped to its bounds. */
-export function toSvg(shapes: Shape[], board: Artboard, transparent = true): string {
+export function toSvg(shapes: Shape[], board: Artboard, transparent = true, boards: Artboard[] = getState().artboards): string {
   const box = { x: board.x, y: board.y, w: board.w, h: board.h };
   const visible = shapes.filter((s) => s.visible && boxesIntersect(bbox(s), box));
-  const body = renderToStaticMarkup(<Artwork shapes={visible} all={shapes} />);
+  const body = renderToStaticMarkup(
+    <>
+      <MasterArtwork board={board} boards={boards} shapes={shapes} />
+      <Artwork shapes={visible} all={shapes} />
+    </>,
+  );
   const bg = transparent ? '' : `\n  <rect x="${board.x}" y="${board.y}" width="${board.w}" height="${board.h}" fill="#fff"/>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${board.w}" height="${board.h}" viewBox="${board.x} ${board.y} ${board.w} ${board.h}">${bg}\n  ${body}\n</svg>\n`;
 }

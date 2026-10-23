@@ -3,6 +3,7 @@ import type { PixelSel } from './raster/selection';
 import type { AdjustType, Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Slice, Snapshot, Tool, Workspace } from './types';
 import { bbox, rotateShape, scaleAbout, shearShape, toPath, translate, unionBox } from './geometry';
 import { type BoolOp, booleanPieces, canBoolean } from './boolean';
+import { inGroup, topGroup, unwrapGroup, wrapGroup } from './groups';
 import { adjustDef, defaultAdjust } from './adjustments';
 import { blankShape, normalizeShape } from './shape';
 import { strokeOutline } from './offset';
@@ -50,6 +51,7 @@ export interface State {
   /** pixel selection of the layer being edited (not saved, not undoable) */
   pixelSel: PixelSel | null;
   rasterDialog: import('./raster/dialog').RasterDialogState | null;
+  warpGrid: number;
   macroRecording: boolean;
   macroSteps: number;
   pbrush: import('./raster/brush').BrushParams & { preset: string };
@@ -130,6 +132,7 @@ let state: State = {
   contour: { steps: 3, join: 'round' },
   pixelSel: null,
   rasterDialog: null,
+  warpGrid: 4,
   macroRecording: false,
   macroSteps: 0,
   pbrush: { preset: 'round', size: 24, hardness: 0.85, opacity: 1, flow: 1, spacing: 0.12, roundness: 1, angle: 0, texture: 'none', jitter: 0 },
@@ -653,9 +656,9 @@ export function deleteSnapshot(id: string) {
 let groupCounter = 0;
 
 export function expandToGroups(ids: string[], shapes: Shape[] = state.shapes): string[] {
-  const groups = new Set(shapes.filter((s) => ids.includes(s.id) && s.group).map((s) => s.group));
+  const groups = new Set(shapes.filter((s) => ids.includes(s.id) && s.group).map((s) => topGroup(s.group)));
   if (!groups.size) return ids;
-  return Array.from(new Set([...ids, ...shapes.filter((s) => s.group && groups.has(s.group)).map((s) => s.id)]));
+  return Array.from(new Set([...ids, ...shapes.filter((s) => s.group && groups.has(topGroup(s.group))).map((s) => s.id)]));
 }
 
 export function groupSelected() {
@@ -668,14 +671,14 @@ export function groupSelected() {
   const rest = state.shapes.filter((s) => !ids.has(s.id));
   // keep the group's members together, at the position of its top-most member
   const before = state.shapes.slice(0, topIndex + 1).filter((s) => !ids.has(s.id)).length;
-  const grouped = members.map((m) => ({ ...m, group: gid }));
+  const grouped = members.map((m) => ({ ...m, group: wrapGroup(m.group, gid) }));
   commit([...rest.slice(0, before), ...grouped, ...rest.slice(before)], { selection: grouped.map((g) => g.id) });
 }
 
 export function ungroupSelected() {
-  const groups = new Set(state.shapes.filter((s) => state.selection.includes(s.id) && s.group).map((s) => s.group));
+  const groups = new Set(state.shapes.filter((s) => state.selection.includes(s.id) && s.group).map((s) => topGroup(s.group)));
   if (!groups.size) return;
-  commit(state.shapes.map((s) => (s.group && groups.has(s.group) ? { ...s, group: null } : s)));
+  commit(state.shapes.map((s) => (s.group && groups.has(topGroup(s.group)) ? { ...s, group: unwrapGroup(s.group) } : s)));
 }
 
 /* ---------- curves & boolean ---------- */
@@ -812,5 +815,23 @@ export function addAdjustment(type: AdjustType): Shape {
 
 /** Toggle visibility or lock for every member of a group at once. */
 export function setGroupFlag(gid: string, flag: 'visible' | 'locked', value: boolean) {
-  commit(state.shapes.map((s) => (s.group === gid ? { ...s, [flag]: value } : s)));
+  commit(state.shapes.map((s) => (inGroup(s, gid) ? { ...s, [flag]: value } : s)));
+}
+
+/* ---------- clipping masks ---------- */
+
+/** The top-most selected shape becomes the mask; the other selected shapes are clipped to its outline. */
+export function makeClippingMask(): boolean {
+  const picked = state.shapes.filter((s) => state.selection.includes(s.id) && !s.locked && !s.adjust);
+  if (picked.length < 2) return false;
+  const mask = picked[picked.length - 1];
+  const targets = new Set(picked.slice(0, -1).map((s) => s.id));
+  commit(state.shapes.map((s) => (targets.has(s.id) ? { ...s, clip: mask.id } : s)));
+  return true;
+}
+
+export function releaseClippingMask() {
+  const sel = new Set(state.selection);
+  if (!state.shapes.some((s) => s.clip && (sel.has(s.id) || sel.has(s.clip)))) return;
+  commit(state.shapes.map((s) => (s.clip && (sel.has(s.id) || sel.has(s.clip)) ? { ...s, clip: null } : s)));
 }

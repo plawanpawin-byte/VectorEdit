@@ -6,7 +6,7 @@ import { toolDef } from '../tools/registry';
 import type { PointerCtx } from '../tools/types';
 import { panSession } from '../tools/view';
 import type { Session } from '../tools/types';
-import { Artwork } from './Artwork';
+import { Artwork, MasterArtwork } from './Artwork';
 import { blankShape } from '../shape';
 import { layoutText } from '../textlayout';
 import { placeFiles } from '../images';
@@ -242,6 +242,9 @@ export function Canvas() {
                 {a.name}
               </text>
             </g>
+          ))}
+          {artboards.map((a) => (
+            <MasterArtwork key={'m' + a.id} board={a} boards={artboards} shapes={shapes} />
           ))}
           <g><Artwork shapes={shapes} hide={editingText} /></g>
 

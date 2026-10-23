@@ -26,7 +26,7 @@ function normalizeBoards(raw: unknown): Artboard[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object')
-    .map((a, i) => ({ id: typeof a.id === 'string' ? a.id : `a${i + 1}`, name: typeof a.name === 'string' ? a.name : `Page ${i + 1}`, x: num(a.x, 0), y: num(a.y, 0), w: Math.max(1, num(a.w, 800)), h: Math.max(1, num(a.h, 600)) }));
+    .map((a, i) => ({ id: typeof a.id === 'string' ? a.id : `a${i + 1}`, name: typeof a.name === 'string' ? a.name : `Page ${i + 1}`, x: num(a.x, 0), y: num(a.y, 0), w: Math.max(1, num(a.w, 800)), h: Math.max(1, num(a.h, 600)), ...(a.isMaster === true ? { isMaster: true } : {}), ...(typeof a.master === 'string' ? { master: a.master } : {}) }));
 }
 
 const normalizeGuides = (raw: unknown): Guide[] =>

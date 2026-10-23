@@ -94,28 +94,36 @@ export function perspectiveMap(box: { x: number; y: number; w: number; h: number
   };
 }
 
-/** Envelope warp from a 3×3 control net (row-major) using quadratic Bézier patches. */
-export function envelopeMap(box: { x: number; y: number; w: number; h: number }, net: XY[]): Mapping {
-  const B = (t: number) => [(1 - t) * (1 - t), 2 * t * (1 - t), t * t];
+const binom = (n: number, k: number) => {
+  let r = 1;
+  for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i;
+  return r;
+};
+
+/** Bernstein basis of degree n-1 at t. */
+const bernstein = (n: number, t: number) => Array.from({ length: n }, (_, i) => binom(n - 1, i) * t ** i * (1 - t) ** (n - 1 - i));
+
+/** Envelope warp from an n×n control net (row-major) using a Bézier patch of degree n-1. */
+export function envelopeMap(box: { x: number; y: number; w: number; h: number }, net: XY[], n = 3): Mapping {
   return (pt) => {
     const u = Math.max(0, Math.min(1, box.w ? (pt.x - box.x) / box.w : 0));
     const v = Math.max(0, Math.min(1, box.h ? (pt.y - box.y) / box.h : 0));
-    const bu = B(u), bv = B(v);
+    const bu = bernstein(n, u), bv = bernstein(n, v);
     let x = 0, y = 0;
-    for (let j = 0; j < 3; j++)
-      for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < n; j++)
+      for (let i = 0; i < n; i++) {
         const wgt = bu[i] * bv[j];
-        x += net[j * 3 + i].x * wgt;
-        y += net[j * 3 + i].y * wgt;
+        x += net[j * n + i].x * wgt;
+        y += net[j * n + i].y * wgt;
       }
     return { x, y };
   };
 }
 
-/** Control net for the neutral (unwarped) envelope. A quadratic net's middle points sit on the box edges. */
-export function neutralNet(box: { x: number; y: number; w: number; h: number }): XY[] {
+/** Control net for the neutral (unwarped) envelope: evenly spaced points reproduce the identity map. */
+export function neutralNet(box: { x: number; y: number; w: number; h: number }, n = 3): XY[] {
   const net: XY[] = [];
-  for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) net.push({ x: box.x + (box.w * i) / 2, y: box.y + (box.h * j) / 2 });
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) net.push({ x: box.x + (box.w * i) / (n - 1), y: box.y + (box.h * j) / (n - 1) });
   return net;
 }
 

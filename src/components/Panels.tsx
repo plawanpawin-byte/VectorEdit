@@ -3,6 +3,8 @@ import { bbox, unionBox } from '../geometry';
 import {
   activeBoard,
   addAdjustment,
+  makeClippingMask,
+  releaseClippingMask,
   setGroupFlag,
   deleteSelected,
   duplicateSelected,
@@ -30,6 +32,7 @@ import { ShapeEl } from './ShapeEl';
 import { chooseImageInto } from '../images';
 import { shapeDef, defaultParams } from '../shapes';
 import { addPixelLayer } from '../raster/layer';
+import { buildTree, membersOf, type TreeNode } from '../groups';
 import { ADJUSTMENTS, adjustDef, defaultAdjust } from '../adjustments';
 import type { AdjustType, ArrowKind, Effect, Pattern, Shape } from '../types';
 
@@ -569,6 +572,10 @@ function AdjustControls({ s }: { s: Shape }) {
           <option key={d.type} value={d.type}>{d.label}</option>
         ))}
       </select>
+      <label className="adj-row check">
+        <input type="checkbox" checked={!!adj.region} onChange={(e) => set({ region: e.target.checked }, 'adjreg')} />
+        <span>Limit to this layer's outline (resize it with the Transform panel)</span>
+      </label>
       {(['a', 'b'] as const).map((k) => {
         const f = def[k];
         if (!f) return null;
@@ -593,50 +600,43 @@ export function Layers() {
   const one = shapes.find((s) => selection.includes(s.id));
   const list = [...shapes].reverse();
 
-  // rows: groups become a header followed by their (indented) members
-  const rows: ReactNode[] = [];
-  const seen = new Set<string>();
-  let groupNo = 0;
-  for (const s of list) {
-    if (!s.group) {
-      rows.push(<LayerRow key={s.id} s={s} depth={0} editing={editing} setEditing={setEditing} />);
-      continue;
-    }
-    if (seen.has(s.group)) continue;
-    seen.add(s.group);
-    const gid = s.group;
-    const members = list.filter((m) => m.group === gid);
-    const open = !collapsed.has(gid);
-    const allVisible = members.every((m) => m.visible);
-    const allLocked = members.every((m) => m.locked);
-    const groupSel = members.every((m) => selection.includes(m.id));
-    groupNo++;
-    rows.push(
-      <div key={gid} className={'layer group-row' + (groupSel ? ' sel' : '') + (allVisible ? '' : ' hidden')} onClick={() => setState({ selection: members.filter((m) => !m.locked).map((m) => m.id) })}>
-        <button className="ic chev" title={open ? 'Collapse' : 'Expand'} onClick={(e) => (e.stopPropagation(), setCollapsed((c) => { const n = new Set(c); open ? n.add(gid) : n.delete(gid); return n; }))}>
-          <svg viewBox="0 0 10 10" width="9" height="9" fill="currentColor" style={{ transform: open ? 'rotate(90deg)' : undefined }}>
-            <path d="M3 1.5l4 3.5-4 3.5z" />
-          </svg>
-        </button>
-        <span className="thumb folder">
-          <svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.3">
-            <path d="M2.5 5.5h5l1.5 2h8.500v8h-15z" />
-          </svg>
-        </span>
-        <span className="name">
-          Group {groupNo}
-          <em>{members.length} {members.length === 1 ? 'layer' : 'layers'}</em>
-        </span>
-        <button className={'ic' + (allLocked ? ' on' : ' faint')} title="Lock group" onClick={(e) => (e.stopPropagation(), setGroupFlag(gid, 'locked', !allLocked))}>
-          <Lock on={allLocked} />
-        </button>
-        <button className={'ic' + (allVisible ? '' : ' off')} title="Group visibility" onClick={(e) => (e.stopPropagation(), setGroupFlag(gid, 'visible', !allVisible))}>
-          <Eye off={!allVisible} />
-        </button>
-      </div>,
-    );
-    if (open) for (const m of members) rows.push(<LayerRow key={m.id} s={m} depth={1} editing={editing} setEditing={setEditing} />);
-  }
+  const groupNames = new Map<string, number>();
+  const renderNodes = (nodes: TreeNode[], depth: number): ReactNode[] =>
+    nodes.flatMap((n): ReactNode[] => {
+      if (n.kind === 'shape') return [<LayerRow key={n.shape.id} s={n.shape} depth={depth} editing={editing} setEditing={setEditing} />];
+      const members = membersOf(n);
+      const open = !collapsed.has(n.path);
+      const allVisible = members.every((m) => m.visible);
+      const allLocked = members.every((m) => m.locked);
+      const groupSel = members.every((m) => selection.includes(m.id));
+      if (!groupNames.has(n.path)) groupNames.set(n.path, groupNames.size + 1);
+      const head = (
+        <div key={'g' + n.path} className={'layer group-row' + (groupSel ? ' sel' : '') + (allVisible ? '' : ' hidden')} style={{ paddingLeft: 8 + depth * 14 }} onClick={() => setState({ selection: members.filter((m) => !m.locked).map((m) => m.id) })}>
+          <button className="ic chev" title={open ? 'Collapse' : 'Expand'} onClick={(e) => (e.stopPropagation(), setCollapsed((c) => { const nx = new Set(c); open ? nx.add(n.path) : nx.delete(n.path); return nx; }))}>
+            <svg viewBox="0 0 10 10" width="9" height="9" fill="currentColor" style={{ transform: open ? 'rotate(90deg)' : undefined }}>
+              <path d="M3 1.5l4 3.5-4 3.5z" />
+            </svg>
+          </button>
+          <span className="thumb folder">
+            <svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.3">
+              <path d="M2.5 5.5h5l1.5 2h8.500v8h-15z" />
+            </svg>
+          </span>
+          <span className="name">
+            Group {groupNames.get(n.path)}
+            <em>{members.length} {members.length === 1 ? 'layer' : 'layers'}</em>
+          </span>
+          <button className={'ic' + (allLocked ? ' on' : ' faint')} title="Lock group" onClick={(e) => (e.stopPropagation(), setGroupFlag(n.path, 'locked', !allLocked))}>
+            <Lock on={allLocked} />
+          </button>
+          <button className={'ic' + (allVisible ? '' : ' off')} title="Group visibility" onClick={(e) => (e.stopPropagation(), setGroupFlag(n.path, 'visible', !allVisible))}>
+            <Eye off={!allVisible} />
+          </button>
+        </div>
+      );
+      return open ? [head, ...renderNodes(n.children, depth + 1)] : [head];
+    });
+  const rows = renderNodes(buildTree(list), 0);
 
   return (
     <div className="layers">
@@ -689,6 +689,8 @@ export function Layers() {
             </div>
           )}
         </div>
+        <button title="Clip the selected layers to the top-most selected shape (clipping mask)" className="txt" onClick={makeClippingMask}>Mask</button>
+        <button title="Release clipping mask" className="txt" onClick={releaseClippingMask}>Release</button>
         <div className="grow" />
         <button title="Duplicate (Ctrl+D)" onClick={duplicateSelected}><Duplicate /></button>
         <button title="Delete" onClick={deleteSelected}><Trash /></button>

@@ -1,4 +1,4 @@
-import { endLive, live } from '../store';
+import { endLive, live, setState, useStore } from '../store';
 import { envelopeMap, neutralNet, perspectiveMap, boxOfShapes, warpShape, type XY } from '../warp';
 import { toolIcon } from './icons';
 import type { PointerCtx, Session, ToolDef } from './types';
@@ -20,9 +20,22 @@ function handleOverlay(points: XY[], lines: [number, number][], zoom: number, ac
   );
 }
 
+function WarpOptions() {
+  const n = useStore((s) => s.warpGrid);
+  return (
+    <>
+      <span className="dim">Mesh</span>
+      <select value={n} onChange={(e) => setState({ warpGrid: Number(e.target.value) })}>
+        {[3, 4, 5, 6].map((g) => (
+          <option key={g} value={g}>{g} × {g} points</option>
+        ))}
+      </select>
+    </>
+  );
+}
+
 function make(mode: 'perspective' | 'warp'): ToolDef {
   const persp = mode === 'perspective';
-  const cornerIdx = [0, 2, 8, 6]; // corners within the 3×3 net
   return {
     id: mode,
     label: persp ? 'Perspective' : 'Envelope Warp',
@@ -33,26 +46,32 @@ function make(mode: 'perspective' | 'warp'): ToolDef {
     cursor: 'crosshair',
     hint: persp
       ? '**Drag** a corner of the selection to apply perspective. Shapes are converted to curves.'
-      : '**Drag** any of the 9 handles to bend the selection like an envelope. Shapes are converted to curves.',
+      : '**Drag** any handle of the mesh (size in the context bar) to bend the selection like an envelope. Shapes are converted to curves.',
     chrome: 'outline',
+    Options: persp ? undefined : WarpOptions,
     down(c): Session | void {
       const sel = eligible(c);
       if (!sel.length) return;
       const box = boxOfShapes(sel);
-      const net = neutralNet(box);
-      const handles = persp ? cornerIdx.map((i) => net[i]) : net;
+      const n = persp ? 2 : c.st.warpGrid;
+      const net = neutralNet(box, n);
+      // a 2×2 net is the four corners in TL, TR, BL, BR order; perspective wants TL, TR, BR, BL
+      const handles = persp ? [net[0], net[1], net[3], net[2]] : net;
       let best = -1;
       let bd = c.tol * 2.5;
       handles.forEach((h, i) => {
         const d = Math.hypot(h.x - c.raw.x, h.y - c.raw.y);
         if (d < bd) (bd = d), (best = i);
       });
+      const gridLines: [number, number][] = [];
+      if (!persp)
+        for (let j = 0; j < n; j++)
+          for (let i = 0; i < n; i++) {
+            if (i < n - 1) gridLines.push([j * n + i, j * n + i + 1]);
+            if (j < n - 1) gridLines.push([j * n + i, (j + 1) * n + i]);
+          }
       const show = (pts: XY[], active: number) => {
-        c.setOverlay(
-          persp
-            ? handleOverlay(pts, [[0, 1], [1, 2], [2, 3], [3, 0]], c.zoom, active)
-            : handleOverlay(pts, [[0, 1], [1, 2], [3, 4], [4, 5], [6, 7], [7, 8], [0, 3], [3, 6], [1, 4], [4, 7], [2, 5], [5, 8]], c.zoom, active),
-        );
+        c.setOverlay(handleOverlay(pts, persp ? [[0, 1], [1, 2], [2, 3], [3, 0]] : gridLines, c.zoom, active));
       };
       if (best < 0) {
         show(handles, -1);
@@ -68,7 +87,7 @@ function make(mode: 'perspective' | 'warp'): ToolDef {
       return {
         move(m) {
           const moved = handles.map((h, i) => (i === best ? { x: m.p.x, y: m.p.y } : h));
-          const map = persp ? perspectiveMap(box, moved as [XY, XY, XY, XY]) : envelopeMap(box, net.map((n, i) => (i === best ? { x: m.p.x, y: m.p.y } : n)));
+          const map = persp ? perspectiveMap(box, moved as [XY, XY, XY, XY]) : envelopeMap(box, net.map((q, i) => (i === best ? { x: m.p.x, y: m.p.y } : q)), n);
           live(m.st.shapes.map((s) => (ids.has(s.id) ? warpShape(originals.get(s.id)!, map) : s)));
           show(moved, best);
         },

@@ -558,3 +558,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 .adjust-box { padding: 6px 10px 8px; display: grid; gap: 6px; border-bottom: 1px solid var(--line); background: rgba(23, 179, 163, .06); }
 .adj-row { display: grid; grid-template-columns: 74px 1fr 34px; align-items: center; gap: 8px; color: var(--text-dim); }
 .adj-row em { font-style: normal; text-align: right; color: var(--text); }
+
+.adj-row.check { grid-template-columns: 16px 1fr; align-items: start; line-height: 1.35; }
+
+.master-box { padding: 6px 10px; display: grid; gap: 6px; border-bottom: 1px solid var(--line); }
+.master-pick { display: grid; grid-template-columns: 48px 1fr; align-items: center; gap: 8px; color: var(--text-dim); }

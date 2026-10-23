@@ -15,7 +15,7 @@ import {
 } from '../store';
 import { shapeIcon } from '../tools/icons';
 import { Duplicate, I, Trash } from './Icons';
-import { Artwork } from './Artwork';
+import { Artwork, MasterArtwork } from './Artwork';
 import { ShapeEl } from './ShapeEl';
 
 export function PagesPanel() {
@@ -32,11 +32,13 @@ export function PagesPanel() {
         <button title="Duplicate page with its content" onClick={() => duplicateArtboard(active)}><Duplicate /></button>
         <button title="Delete page and its content" disabled={boards.length < 2} onClick={() => deleteArtboard(active)}><Trash /></button>
       </div>
+      <MasterControls />
       <div className="page-grid">
         {boards.map((b) => (
           <div key={b.id} className={'page' + (b.id === active ? ' on' : '')} onClick={() => setActiveArtboard(b.id, true)}>
             <svg className="thumb-page" viewBox={`${b.x} ${b.y} ${b.w} ${b.h}`} preserveAspectRatio="xMidYMid meet">
               <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="#fff" />
+              <MasterArtwork board={b} boards={boards} shapes={shapes} />
               <Artwork shapes={shapes} />
             </svg>
             {editing === b.id ? (
@@ -51,10 +53,36 @@ export function PagesPanel() {
             ) : (
               <span className="pname" onDoubleClick={() => setEditing(b.id)}>{b.name}</span>
             )}
-            <em>{b.w} × {b.h}</em>
+            <em>{b.isMaster ? 'Master · ' : ''}{b.w} × {b.h}</em>
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function MasterControls() {
+  const boards = useStore((s) => s.artboards);
+  const active = useStore((s) => s.activeArtboard);
+  const board = boards.find((b) => b.id === active) ?? boards[0];
+  const masters = boards.filter((b) => b.isMaster && b.id !== board.id);
+  return (
+    <div className="master-box">
+      <label className="adj-row check">
+        <input type="checkbox" checked={!!board.isMaster} onChange={(e) => updateArtboard(board.id, { isMaster: e.target.checked, ...(e.target.checked ? { master: null } : {}) })} />
+        <span>Use “{board.name}” as a master page</span>
+      </label>
+      {!board.isMaster && (
+        <label className="master-pick">
+          <span>Master</span>
+          <select value={board.master ?? ''} disabled={!masters.length} onChange={(e) => updateArtboard(board.id, { master: e.target.value || null })}>
+            <option value="">{masters.length ? 'None' : 'No master pages yet'}</option>
+            {masters.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </label>
+      )}
     </div>
   );
 }
