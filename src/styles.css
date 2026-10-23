@@ -764,3 +764,15 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']), select, te
 /* measured against the Affinity Vector reference at 1902x1014: first tool 5px higher, dividers take 4px */
 .toolbar { padding-top: 1px; }
 .tsep { margin: 2px 0; }
+
+/* ---------- Pixel floating warp palette (beside the canvas, like the reference) ---------- */
+.float-tools {
+  position: absolute; left: 22px; top: 50%; transform: translateY(-50%); z-index: 20;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 4px 6px;
+  background: #2b2b2b; border: 1px solid #111; border-radius: 10px; box-shadow: 0 6px 16px rgba(0,0,0,.45);
+}
+.float-grip { width: 26px; height: 8px; margin: 4px 0 2px; border-radius: 4px; background: #3f3f3f; }
+.float-tools button { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 7px; color: #f0f0f0; }
+.float-tools button:hover { background: #3f3f3f; }
+.float-tools button.on { background: #1d1d1d; box-shadow: inset 0 0 0 1px #5a5a5a; }
+.float-tools svg { width: 20px; height: 20px; }

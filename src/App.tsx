@@ -39,6 +39,7 @@ import { placeFiles } from './images';
 import { RulerH, RulerV, RULER } from './components/Rulers';
 import { StatusBar } from './components/StatusBar';
 import { MenuBar } from './components/MenuBar';
+import { FloatingTools } from './components/FloatingTools';
 import { PathBrushesPanel, QuickFxPanel, StylesPanel } from './components/StylePanels';
 import { Toolbar } from './components/Toolbar';
 
@@ -326,6 +327,7 @@ export function App() {
             <button className="ibtn" title="Close document" onClick={newDocument}>{I.close}</button>
           </div>
           <div className="canvas-wrap" style={{ ['--ruler' as string]: rulers ? `${RULER}px` : '0px' }}>
+            <FloatingTools />
             {rulers && (
               <>
                 <div className="corner" />
