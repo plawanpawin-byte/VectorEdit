@@ -46,7 +46,7 @@ Installers for Windows are best built on Windows, macOS ones on macOS.
 The **Build Windows app** workflow builds the installer (`VectorEdit-Setup-<version>.exe`) and a portable
 `VectorEdit-Portable-<version>.exe` on GitHub's Windows runners. Run it from the repository's *Actions* tab
 (*Build Windows app* → *Run workflow*) and download the files from the run's *Artifacts*. Pushing a tag
-such as `v0.1.0` also attaches both files to a GitHub release. The installer is not code-signed, so Windows
+such as `v0.1.0`, or running the workflow with a *tag* value, also publishes both files on the repository's Releases page. The installer is not code-signed, so Windows
 SmartScreen shows a warning the first time (*More info → Run anyway*).
 
 Double-clicking a `.vedit` file opens it in the running app; closing the window with unsaved changes asks first.
