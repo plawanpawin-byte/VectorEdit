@@ -24,6 +24,7 @@ export interface State {
   cursor: { x: number; y: number };
   pen: Pt[] | null;
   editingText: string | null;
+  filePath: string | null;
 }
 
 let counter = 0;
@@ -104,6 +105,7 @@ let state: State = {
   cursor: { x: 0, y: 0 },
   pen: null,
   editingText: null,
+  filePath: null,
 };
 
 const listeners = new Set<() => void>();
@@ -383,7 +385,14 @@ export function fitArtboard() {
 }
 
 export function newDocument() {
-  setState({ shapes: [], selection: [], past: [], future: [], pen: null });
+  setState({ shapes: [], selection: [], past: [], future: [], pen: null, filePath: null });
+}
+
+export function loadDocument(shapes: Shape[], artboard: { w: number; h: number }, filePath: string | null) {
+  // keep generated ids unique against the loaded ones
+  counter = Math.max(counter, ...shapes.map((s) => Number(/^s(\d+)$/.exec(s.id)?.[1] ?? 0)));
+  setState({ shapes, artboard, selection: [], past: [], future: [], pen: null, editingText: null, filePath });
+  fitArtboard();
 }
 
 /* ---------- align / flip / history ---------- */

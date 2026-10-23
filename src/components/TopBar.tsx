@@ -20,6 +20,7 @@ import {
   zoomTo,
 } from '../store';
 import { exportPng, exportSvg } from './exporter';
+import { openDoc, saveDoc } from '../fileio';
 import { I, Logo } from './Icons';
 
 interface Item {
@@ -34,7 +35,7 @@ const zoomBy = (f: number) => {
   const { viewport } = getState();
   zoomAt(f, viewport.w / 2, viewport.h / 2);
 };
-const doExport = (kind: 'png' | 'svg') => {
+export const doExport = (kind: 'png' | 'svg') => {
   const { shapes, artboard } = getState();
   (kind === 'png' ? exportPng : exportSvg)(shapes, artboard.w, artboard.h);
 };
@@ -80,6 +81,9 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
   const menu: Item[] = [
     { label: 'File', head: true },
     { label: 'New Document', shortcut: 'Ctrl+N', action: newDocument },
+    { label: 'Open…', shortcut: 'Ctrl+O', action: openDoc },
+    { label: 'Save', shortcut: 'Ctrl+S', action: () => saveDoc(false) },
+    { label: 'Save As…', shortcut: 'Ctrl+Shift+S', action: () => saveDoc(true) },
     { label: 'Export SVG…', action: () => doExport('svg') },
     { label: 'Export PNG…', action: () => doExport('png') },
     { label: 'Edit', head: true },

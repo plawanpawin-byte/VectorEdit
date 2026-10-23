@@ -11,6 +11,19 @@ npm run dev      # http://localhost:5173
 npm run build    # typecheck + production bundle in dist/
 ```
 
+## Desktop app (Electron)
+
+```bash
+npm run electron:dev    # Vite dev server + Electron window with hot reload
+npm run electron:start  # build, then open the production bundle in Electron
+npm run electron:pack   # unpacked app in release/ (no installer)
+npm run electron:dist   # installer for the current OS (NSIS/portable, dmg, AppImage)
+```
+
+The desktop build adds a native menu, Open/Save/Save As for `.vedit` documents, native export dialogs and
+the file name in the window title. In the browser, Save downloads a `.vedit` file and Open uses a file picker.
+Installers for Windows are best built on Windows, macOS ones on macOS.
+
 ## What works
 
 - **Tools:** Selection (V), Direct Selection (A), Pen (P), Type (T), Line (\\), Rectangle (M), Ellipse (L), Hand (H), Zoom (Z)
@@ -49,4 +62,4 @@ src/
 
 ## Not yet
 
-Boolean path operations, gradients, groups, artboard management, file save/open (`.json`), clipping masks.
+Boolean path operations, gradients, groups, multiple artboards, clipping masks, code signing and auto-update for the desktop build.

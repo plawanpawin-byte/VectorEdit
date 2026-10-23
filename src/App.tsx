@@ -24,7 +24,8 @@ import { Canvas } from './components/Canvas';
 import { ContextBar } from './components/ContextBar';
 import { I } from './components/Icons';
 import { Appearance, ColorPanel, History, Layers, Navigator, StrokePanel, Swatches, TransformPanel } from './components/Panels';
-import { TopBar } from './components/TopBar';
+import { TopBar, doExport } from './components/TopBar';
+import { isDesktop, openDoc, saveDoc } from './fileio';
 import { RulerH, RulerV, RULER } from './components/Rulers';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
@@ -65,6 +66,7 @@ function useShortcuts() {
           ']': () => arrange(e.shiftKey ? 'front' : 'forward'),
           '[': () => arrange(e.shiftKey ? 'back' : 'backward'),
           n: newDocument,
+          ...(isDesktop() ? {} : { s: () => saveDoc(e.shiftKey), o: openDoc }),
         };
         const fn = map[key];
         if (fn) {
@@ -171,10 +173,32 @@ function Dock({ tabs, grow }: { tabs: { id: string; label: string; body: React.R
   );
 }
 
+function useDesktopBridge() {
+  const filePath = useStore((s) => s.filePath);
+  useEffect(() => {
+    const d = window.desktop;
+    if (!d) return;
+    return d.onMenu((c) => {
+      if (c === 'new') newDocument();
+      else if (c === 'open') void openDoc();
+      else if (c === 'save') void saveDoc(false);
+      else if (c === 'save-as') void saveDoc(true);
+      else if (c === 'export-svg') doExport('svg');
+      else if (c === 'export-png') doExport('png');
+    });
+  }, []);
+  useEffect(() => {
+    const name = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled';
+    window.desktop?.setTitle(`${name} - VectorEdit`);
+  }, [filePath]);
+}
+
 export function App() {
   useShortcuts();
+  useDesktopBridge();
   const rulers = useStore((s) => s.rulers);
   const zoom = useStore((s) => s.zoom);
+  const filePath = useStore((s) => s.filePath);
   const [help, setHelp] = useState(false);
 
   return (
@@ -186,7 +210,7 @@ export function App() {
         <main className="stage">
           <div className="doc-tabs">
             <div className="doc-tab">
-              <span>&lt;Untitled&gt; @ {Math.round(zoom * 100)}%</span>
+              <span>{filePath ? filePath.split(/[\\/]/).pop() : '<Untitled>'} @ {Math.round(zoom * 100)}%</span>
             </div>
             <div className="grow" />
             <button className="ibtn" title="Close document" onClick={newDocument}>{I.close}</button>

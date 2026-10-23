@@ -8,7 +8,12 @@ export function toSvg(shapes: Shape[], w: number, h: number, transparent = true)
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${bg}\n  ${body}\n</svg>\n`;
 }
 
-function download(blob: Blob, name: string) {
+export function download(blob: Blob, name: string) {
+  if (window.desktop) {
+    const ext = name.split('.').pop() ?? '';
+    void blob.arrayBuffer().then((buf) => window.desktop!.exportFile({ name, ext, data: new Uint8Array(buf) }));
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
