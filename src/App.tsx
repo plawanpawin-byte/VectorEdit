@@ -6,7 +6,10 @@ import {
   fitArtboard,
   getState,
   groupSelected,
+  confirmDiscard,
+  isDirty,
   newDocument,
+  openNewDocument,
   penCancel,
   penFinish,
   redo,
@@ -34,12 +37,13 @@ import { MacroPanel } from './components/PixelPanels';
 import { ScopesPanel } from './components/ScopesPanel';
 import { AdjustmentsPanel, BrushPanel, FiltersPanel, RasterDialog, SelectionPanel } from './components/PixelPanels';
 import { CharacterPanel, ParagraphPanel, TextStylesPanel } from './components/TextPanels';
-import { isDesktop, openDoc, saveDoc } from './fileio';
-import { placeFiles } from './images';
+import { isDesktop, openDoc, openDocText, saveDoc } from './fileio';
 import { RulerH, RulerV, RULER } from './components/Rulers';
 import { StatusBar } from './components/StatusBar';
 import { MenuBar } from './components/MenuBar';
 import { FloatingTools } from './components/FloatingTools';
+import { NewDocument } from './components/NewDocument';
+import { importFiles, importFilesDialog, kindOf, looksLikeSvg, reportImport } from './importer';
 import { PathBrushesPanel, QuickFxPanel, StylesPanel } from './components/StylePanels';
 import { Toolbar } from './components/Toolbar';
 
@@ -52,15 +56,73 @@ const keyMap = (ws: Workspace) => new Map(TOOLS.filter((t) => t.key && t.workspa
 
 function usePasteImages() {
   useEffect(() => {
+    const editable = (t: EventTarget | null) => /INPUT|TEXTAREA|SELECT/.test((t as HTMLElement)?.tagName) || !!(t as HTMLElement)?.isContentEditable;
     const onPaste = (e: ClipboardEvent) => {
-      if (/INPUT|TEXTAREA/.test((e.target as HTMLElement)?.tagName)) return;
-      const files = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith('image/'));
+      if (editable(e.target)) return;
+      const data = e.clipboardData;
+      if (!data) return;
+      // files, plus pictures that only arrive as clipboard items (screenshots, "copy image")
+      const files = Array.from(data.files).filter((f) => kindOf(f.name, f.type) !== 'other');
+      for (const item of Array.from(data.items)) {
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const f = item.getAsFile();
+          if (f && !files.some((x) => x.size === f.size && x.type === f.type)) files.push(f);
+        }
+      }
+      if (files.length) {
+        e.preventDefault();
+        void importFiles(files).then(reportImport);
+        return;
+      }
+      const text = data.getData('text/plain');
+      if (text && looksLikeSvg(text)) {
+        e.preventDefault();
+        void importFiles([new File([text], 'Pasted.svg', { type: 'image/svg+xml' })]).then(reportImport);
+      }
+    };
+    const onDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    };
+    const onDrop = (e: DragEvent) => {
+      const files = Array.from(e.dataTransfer?.files ?? []);
       if (!files.length) return;
       e.preventDefault();
-      void placeFiles(files);
+      const docs = files.filter((f) => f.name.toLowerCase().endsWith('.vedit'));
+      const images = files.filter((f) => kindOf(f.name, f.type) !== 'other');
+      if (docs.length && !images.length) {
+        void docs[0].text().then((t) => {
+          if (confirmDiscard()) void openDocText(t);
+        });
+        return;
+      }
+      if (!images.length) return alert('Drop PNG, JPG, GIF, WebP, BMP or SVG files, or a .vedit document.');
+      const st = getState();
+      const canvas = document.querySelector('.canvas')?.getBoundingClientRect();
+      const at = canvas && e.clientX >= canvas.left && e.clientX <= canvas.right && e.clientY >= canvas.top && e.clientY <= canvas.bottom
+        ? { x: (e.clientX - canvas.left - st.panX) / st.zoom, y: (e.clientY - canvas.top - st.panY) / st.zoom }
+        : undefined;
+      void importFiles(images, at).then(reportImport);
+    };
+    const onUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
     };
     window.addEventListener('paste', onPaste);
-    return () => window.removeEventListener('paste', onPaste);
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('drop', onDrop);
+    window.addEventListener('beforeunload', onUnload);
+    (window as unknown as { __veDirty?: () => boolean }).__veDirty = isDirty;
+    return () => {
+      window.removeEventListener('paste', onPaste);
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('drop', onDrop);
+      window.removeEventListener('beforeunload', onUnload);
+    };
   }, []);
 }
 
@@ -98,7 +160,7 @@ function useShortcuts() {
           "'": () => setState({ grid: !st.grid }),
           ']': () => arrange(e.shiftKey ? 'front' : 'forward'),
           '[': () => arrange(e.shiftKey ? 'back' : 'backward'),
-          n: newDocument,
+          n: openNewDocument,
           g: () => (e.shiftKey ? ungroupSelected() : groupSelected()),
           ...(isDesktop() ? {} : { s: () => saveDoc(e.shiftKey), o: openDoc }),
         };
@@ -276,7 +338,8 @@ function useDesktopBridge() {
     const d = window.desktop;
     if (!d) return;
     return d.onMenu((c) => {
-      if (c === 'new') newDocument();
+      if (c === 'new') openNewDocument();
+      else if (c === 'import') void importFilesDialog();
       else if (c === 'open') void openDoc();
       else if (c === 'save') void saveDoc(false);
       else if (c === 'save-as') void saveDoc(true);
@@ -324,7 +387,7 @@ export function App() {
               <span>{filePath ? filePath.split(/[\\/]/).pop() : '<Untitled>'} @ {Math.round(zoom * 100)}%</span>
             </div>
             <div className="grow" />
-            <button className="ibtn" title="Close document" onClick={newDocument}>{I.close}</button>
+            <button className="ibtn" title="Close document" onClick={() => confirmDiscard() && newDocument()}>{I.close}</button>
           </div>
           <div className="canvas-wrap" style={{ ['--ruler' as string]: rulers ? `${RULER}px` : '0px' }}>
             <FloatingTools />
@@ -397,6 +460,7 @@ export function App() {
       </div>
       <StatusBar />
       <RasterDialog />
+      <NewDocument />
       {help && <Help onClose={() => setHelp(false)} />}
     </div>
   );

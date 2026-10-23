@@ -31,6 +31,10 @@ export interface State {
   strokeWidth: number;
   colorTarget: 'fill' | 'stroke';
   rulers: boolean;
+  /** the New Document dialog is open */
+  newDocOpen: boolean;
+  /** undo depth at the last save or load; the document has unsaved changes when it differs */
+  cleanMark: number;
   grid: boolean;
   snap: boolean;
   workspace: Workspace;
@@ -123,6 +127,8 @@ let state: State = {
   strokeWidth: 2,
   colorTarget: 'fill',
   rulers: false,
+  newDocOpen: false,
+  cleanMark: 0,
   grid: false,
   snap: false,
   workspace: 'vector',
@@ -461,7 +467,9 @@ export function fitArtboard(id?: string) {
   });
 }
 
-export function newDocument() {
+export function newDocument(size: { w?: number; h?: number; name?: string } = {}) {
+  const w = size.w ?? 800;
+  const h = size.h ?? 600;
   setState({
     shapes: [],
     selection: [],
@@ -469,15 +477,29 @@ export function newDocument() {
     future: [],
     pen: null,
     filePath: null,
-    artboards: [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 800, h: 600 }],
+    artboards: [{ id: 'a1', name: size.name ?? 'Page 1', x: 0, y: 0, w, h }],
     activeArtboard: 'a1',
     guides: [],
     slices: [],
     activeSlice: null,
     snapshots: [],
+    editingText: null,
+    nodeSel: [],
+    newDocOpen: false,
+    cleanMark: 0,
   });
   fitArtboard();
 }
+
+/** True when the document has changes since it was last saved, opened or created. */
+export const isDirty = () => state.past.length !== state.cleanMark;
+export const markClean = () => setState({ cleanMark: state.past.length });
+
+/** Ask before throwing away unsaved work. */
+export const confirmDiscard = () => !isDirty() || window.confirm('This document has unsaved changes. Discard them?');
+
+/** Show the New Document dialog (page size presets). */
+export const openNewDocument = () => setState({ newDocOpen: true });
 
 export function loadDocument(raw: unknown[], boards: Artboard[], filePath: string | null, extra: { guides?: Guide[]; slices?: Slice[]; snapshots?: Snapshot[] } = {}) {
   const shapes = raw.map(normalizeShape).filter((x): x is Shape => x !== null);
@@ -499,6 +521,7 @@ export function loadDocument(raw: unknown[], boards: Artboard[], filePath: strin
     editingText: null,
     nodeSel: [],
     filePath,
+    cleanMark: 0,
   });
   fitArtboard();
 }

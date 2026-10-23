@@ -2,7 +2,7 @@ import { parseDoc, serializeDoc } from './document';
 import { download } from './components/exporter';
 import { preloadRasters } from './raster/cache';
 import { translate } from './geometry';
-import { activeBoard, commit, getState, loadDocument, makeShape, setState } from './store';
+import { activeBoard, commit, confirmDiscard, getState, loadDocument, makeShape, markClean, setState } from './store';
 import { importSvg } from './svgimport';
 import { normalizeShape } from './shape';
 import type { Shape } from './types';
@@ -25,6 +25,9 @@ export const isDesktop = () => !!window.desktop;
 
 const serialize = () => serializeDoc(getState());
 
+/** Open a document from its text (used for files dropped on the window). */
+export const openDocText = (text: string) => load(text, null).catch((e) => alert(`Could not open the file.\n${(e as Error).message}`));
+
 async function load(text: string, path: string | null) {
   const d = parseDoc(text);
   // decode pixel layers first so painting can start the moment the document appears
@@ -35,10 +38,12 @@ async function load(text: string, path: string | null) {
 export async function openDoc() {
   try {
     if (window.desktop) {
+      if (!confirmDiscard()) return;
       const r = await window.desktop.openFile();
       if (r) await load(r.text, r.path);
       return;
     }
+    if (!confirmDiscard()) return;
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.vedit,application/json';
@@ -56,10 +61,14 @@ export async function saveDoc(saveAs = false) {
   const text = serialize();
   if (window.desktop) {
     const r = await window.desktop.saveFile({ path: getState().filePath, text, saveAs });
-    if (r) setState({ filePath: r.path });
+    if (r) {
+      setState({ filePath: r.path });
+      markClean();
+    }
     return;
   }
   download(new Blob([text], { type: 'application/json' }), 'Untitled.vedit');
+  markClean();
 }
 
 /** Add the shapes of an SVG file to the active page, centred on it. */

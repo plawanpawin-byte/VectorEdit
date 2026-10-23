@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-const menuChannels = ['new', 'open', 'save', 'save-as', 'export-svg', 'export-png'];
+const menuChannels = ['new', 'open', 'import', 'save', 'save-as', 'export-svg', 'export-png'];
 
 contextBridge.exposeInMainWorld('desktop', {
   openFile: () => ipcRenderer.invoke('file:open'),

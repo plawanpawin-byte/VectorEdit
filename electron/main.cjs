@@ -48,8 +48,9 @@ function buildMenu() {
     {
       label: 'File',
       submenu: [
-        { label: 'New', accelerator: 'CmdOrCtrl+N', click: () => send('menu:new') },
+        { label: 'New…', accelerator: 'CmdOrCtrl+N', click: () => send('menu:new') },
         { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: () => send('menu:open') },
+        { label: 'Import images or SVG…', accelerator: 'CmdOrCtrl+Shift+I', click: () => send('menu:import') },
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => send('menu:save') },
         { label: 'Save As…', accelerator: 'CmdOrCtrl+Shift+S', click: () => send('menu:save-as') },
         { type: 'separator' },

@@ -14,7 +14,7 @@ import {
   flip,
   getState,
   groupSelected,
-  newDocument,
+  openNewDocument,
   redo,
   rotateSelection,
   selectAll,
@@ -26,7 +26,8 @@ import {
   zoomAt,
   zoomTo,
 } from '../store';
-import { importSvgFile, openDoc, saveDoc } from '../fileio';
+import { openDoc, saveDoc } from '../fileio';
+import { importFilesDialog } from '../importer';
 import { openRasterOp } from '../raster/dialog';
 import { RASTER_OPS } from '../raster/ops';
 import { mergeDown, rasteriseSelection } from '../raster/rasterise';
@@ -79,9 +80,9 @@ export function MenuBar({ onHelp }: { onHelp: () => void }) {
 
   const menus: [string, Item[]][] = [
     ['File', [
-      { label: 'New', shortcut: 'Ctrl+N', action: newDocument },
+      { label: 'New…', shortcut: 'Ctrl+N', action: openNewDocument },
       { label: 'Open…', shortcut: 'Ctrl+O', action: () => void openDoc() },
-      { label: 'Import SVG…', action: importSvgFile },
+      { label: 'Import images or SVG…', action: () => void importFilesDialog() },
       { label: 'Save', shortcut: 'Ctrl+S', action: () => void saveDoc(false) },
       { label: 'Save As…', shortcut: 'Shift+Ctrl+S', action: () => void saveDoc(true) },
       { label: 'Export', head: true },
