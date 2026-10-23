@@ -26,7 +26,7 @@ import {
   zoomTo,
 } from '../store';
 import { exportPng, exportSvg } from './exporter';
-import { openDoc, saveDoc } from '../fileio';
+import { importSvgFile, openDoc, saveDoc } from '../fileio';
 import { openRasterOp } from '../raster/dialog';
 import { divideSelected, joinSelected, reverseSelected, separateSelected, setAll, smoothSelected, stepRepeatSelected, strokeWeight, traceSelected } from '../objectcmds';
 import { mergeDown, rasteriseSelection } from '../raster/rasterise';
@@ -176,6 +176,7 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
     { label: 'File', head: true },
     { label: 'New Document', shortcut: 'Ctrl+N', action: newDocument },
     { label: 'Open…', shortcut: 'Ctrl+O', action: openDoc },
+    { label: 'Import SVG…', action: importSvgFile },
     { label: 'Save', shortcut: 'Ctrl+S', action: () => saveDoc(false) },
     { label: 'Save As…', shortcut: 'Ctrl+Shift+S', action: () => saveDoc(true) },
     { label: 'Export artboard as SVG…', action: () => doExport('svg') },

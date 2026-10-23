@@ -1,7 +1,9 @@
 import { parseDoc, serializeDoc } from './document';
 import { download } from './components/exporter';
 import { preloadRasters } from './raster/cache';
-import { getState, loadDocument, setState } from './store';
+import { translate } from './geometry';
+import { activeBoard, commit, getState, loadDocument, makeShape, setState } from './store';
+import { importSvg } from './svgimport';
 import { normalizeShape } from './shape';
 import type { Shape } from './types';
 
@@ -58,4 +60,31 @@ export async function saveDoc(saveAs = false) {
     return;
   }
   download(new Blob([text], { type: 'application/json' }), 'Untitled.vedit');
+}
+
+/** Add the shapes of an SVG file to the active page, centred on it. */
+export function importSvgText(text: string): { count: number; skipped: string[] } | null {
+  const result = importSvg(text);
+  if (!result || !result.shapes.length) return null;
+  const st = getState();
+  const board = activeBoard(st);
+  const dx = board.x + (board.w - result.width) / 2;
+  const dy = board.y + (board.h - result.height) / 2;
+  const shapes = result.shapes.map((s) => ({ ...translate(s, dx, dy), id: makeShape(s.kind).id }));
+  commit([...st.shapes, ...shapes], { selection: shapes.map((s) => s.id) });
+  return { count: shapes.length, skipped: result.skipped };
+}
+
+export function importSvgFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.svg,image/svg+xml';
+  input.onchange = async () => {
+    const f = input.files?.[0];
+    if (!f) return;
+    const r = importSvgText(await f.text());
+    if (!r) alert('That file has no shapes VectorEdit can import.');
+    else if (r.skipped.length) alert(`Imported ${r.count} shapes. Not imported: ${r.skipped.join(', ')} (text, images, gradients and filters are not supported yet).`);
+  };
+  input.click();
 }

@@ -47,3 +47,18 @@ describe('document files', () => {
     expect(d.guides).toHaveLength(1);
   });
 });
+
+import { importSvgText } from '../src/fileio';
+import { getState as stateNow, setState as patchState } from '../src/store';
+describe('svg import into the document', () => {
+  it('adds shapes centred on the active page and selects them', () => {
+    patchState({ shapes: [], selection: [], past: [], future: [] });
+    const r = importSvgText('<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#f00"/><circle cx="50" cy="50" r="10"/></svg>');
+    expect(r?.count).toBe(2);
+    const s = stateNow();
+    expect(s.shapes).toHaveLength(2);
+    expect(s.selection).toHaveLength(2);
+    expect(new Set(s.shapes.map((x) => x.id)).size).toBe(2);
+    expect(importSvgText('<svg></svg>')).toBeNull();
+  });
+});
