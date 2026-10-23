@@ -1,7 +1,36 @@
-import { useStore } from '../store';
+import { docOf, endLiveDoc, getState, liveDoc, useStore } from '../store';
 
 const STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
 export const RULER = 20;
+
+/** Drag out of a ruler to create a guide. A horizontal ruler makes horizontal guides. */
+function startGuide(horizontal: boolean, e: React.PointerEvent) {
+  const canvas = document.querySelector('.canvas') as HTMLElement | null;
+  if (!canvas) return;
+  e.preventDefault();
+  const before = docOf();
+  const id = `g${Date.now().toString(36)}${before.guides.length}`;
+  const axis = horizontal ? 'h' : 'v';
+  const posAt = (ev: PointerEvent) => {
+    const r = canvas.getBoundingClientRect();
+    const st = getState();
+    return horizontal ? (ev.clientY - r.top - st.panY) / st.zoom : (ev.clientX - r.left - st.panX) / st.zoom;
+  };
+  const move = (ev: PointerEvent) => {
+    const pos = Math.round(posAt(ev) * 10) / 10;
+    liveDoc({ guides: [...before.guides, { id, axis, pos }] });
+  };
+  const up = (ev: PointerEvent) => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    const r = canvas.getBoundingClientRect();
+    const inside = ev.clientX >= r.left && ev.clientY >= r.top;
+    if (inside) endLiveDoc(before);
+    else liveDoc({ guides: before.guides });
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+}
 
 function Ruler({ horizontal }: { horizontal: boolean }) {
   const zoom = useStore((s) => s.zoom);
@@ -21,7 +50,7 @@ function Ruler({ horizontal }: { horizontal: boolean }) {
     if (isMajor) labels.push({ at, text: String(Math.round(v)) });
   }
   return (
-    <svg className={horizontal ? 'ruler ruler-h' : 'ruler ruler-v'} width={horizontal ? length : RULER} height={horizontal ? RULER : length}>
+    <svg className={horizontal ? 'ruler ruler-h' : 'ruler ruler-v'} width={horizontal ? length : RULER} height={horizontal ? RULER : length} onPointerDown={(e) => startGuide(horizontal, e)}>
       <path d={d} stroke="#6b6b6b" strokeWidth="1" />
       {labels.map((l) =>
         horizontal ? (

@@ -25,12 +25,14 @@ import { ContextBar } from './components/ContextBar';
 import { I } from './components/Icons';
 import { Appearance, ColorPanel, History, Layers, Navigator, StrokePanel, Swatches, TransformPanel } from './components/Panels';
 import { TopBar, doExport } from './components/TopBar';
+import { AssetsPanel, PagesPanel } from './components/PagesPanel';
+import { CharacterPanel, ParagraphPanel, TextStylesPanel } from './components/TextPanels';
 import { isDesktop, openDoc, saveDoc } from './fileio';
 import { RulerH, RulerV, RULER } from './components/Rulers';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
 
-import { TOOLS, activateTool, toolInWorkspace } from './tools/registry';
+import { TOOLS, activateTool, toolDef, toolInWorkspace } from './tools/registry';
 
 const TOOL_KEYS = new Map(TOOLS.filter((t) => t.key).map((t) => [t.key!, t.id]));
 
@@ -77,6 +79,7 @@ function useShortcuts() {
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
+        if (toolDef(st.tool)?.onDelete?.()) return;
         return deleteSelected();
       }
       if (e.key.startsWith('Arrow') && st.selection.length) {
@@ -190,14 +193,26 @@ export function App() {
   const rulers = useStore((s) => s.rulers);
   const zoom = useStore((s) => s.zoom);
   const filePath = useStore((s) => s.filePath);
+  const workspace = useStore((s) => s.workspace);
   const [help, setHelp] = useState(false);
 
   return (
     <div className="app">
       <TopBar onHelp={() => setHelp(true)} />
       <ContextBar />
-      <div className="workspace-row">
+      <div className={'workspace-row' + (workspace === 'layout' ? ' with-left' : '')}>
         <Toolbar />
+        {workspace === 'layout' && (
+          <aside className="leftdock">
+            <Dock
+              key="left"
+              tabs={[
+                { id: 'pages', label: 'Pages', body: <PagesPanel /> },
+                { id: 'assets', label: 'Assets', body: <AssetsPanel /> },
+              ]}
+            />
+          </aside>
+        )}
         <main className="stage">
           <div className="doc-tabs">
             <div className="doc-tab">
@@ -227,7 +242,20 @@ export function App() {
               { id: 'appearance', label: 'Appearance', body: <Appearance /> },
             ]}
           />
-          <Dock grow={1.2} tabs={[{ id: 'layers', label: 'Layers', body: <Layers /> }]} />
+          <Dock
+            grow={1.2}
+            tabs={[
+              { id: 'layers', label: 'Layers', body: <Layers /> },
+              ...(workspace !== 'vector'
+                ? [
+                    { id: 'char', label: 'Character', body: <CharacterPanel /> },
+                    { id: 'para', label: 'Paragraph', body: <ParagraphPanel /> },
+                    { id: 'styles', label: 'Styles', body: <TextStylesPanel /> },
+                  ]
+                : []),
+              ...(workspace === 'vector' ? [{ id: 'pages', label: 'Pages', body: <PagesPanel /> }, { id: 'assets', label: 'Assets', body: <AssetsPanel /> }] : []),
+            ]}
+          />
           <Dock
             grow={0.8}
             tabs={[

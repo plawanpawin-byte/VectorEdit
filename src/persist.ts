@@ -1,24 +1,17 @@
-import type { Shape } from './types';
+import { parseDoc, serializeDoc } from './document';
 import { getState, loadDocument, setState } from './store';
-import { normalizeShape } from './shape';
 
-export const AUTOSAVE_KEY = 'vectoredit:autosave:v1';
-
-interface Saved {
-  artboard: { w: number; h: number };
-  shapes: unknown[];
-}
+export const AUTOSAVE_KEY = 'vectoredit:autosave:v2';
+const LEGACY_KEY = 'vectoredit:autosave:v1';
 
 /** Restore the last autosaved document, if any. Never throws. */
 export function restoreAutosave(): boolean {
   try {
-    const raw = localStorage.getItem(AUTOSAVE_KEY);
+    const raw = localStorage.getItem(AUTOSAVE_KEY) ?? localStorage.getItem(LEGACY_KEY);
     if (!raw) return false;
-    const doc = JSON.parse(raw) as Saved;
-    if (!doc || !Array.isArray(doc.shapes) || !doc.artboard) return false;
-    const shapes = doc.shapes.map(normalizeShape).filter((s): s is Shape => s !== null);
-    loadDocument(shapes, doc.artboard, null);
-    // loadDocument fits the artboard to a viewport that does not exist yet; the canvas refits on mount
+    const d = parseDoc(raw);
+    loadDocument(d.shapes, d.artboards, null, { guides: d.guides, snapshots: d.snapshots });
+    // the canvas refits once it knows its size
     setState({ viewport: { w: 0, h: 0 } });
     return true;
   } catch {
@@ -29,6 +22,7 @@ export function restoreAutosave(): boolean {
 export function clearAutosave() {
   try {
     localStorage.removeItem(AUTOSAVE_KEY);
+    localStorage.removeItem(LEGACY_KEY);
   } catch {
     /* storage unavailable */
   }
@@ -37,17 +31,15 @@ export function clearAutosave() {
 /** Save the document shortly after it changes. Returns an unsubscribe function. */
 export function startAutosave(delay = 600): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let last = getState().shapes;
-  let lastBoard = getState().artboard;
+  let last = getState();
   const tick = setInterval(() => {
-    const { shapes, artboard } = getState();
-    if (shapes === last && artboard === lastBoard) return;
-    last = shapes;
-    lastBoard = artboard;
+    const s = getState();
+    if (s.shapes === last.shapes && s.artboards === last.artboards && s.guides === last.guides && s.snapshots === last.snapshots) return;
+    last = s;
     clearTimeout(timer);
     timer = setTimeout(() => {
       try {
-        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ artboard, shapes }));
+        localStorage.setItem(AUTOSAVE_KEY, serializeDoc(getState()));
       } catch {
         /* quota exceeded or storage unavailable: keep working without autosave */
       }

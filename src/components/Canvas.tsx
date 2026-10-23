@@ -1,13 +1,14 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import type { Box } from '../types';
 import { bbox, inCtl, outCtl, pathD, unionBox } from '../geometry';
-import { commit, fitArtboard, getState, setState, snapV, updateShape, useStore, zoomAt } from '../store';
+import { commit, endLiveDoc, fitArtboard, getState, liveDoc, docOf, removeGuide, setState, snapV, updateShape, useStore, zoomAt } from '../store';
 import { toolDef } from '../tools/registry';
 import type { PointerCtx } from '../tools/types';
 import { panSession } from '../tools/view';
 import type { Session } from '../tools/types';
 import { ShapeEl } from './ShapeEl';
 import { blankShape } from '../shape';
+import { layoutText } from '../textlayout';
 
 const HANDLE_CURSOR: Record<string, string> = {
   nw: 'nwse-resize',
@@ -50,7 +51,11 @@ export function Canvas() {
   const zoom = useStore((s) => s.zoom);
   const panX = useStore((s) => s.panX);
   const panY = useStore((s) => s.panY);
-  const artboard = useStore((s) => s.artboard);
+  const artboards = useStore((s) => s.artboards);
+  const activeId = useStore((s) => s.activeArtboard);
+  const guides = useStore((s) => s.guides);
+  const guidesVisible = useStore((s) => s.guidesVisible);
+  const viewport = useStore((s) => s.viewport);
   const grid = useStore((s) => s.grid);
   const pen = useStore((s) => s.pen);
   const penCursor = useStore((s) => (s.tool === 'pen' && s.pen ? s.cursor : null));
@@ -129,7 +134,7 @@ export function Canvas() {
     const sy = e.clientY - rect.top;
     const raw = { x: (sx - st.panX) / st.zoom, y: (sy - st.panY) / st.zoom };
     return {
-      p: { x: snapV(raw.x), y: snapV(raw.y) },
+      p: { x: snapV(raw.x, 'x', st.zoom), y: snapV(raw.y, 'y', st.zoom) },
       raw,
       screen: { x: sx, y: sy },
       shift: e.shiftKey,
@@ -152,7 +157,35 @@ export function Canvas() {
       setPanning(true);
       return;
     }
+    const guideId = c.target.getAttribute?.('data-guide');
+    if (guideId) {
+      session.current = guideDrag(guideId, c);
+      return;
+    }
+    // clicking inside a page makes it the active one
+    if (c.st.artboards.length > 1) {
+      const hit = c.st.artboards.find((a) => c.raw.x >= a.x && c.raw.x <= a.x + a.w && c.raw.y >= a.y && c.raw.y <= a.y + a.h);
+      if (hit && hit.id !== c.st.activeArtboard) setState({ activeArtboard: hit.id });
+    }
     session.current = toolDef(c.st.tool)?.down?.(c) ?? null;
+  }
+
+  function guideDrag(id: string, c: PointerCtx): Session {
+    const before = docOf(c.st);
+    const g = c.st.guides.find((x) => x.id === id)!;
+    return {
+      move(m) {
+        const pos = g.axis === 'v' ? m.p.x : m.p.y;
+        liveDoc({ guides: m.st.guides.map((x) => (x.id === id ? { ...x, pos } : x)) });
+      },
+      up(m) {
+        const outside = m.screen.x < 0 || m.screen.y < 0 || m.screen.x > viewport.w || m.screen.y > viewport.h;
+        if (outside) {
+          liveDoc({ guides: before.guides });
+          removeGuide(id);
+        } else endLiveDoc(before);
+      },
+    };
   }
 
   function onMove(e: React.PointerEvent) {
@@ -186,9 +219,16 @@ export function Canvas() {
     >
       <svg width="100%" height="100%" style={{ display: 'block' }}>
         <g transform={`translate(${panX} ${panY}) scale(${zoom})`}>
-          <rect x={0} y={0} width={artboard.w} height={artboard.h} fill="#fff" stroke="#000" strokeWidth={k} filter="url(#shadow)" />
-          {grid && <rect x={0} y={0} width={artboard.w} height={artboard.h} fill="url(#grid)" pointerEvents="none" />}
-          <g>{shapes.map((s) => (s.id === editingText ? null : <ShapeEl key={s.id} shape={s} />))}</g>
+          {artboards.map((a) => (
+            <g key={a.id}>
+              <rect x={a.x} y={a.y} width={a.w} height={a.h} fill="#fff" stroke={artboards.length > 1 && a.id === activeId ? BLUE : '#000'} strokeWidth={k} filter="url(#shadow)" />
+              {grid && <rect x={a.x} y={a.y} width={a.w} height={a.h} fill="url(#grid)" pointerEvents="none" />}
+              <text x={a.x} y={a.y - 6 * k} fontSize={11 * k} fill={a.id === activeId ? '#cfe3ff' : '#9a9a9a'} fontFamily="Segoe UI, sans-serif" pointerEvents="none" style={{ userSelect: 'none' }}>
+                {a.name}
+              </text>
+            </g>
+          ))}
+          <g>{shapes.map((s) => (s.id === editingText ? null : <ShapeEl key={s.id} shape={s} all={shapes} />))}</g>
 
           {/* selection outlines */}
           {chrome !== 'none' &&
@@ -250,6 +290,41 @@ export function Canvas() {
             </g>
           )}
 
+          {guidesVisible &&
+            guides.map((g) => (
+              <g key={g.id}>
+                <line
+                  x1={g.axis === 'v' ? g.pos : -1e5}
+                  x2={g.axis === 'v' ? g.pos : 1e5}
+                  y1={g.axis === 'h' ? g.pos : -1e5}
+                  y2={g.axis === 'h' ? g.pos : 1e5}
+                  stroke="#26c6da"
+                  strokeWidth={k}
+                  pointerEvents="none"
+                />
+                <line
+                  data-guide={g.id}
+                  x1={g.axis === 'v' ? g.pos : -1e5}
+                  x2={g.axis === 'v' ? g.pos : 1e5}
+                  y1={g.axis === 'h' ? g.pos : -1e5}
+                  y2={g.axis === 'h' ? g.pos : 1e5}
+                  stroke="transparent"
+                  strokeWidth={8 * k}
+                  style={{ cursor: g.axis === 'v' ? 'ew-resize' : 'ns-resize' }}
+                />
+              </g>
+            ))}
+
+          {chrome === 'artboard' &&
+            (() => {
+              const a = artboards.find((x) => x.id === activeId);
+              return a
+                ? handleList({ x: a.x, y: a.y, w: a.w, h: a.h }).map(([h, hx, hy]) => (
+                    <rect key={h} data-ab={h} x={hx - 4 * k} y={hy - 4 * k} width={8 * k} height={8 * k} fill="#fff" stroke={BLUE} strokeWidth={k} style={{ cursor: HANDLE_CURSOR[h] }} />
+                  ))
+                : null;
+            })()}
+
           {/* pen draft */}
           {pen && pen.length > 0 && (
             <g pointerEvents="none">
@@ -292,14 +367,26 @@ export function Canvas() {
             setState({ editingText: null });
             if (cur && !cur.text.trim()) commit(st.shapes.filter((s) => s.id !== cur.id), { selection: [], key: 'text-edit' });
           }}
-          style={{
-            left: panX + editShape.x * zoom,
-            top: panY + editShape.y * zoom,
-            fontSize: editShape.fontSize * zoom,
-            color: editShape.fill ?? '#1c1c1c',
-            width: Math.max(120, (Math.max(4, ...editShape.text.split('\n').map((l) => l.length)) + 2) * editShape.fontSize * 0.58 * zoom),
-            height: (editShape.text.split('\n').length * 1.2 + 0.3) * editShape.fontSize * zoom,
-          }}
+          style={(() => {
+            const lay = layoutText(editShape);
+            const lh = editShape.fontSize * (editShape.lineHeight || 1.2) * zoom;
+            return {
+              left: panX + editShape.x * zoom,
+              top: panY + editShape.y * zoom,
+              fontFamily: `${editShape.fontFamily}, serif`,
+              fontSize: editShape.fontSize * zoom,
+              fontWeight: editShape.fontWeight,
+              fontStyle: editShape.italic ? 'italic' : 'normal',
+              textDecoration: editShape.underline ? 'underline' : 'none',
+              letterSpacing: editShape.letterSpacing * zoom,
+              lineHeight: `${lh}px`,
+              textAlign: editShape.align,
+              color: editShape.fill ?? '#1c1c1c',
+              whiteSpace: editShape.frameW > 0 ? 'pre-wrap' : 'pre',
+              width: editShape.frameW > 0 ? editShape.frameW * zoom : Math.max(120, lay.width * zoom + 60),
+              height: Math.max(lh, lay.height * zoom) + lh,
+            } as React.CSSProperties;
+          })()}
         />
       )}
     </div>

@@ -35,7 +35,7 @@ export interface Session {
 }
 
 /** Which selection chrome the canvas draws for the active tool. */
-export type Chrome = 'transform' | 'nodes' | 'outline' | 'none';
+export type Chrome = 'transform' | 'nodes' | 'outline' | 'artboard' | 'none';
 
 export interface ToolDef {
   id: Tool;

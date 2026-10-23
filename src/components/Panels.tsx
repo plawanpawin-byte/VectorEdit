@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { bbox, unionBox } from '../geometry';
 import {
+  activeBoard,
   deleteSelected,
   duplicateSelected,
   getState,
+  deleteSnapshot,
   historyJump,
+  restoreSnapshot,
+  takeSnapshot,
   live,
   makeShape,
   setColor,
@@ -454,7 +458,8 @@ export function Layers() {
           title="New rectangle"
           onClick={() => {
             const st = getState();
-            const r = makeShape('rect', { x: st.artboard.w / 2 - 60, y: st.artboard.h / 2 - 40, w: 120, h: 80 });
+            const ab = activeBoard(st);
+            const r = makeShape('rect', { x: ab.x + ab.w / 2 - 60, y: ab.y + ab.h / 2 - 40, w: 120, h: 80 });
             const before = st.shapes;
             live([...before, r], [r.id]);
             endLive(before);
@@ -490,14 +495,15 @@ export function TransformPanel() {
 
 export function Navigator() {
   const shapes = useStore((s) => s.shapes);
-  const artboard = useStore((s) => s.artboard);
+  const artboards = useStore((s) => s.artboards);
   const zoom = useStore((s) => s.zoom);
   const panX = useStore((s) => s.panX);
   const panY = useStore((s) => s.panY);
   const viewport = useStore((s) => s.viewport);
   const ref = useRef<SVGSVGElement>(null);
-  const pad = Math.max(artboard.w, artboard.h) * 0.1;
-  const vb = { x: -pad, y: -pad, w: artboard.w + pad * 2, h: artboard.h + pad * 2 };
+  const all = unionBox(artboards.map((a) => ({ x: a.x, y: a.y, w: a.w, h: a.h }))) ?? { x: 0, y: 0, w: 800, h: 600 };
+  const pad = Math.max(all.w, all.h) * 0.1;
+  const vb = { x: all.x - pad, y: all.y - pad, w: all.w + pad * 2, h: all.h + pad * 2 };
   const center = (e: React.PointerEvent) => {
     const r = ref.current!.getBoundingClientRect();
     const scale = Math.max(vb.w / r.width, vb.h / r.height);
@@ -516,7 +522,9 @@ export function Navigator() {
         onPointerDown={(e) => ((e.target as Element).setPointerCapture(e.pointerId), center(e))}
         onPointerMove={(e) => e.buttons && center(e)}
       >
-        <rect width={artboard.w} height={artboard.h} fill="#fff" />
+        {artboards.map((a) => (
+          <rect key={a.id} x={a.x} y={a.y} width={a.w} height={a.h} fill="#fff" />
+        ))}
         {shapes.map((s) => (
           <ShapeEl key={s.id} shape={s} />
         ))}
@@ -539,6 +547,7 @@ export function Navigator() {
 export function History() {
   const past = useStore((s) => s.past.length);
   const future = useStore((s) => s.future.length);
+  const snapshots = useStore((s) => s.snapshots);
   const total = past + future;
   return (
     <div className="panel-body pad">
@@ -553,6 +562,22 @@ export function History() {
             {i === 0 ? 'Open document' : `Step ${i}`}
           </button>
         )).reverse()}
+      </div>
+      <div className="snap-head">
+        <span>Snapshots</span>
+        <button className="mini wide" onClick={() => takeSnapshot()}>+ Take snapshot</button>
+      </div>
+      <div className="snap-list">
+        {snapshots.length === 0 && <p className="hint tight">A snapshot saves the whole document so you can return to it later.</p>}
+        {snapshots.map((sn) => (
+          <div key={sn.id} className="snap">
+            <button onClick={() => restoreSnapshot(sn.id)} title="Restore this snapshot (undoable)">
+              <b>{sn.name}</b>
+              <em>{new Date(sn.time).toLocaleTimeString()} · {sn.shapes.length} objects</em>
+            </button>
+            <i title="Delete snapshot" onClick={() => deleteSnapshot(sn.id)}>×</i>
+          </div>
+        ))}
       </div>
     </div>
   );

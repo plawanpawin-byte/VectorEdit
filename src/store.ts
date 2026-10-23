@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { Box, Pt, Shape, ShapeKind, Tool, Workspace } from './types';
+import type { Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Snapshot, Tool, Workspace } from './types';
 import { bbox, rotateShape, scaleAbout, toPath, translate, unionBox } from './geometry';
 import { type BoolOp, booleanPieces, canBoolean } from './boolean';
 import { blankShape, normalizeShape } from './shape';
@@ -13,7 +13,11 @@ export interface State {
   panX: number;
   panY: number;
   viewport: { w: number; h: number };
-  artboard: { w: number; h: number };
+  artboards: Artboard[];
+  activeArtboard: string;
+  guides: Guide[];
+  guidesVisible: boolean;
+  snapshots: Snapshot[];
   fill: string | null;
   stroke: string | null;
   strokeWidth: number;
@@ -22,8 +26,8 @@ export interface State {
   grid: boolean;
   snap: boolean;
   workspace: Workspace;
-  past: Shape[][];
-  future: Shape[][];
+  past: Doc[];
+  future: Doc[];
   cursor: { x: number; y: number };
   pen: Pt[] | null;
   editingText: string | null;
@@ -82,7 +86,11 @@ let state: State = {
   panX: 0,
   panY: 0,
   viewport: { w: 0, h: 0 },
-  artboard: { w: 800, h: 600 },
+  artboards: [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 800, h: 600 }],
+  activeArtboard: 'a1',
+  guides: [],
+  guidesVisible: true,
+  snapshots: [],
   fill: '#5b9cf5',
   stroke: '#1c1c1c',
   strokeWidth: 2,
@@ -124,19 +132,29 @@ export function useStore<T>(sel: (s: State) => T): T {
 
 /* ---------- history ---------- */
 
+export const docOf = (s: State = state): Doc => ({ shapes: s.shapes, artboards: s.artboards, guides: s.guides });
+
 let lastKey = '';
 let lastTime = 0;
+const MAX_HISTORY = 100;
 
-export function commit(
-  shapes: Shape[],
-  opts: { selection?: string[]; key?: string; before?: Shape[] } = {},
-) {
+function pushPast(entry: Doc, key?: string): Doc[] {
   const now = Date.now();
-  const coalesce = !!opts.key && opts.key === lastKey && now - lastTime < 700;
-  lastKey = opts.key ?? '';
+  const coalesce = !!key && key === lastKey && now - lastTime < 700;
+  lastKey = key ?? '';
   lastTime = now;
-  const past = coalesce ? state.past : [...state.past, opts.before ?? state.shapes].slice(-100);
+  return coalesce ? state.past : [...state.past, entry].slice(-MAX_HISTORY);
+}
+
+export function commit(shapes: Shape[], opts: { selection?: string[]; key?: string; before?: Shape[] } = {}) {
+  const past = pushPast({ ...docOf(), shapes: opts.before ?? state.shapes }, opts.key);
   setState({ shapes, past, future: [], ...(opts.selection ? { selection: opts.selection } : {}) });
+}
+
+/** Commit a change to any part of the document (artboards, guides, shapes). */
+export function commitDoc(patch: Partial<Doc>, opts: { selection?: string[]; key?: string } = {}) {
+  const past = pushPast(docOf(), opts.key);
+  setState({ ...patch, past, future: [], ...(opts.selection ? { selection: opts.selection } : {}) });
 }
 
 /** Update without recording history (during drags). Pair with endLive. */
@@ -144,10 +162,23 @@ export function live(shapes: Shape[], selection?: string[]) {
   setState({ shapes, ...(selection ? { selection } : {}) });
 }
 
+export function liveDoc(patch: Partial<Doc>) {
+  setState(patch);
+}
+
 export function endLive(before: Shape[]) {
   if (state.shapes !== before) {
     lastKey = '';
-    setState({ past: [...state.past, before].slice(-100), future: [] });
+    setState({ past: [...state.past, { ...docOf(), shapes: before }].slice(-MAX_HISTORY), future: [] });
+  }
+}
+
+/** Like endLive, for gestures that changed more than the shapes. */
+export function endLiveDoc(before: Doc) {
+  const now = docOf();
+  if (now.shapes !== before.shapes || now.artboards !== before.artboards || now.guides !== before.guides) {
+    lastKey = '';
+    setState({ past: [...state.past, before].slice(-MAX_HISTORY), future: [] });
   }
 }
 
@@ -156,30 +187,23 @@ function pruneSelection(shapes: Shape[], sel: string[]) {
   return sel.filter((id) => ids.has(id));
 }
 
+function restore(doc: Doc, past: Doc[], future: Doc[]) {
+  const active = doc.artboards.some((a) => a.id === state.activeArtboard) ? state.activeArtboard : doc.artboards[0]?.id;
+  setState({ ...doc, past, future, activeArtboard: active, selection: pruneSelection(doc.shapes, state.selection), nodeSel: [] });
+}
+
 export function undo() {
-  const { past, future, shapes, selection } = state;
+  const { past, future } = state;
   if (!past.length) return;
-  const prev = past[past.length - 1];
   lastKey = '';
-  setState({
-    shapes: prev,
-    past: past.slice(0, -1),
-    future: [shapes, ...future],
-    selection: pruneSelection(prev, selection),
-  });
+  restore(past[past.length - 1], past.slice(0, -1), [docOf(), ...future]);
 }
 
 export function redo() {
-  const { past, future, shapes, selection } = state;
+  const { past, future } = state;
   if (!future.length) return;
-  const next = future[0];
   lastKey = '';
-  setState({
-    shapes: next,
-    past: [...past, shapes],
-    future: future.slice(1),
-    selection: pruneSelection(next, selection),
-  });
+  restore(future[0], [...past, docOf()], future.slice(1));
 }
 
 /* ---------- shapes ---------- */
@@ -361,36 +385,71 @@ export function zoomTo(nz: number) {
   zoomAt(nz / state.zoom, viewport.w / 2, viewport.h / 2);
 }
 
-export function fitArtboard() {
-  const { viewport, artboard } = state;
-  if (!viewport.w || !viewport.h) return;
-  const zoom = Math.min(Math.max(0.05, (viewport.w - 120) / artboard.w), (viewport.h - 120) / artboard.h);
+export const activeBoard = (s: State = state): Artboard => s.artboards.find((a) => a.id === s.activeArtboard) ?? s.artboards[0];
+
+/** Fit the active artboard (or the given one) in the window. */
+export function fitArtboard(id?: string) {
+  const { viewport } = state;
+  const board = id ? (state.artboards.find((a) => a.id === id) ?? activeBoard()) : activeBoard();
+  if (!viewport.w || !viewport.h || !board) return;
+  const zoom = Math.min(Math.max(0.05, (viewport.w - 120) / board.w), (viewport.h - 120) / board.h);
   setState({
     zoom,
-    panX: (viewport.w - artboard.w * zoom) / 2,
-    panY: (viewport.h - artboard.h * zoom) / 2,
+    panX: (viewport.w - board.w * zoom) / 2 - board.x * zoom,
+    panY: (viewport.h - board.h * zoom) / 2 - board.y * zoom,
   });
 }
 
 export function newDocument() {
-  setState({ shapes: [], selection: [], past: [], future: [], pen: null, filePath: null });
+  setState({
+    shapes: [],
+    selection: [],
+    past: [],
+    future: [],
+    pen: null,
+    filePath: null,
+    artboards: [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 800, h: 600 }],
+    activeArtboard: 'a1',
+    guides: [],
+    snapshots: [],
+  });
+  fitArtboard();
 }
 
-export function loadDocument(raw: unknown[], artboard: { w: number; h: number }, filePath: string | null) {
+export function loadDocument(raw: unknown[], boards: Artboard[], filePath: string | null, extra: { guides?: Guide[]; snapshots?: Snapshot[] } = {}) {
   const shapes = raw.map(normalizeShape).filter((x): x is Shape => x !== null);
+  if (!boards.length) boards = [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 800, h: 600 }];
   // keep generated ids unique against the loaded ones
   counter = Math.max(counter, ...shapes.map((s) => Number(/^s(\d+)$/.exec(s.id)?.[1] ?? 0)));
-  setState({ shapes, artboard, selection: [], past: [], future: [], pen: null, editingText: null, filePath });
+  setState({
+    shapes,
+    artboards: boards,
+    activeArtboard: boards[0].id,
+    guides: extra.guides ?? [],
+    snapshots: extra.snapshots ?? [],
+    selection: [],
+    past: [],
+    future: [],
+    pen: null,
+    editingText: null,
+    nodeSel: [],
+    filePath,
+  });
   fitArtboard();
 }
 
 /* ---------- align / flip / history ---------- */
 
+const activeBoardBox = (): Box => {
+  const a = activeBoard();
+  return { x: a.x, y: a.y, w: a.w, h: a.h };
+};
+
 export function align(how: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom') {
   const sel = selectedShapes().filter((s) => !s.locked);
   if (!sel.length) return;
   const ref: Box =
-    sel.length === 1 ? { x: 0, y: 0, w: state.artboard.w, h: state.artboard.h } : unionBox(sel.map(bbox))!;
+    sel.length === 1 ? activeBoardBox() : unionBox(sel.map(bbox))!;
   const ids = new Set(sel.map((s) => s.id));
   commit(
     state.shapes.map((s) => {
@@ -430,7 +489,110 @@ export function updateRadius(r: number) {
   updateSelected((s) => (s.kind === 'rect' ? { ...s, radius: Math.max(0, Math.min(r, Math.min(s.w, s.h) / 2)) } : s), 'radius');
 }
 
-export const snapV = (v: number) => (state.snap ? Math.round(v / 10) * 10 : v);
+/** Snap a coordinate to guides and artboard edges (always) and to the 10 px grid (when snapping is on). */
+export function snapV(v: number, axis?: 'x' | 'y', zoom = state.zoom): number {
+  const tol = 6 / zoom;
+  if (axis) {
+    const candidates: number[] = [];
+    if (state.guidesVisible) for (const g of state.guides) if (g.axis === (axis === 'x' ? 'v' : 'h')) candidates.push(g.pos);
+    for (const a of state.artboards) candidates.push(...(axis === 'x' ? [a.x, a.x + a.w, a.x + a.w / 2] : [a.y, a.y + a.h, a.y + a.h / 2]));
+    let best = v;
+    let dist = tol;
+    for (const c of candidates) {
+      const d = Math.abs(c - v);
+      if (d < dist) {
+        dist = d;
+        best = c;
+      }
+    }
+    if (best !== v) return best;
+  }
+  return state.snap ? Math.round(v / 10) * 10 : v;
+}
+
+/* ---------- artboards ---------- */
+
+let boardCounter = 1;
+
+const centreIn = (s: Shape, a: Artboard) => {
+  const b = bbox(s);
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  return cx >= a.x && cx <= a.x + a.w && cy >= a.y && cy <= a.y + a.h;
+};
+
+/** Artboard whose area holds the centre of the shape. */
+export const boardOf = (s: Shape, boards: Artboard[] = state.artboards) => boards.find((a) => centreIn(s, a));
+export const shapesOn = (a: Artboard, shapes: Shape[] = state.shapes) => shapes.filter((s) => centreIn(s, a));
+
+export function addArtboard(p: Partial<Artboard> = {}): Artboard {
+  const last = state.artboards.reduce((m, a) => Math.max(m, a.x + a.w), 0);
+  const ref = activeBoard();
+  boardCounter = Math.max(boardCounter, state.artboards.length) + 1;
+  const board: Artboard = { id: `a${Date.now().toString(36)}${boardCounter}`, name: `Page ${state.artboards.length + 1}`, x: last + 60, y: ref.y, w: ref.w, h: ref.h, ...p };
+  commitDoc({ artboards: [...state.artboards, board] });
+  setState({ activeArtboard: board.id });
+  return board;
+}
+
+export function duplicateArtboard(id: string) {
+  const src = state.artboards.find((a) => a.id === id);
+  if (!src) return;
+  const board = { ...src, id: `a${Date.now().toString(36)}${++boardCounter}`, name: `${src.name} copy`, x: state.artboards.reduce((m, a) => Math.max(m, a.x + a.w), 0) + 60 };
+  const dx = board.x - src.x;
+  const copies = shapesOn(src).map((s) => ({ ...translate(s, dx, 0), id: `s${++counter}` }));
+  commitDoc({ artboards: [...state.artboards, board], shapes: [...state.shapes, ...copies] });
+  setState({ activeArtboard: board.id });
+}
+
+export function deleteArtboard(id: string) {
+  if (state.artboards.length < 2) return;
+  const board = state.artboards.find((a) => a.id === id);
+  if (!board) return;
+  const gone = new Set(shapesOn(board).map((s) => s.id));
+  const boards = state.artboards.filter((a) => a.id !== id);
+  commitDoc({ artboards: boards, shapes: state.shapes.filter((s) => !gone.has(s.id)) }, { selection: state.selection.filter((i) => !gone.has(i)) });
+  if (state.activeArtboard === id) setState({ activeArtboard: boards[0].id });
+}
+
+export function updateArtboard(id: string, patch: Partial<Artboard>, key?: string) {
+  commitDoc({ artboards: state.artboards.map((a) => (a.id === id ? { ...a, ...patch } : a)) }, { key });
+}
+
+export function setActiveArtboard(id: string, focus = false) {
+  if (!state.artboards.some((a) => a.id === id)) return;
+  setState({ activeArtboard: id });
+  if (focus) fitArtboard(id);
+}
+
+/* ---------- guides ---------- */
+
+export function addGuide(axis: 'h' | 'v', pos: number) {
+  commitDoc({ guides: [...state.guides, { id: `g${Date.now().toString(36)}${state.guides.length}`, axis, pos }] });
+}
+export function removeGuide(id: string) {
+  commitDoc({ guides: state.guides.filter((g) => g.id !== id) });
+}
+export function clearGuides() {
+  if (state.guides.length) commitDoc({ guides: [] });
+}
+
+/* ---------- snapshots ---------- */
+
+export function takeSnapshot(name?: string) {
+  const n = state.snapshots.length + 1;
+  const snap: Snapshot = { ...docOf(), id: `n${Date.now().toString(36)}`, name: name ?? `Snapshot ${n}`, time: Date.now() };
+  setState({ snapshots: [...state.snapshots, snap] });
+}
+export function restoreSnapshot(id: string) {
+  const snap = state.snapshots.find((x) => x.id === id);
+  if (!snap) return;
+  commitDoc({ shapes: snap.shapes, artboards: snap.artboards, guides: snap.guides });
+  if (!snap.artboards.some((a) => a.id === state.activeArtboard)) setState({ activeArtboard: snap.artboards[0].id });
+}
+export function deleteSnapshot(id: string) {
+  setState({ snapshots: state.snapshots.filter((x) => x.id !== id) });
+}
 
 /* ---------- groups ---------- */
 

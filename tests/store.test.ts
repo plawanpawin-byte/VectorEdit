@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  addArtboard,
+  addGuide,
   booleanOp,
+  deleteArtboard,
+  duplicateArtboard,
+  restoreSnapshot,
+  takeSnapshot,
+  updateArtboard,
   commit,
   convertToCurves,
   expandToGroups,
@@ -108,10 +115,77 @@ describe('boolean and curves', () => {
 
 describe('loading documents', () => {
   it('normalises old files and keeps ids unique', () => {
-    loadDocument([{ id: 's900', kind: 'rect', x: 0, y: 0, w: 5, h: 5 }, { nope: true }], { w: 10, h: 10 }, null);
+    loadDocument([{ id: 's900', kind: 'rect', x: 0, y: 0, w: 5, h: 5 }, { nope: true }], [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 10, h: 10 }], null);
     expect(getState().shapes).toHaveLength(1);
     const next = makeShape('rect');
     expect(next.id).not.toBe('s900');
     expect(Number(next.id.slice(1))).toBeGreaterThan(900);
+  });
+});
+
+describe('artboards, guides and snapshots', () => {
+  beforeEach(() => {
+    setState({
+      shapes: [],
+      selection: [],
+      past: [],
+      future: [],
+      artboards: [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 800, h: 600 }],
+      activeArtboard: 'a1',
+      guides: [],
+      snapshots: [],
+    });
+  });
+
+  it('adds pages beside the last one and makes them active', () => {
+    const b = addArtboard();
+    expect(b.x).toBeGreaterThanOrEqual(800);
+    expect(getState().activeArtboard).toBe(b.id);
+    undo();
+    expect(getState().artboards).toHaveLength(1);
+    expect(getState().activeArtboard).toBe('a1');
+  });
+
+  it('duplicates a page with its content', () => {
+    add(100, 50);
+    duplicateArtboard('a1');
+    expect(getState().artboards).toHaveLength(2);
+    expect(getState().shapes).toHaveLength(2);
+  });
+
+  it('deletes a page together with its shapes, but never the last page', () => {
+    const b = addArtboard();
+    const s = makeShape('rect', { x: b.x + 10, y: 10, w: 20, h: 20 });
+    commit([...getState().shapes, s]);
+    deleteArtboard(b.id);
+    expect(getState().artboards).toHaveLength(1);
+    expect(getState().shapes).toHaveLength(0);
+    deleteArtboard('a1');
+    expect(getState().artboards).toHaveLength(1);
+  });
+
+  it('undoes page resizing together with other edits', () => {
+    updateArtboard('a1', { w: 1000 });
+    expect(getState().artboards[0].w).toBe(1000);
+    undo();
+    expect(getState().artboards[0].w).toBe(800);
+  });
+
+  it('records guides in history', () => {
+    addGuide('v', 120);
+    expect(getState().guides).toHaveLength(1);
+    undo();
+    expect(getState().guides).toHaveLength(0);
+  });
+
+  it('restores a snapshot and can undo the restore', () => {
+    add(0);
+    takeSnapshot('one');
+    add(200);
+    expect(getState().shapes).toHaveLength(2);
+    restoreSnapshot(getState().snapshots[0].id);
+    expect(getState().shapes).toHaveLength(1);
+    undo();
+    expect(getState().shapes).toHaveLength(2);
   });
 });

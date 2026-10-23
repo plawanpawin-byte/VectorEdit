@@ -1,6 +1,6 @@
-import type { Shape } from './types';
-import { getState, loadDocument, setState } from './store';
+import { parseDoc, serializeDoc } from './document';
 import { download } from './components/exporter';
+import { getState, loadDocument, setState } from './store';
 
 interface DesktopApi {
   openFile(): Promise<{ path: string; text: string } | null>;
@@ -18,15 +18,11 @@ declare global {
 
 export const isDesktop = () => !!window.desktop;
 
-function serialize(): string {
-  const { shapes, artboard } = getState();
-  return JSON.stringify({ app: 'vectoredit', version: 1, artboard, shapes }, null, 2);
-}
+const serialize = () => serializeDoc(getState());
 
 function load(text: string, path: string | null) {
-  const doc = JSON.parse(text) as { app?: string; artboard?: { w: number; h: number }; shapes?: Shape[] };
-  if (doc.app !== 'vectoredit' || !Array.isArray(doc.shapes) || !doc.artboard) throw new Error('Not a VectorEdit document');
-  loadDocument(doc.shapes, doc.artboard, path);
+  const d = parseDoc(text);
+  loadDocument(d.shapes, d.artboards, path, { guides: d.guides, snapshots: d.snapshots });
 }
 
 export async function openDoc() {

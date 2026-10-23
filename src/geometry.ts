@@ -1,5 +1,6 @@
 import type { Box, Gradient, Pt, Shape } from './types';
 import { buildShape } from './shapes';
+import { layoutText } from './textlayout';
 
 interface P2 {
   x: number;
@@ -72,9 +73,8 @@ export function rings(s: Shape, steps = 14): P2[][] {
 }
 
 export function textBox(s: Shape): Box {
-  const lines = s.text.split('\n');
-  const longest = Math.max(1, ...lines.map((l) => l.length));
-  return { x: s.x, y: s.y, w: longest * s.fontSize * 0.56, h: lines.length * s.fontSize * 1.2 };
+  const l = layoutText(s);
+  return { x: s.x, y: s.y, w: l.width, h: l.height };
 }
 
 export function bbox(s: Shape): Box {

@@ -1,12 +1,20 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { Shape } from '../types';
+import { bbox, boxesIntersect } from '../geometry';
+import type { Artboard, Shape } from '../types';
 import { ShapeEl } from './ShapeEl';
 
-export function toSvg(shapes: Shape[], w: number, h: number, transparent = true): string {
-  const body = shapes.map((s) => renderToStaticMarkup(<ShapeEl shape={s} />)).join('\n  ');
-  const bg = transparent ? '' : `\n  <rect width="${w}" height="${h}" fill="#fff"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${bg}\n  ${body}\n</svg>\n`;
+/** SVG of one artboard: every shape that touches it, cropped to its bounds. */
+export function toSvg(shapes: Shape[], board: Artboard, transparent = true): string {
+  const box = { x: board.x, y: board.y, w: board.w, h: board.h };
+  const body = shapes
+    .filter((s) => s.visible && boxesIntersect(bbox(s), box))
+    .map((s) => renderToStaticMarkup(<ShapeEl shape={s} all={shapes} />))
+    .join('\n  ');
+  const bg = transparent ? '' : `\n  <rect x="${board.x}" y="${board.y}" width="${board.w}" height="${board.h}" fill="#fff"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${board.w}" height="${board.h}" viewBox="${board.x} ${board.y} ${board.w} ${board.h}">${bg}\n  ${body}\n</svg>\n`;
 }
+
+const fileName = (board: Artboard, ext: string) => `${board.name.replace(/[^\w.-]+/g, '_') || 'artboard'}.${ext}`;
 
 export function download(blob: Blob, name: string) {
   if (window.desktop) {
@@ -22,12 +30,13 @@ export function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function exportSvg(shapes: Shape[], w: number, h: number) {
-  download(new Blob([toSvg(shapes, w, h)], { type: 'image/svg+xml' }), 'Untitled-1.svg');
+export function exportSvg(shapes: Shape[], board: Artboard) {
+  download(new Blob([toSvg(shapes, board)], { type: 'image/svg+xml' }), fileName(board, 'svg'));
 }
 
-export function exportPng(shapes: Shape[], w: number, h: number, scale = 2) {
-  const svg = toSvg(shapes, w, h, false);
+export function exportPng(shapes: Shape[], board: Artboard, scale = 2) {
+  const { w, h } = board;
+  const svg = toSvg(shapes, board, false);
   const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
   const img = new Image();
   img.onload = () => {
@@ -38,7 +47,7 @@ export function exportPng(shapes: Shape[], w: number, h: number, scale = 2) {
     if (!ctx) return;
     ctx.drawImage(img, 0, 0, c.width, c.height);
     URL.revokeObjectURL(url);
-    c.toBlob((b) => b && download(b, 'Untitled-1.png'));
+    c.toBlob((b) => b && download(b, fileName(board, 'png')));
   };
   img.src = url;
 }

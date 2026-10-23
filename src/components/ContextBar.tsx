@@ -1,5 +1,5 @@
 import { bbox, unionBox } from '../geometry';
-import { fitArtboard, setColor, setState, setTransform, useStore } from '../store';
+import { fitArtboard, setColor, setState, setTransform, updateArtboard, useStore } from '../store';
 import { NumField } from './Fields';
 import { Popover } from './TopBar';
 import { toolDef } from '../tools/registry';
@@ -19,7 +19,9 @@ export function ContextBar() {
   const fill = useStore((s) => s.fill);
   const stroke = useStore((s) => s.stroke);
   const strokeWidth = useStore((s) => s.strokeWidth);
-  const artboard = useStore((s) => s.artboard);
+  const artboards = useStore((s) => s.artboards);
+  const activeId = useStore((s) => s.activeArtboard);
+  const artboard = artboards.find((a) => a.id === activeId) ?? artboards[0];
   const tool = useStore((s) => s.tool);
   const Options = toolDef(tool)?.Options;
   const sel = shapes.filter((s) => selection.includes(s.id));
@@ -35,8 +37,8 @@ export function ContextBar() {
               <div className="doc-setup">
                 <h4>Document Setup</h4>
                 <div className="grid2">
-                  <NumField label="W" value={artboard.w} suffix="px" min={1} onCommit={(w) => setState({ artboard: { ...artboard, w } })} />
-                  <NumField label="H" value={artboard.h} suffix="px" min={1} onCommit={(h) => setState({ artboard: { ...artboard, h } })} />
+                  <NumField label="W" value={artboard.w} suffix="px" min={1} onCommit={(w) => updateArtboard(artboard.id, { w }, 'abw')} />
+                  <NumField label="H" value={artboard.h} suffix="px" min={1} onCommit={(h) => updateArtboard(artboard.id, { h }, 'abh')} />
                 </div>
                 <h5>Presets</h5>
                 <div className="presets">
@@ -45,8 +47,8 @@ export function ContextBar() {
                       key={name}
                       className={artboard.w === w && artboard.h === h ? 'on' : ''}
                       onClick={() => {
-                        setState({ artboard: { w, h } });
-                        fitArtboard();
+                        updateArtboard(artboard.id, { w, h });
+                        fitArtboard(artboard.id);
                         close();
                       }}
                     >

@@ -21,6 +21,12 @@ export const toolIcon: Record<string, ReactNode> = {
       <circle cx="16.5" cy="4.5" r="1.8" fill="currentColor" stroke="none" />
     </>,
   ),
+  artboard: svg(
+    <>
+      <path d="M6.5 2.5v15M13.5 2.5v15M2.5 6.5h15M2.5 13.5h15" />
+      <rect x="6.5" y="6.5" width="7" height="7" fill="currentColor" stroke="none" opacity=".35" />
+    </>,
+  ),
   rotate: svg(
     <>
       <path d="M16 10.5a6 6 0 11-2-4.5" />

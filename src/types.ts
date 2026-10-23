@@ -2,6 +2,7 @@ export type BaseTool =
   | 'select'
   | 'direct'
   | 'corner'
+  | 'artboard'
   | 'pen'
   | 'pencil'
   | 'text'
@@ -88,6 +89,19 @@ export interface Shape {
   closed: boolean;
   text: string;
   fontSize: number;
+  fontFamily: string;
+  fontWeight: number;
+  italic: boolean;
+  underline: boolean;
+  align: 'left' | 'center' | 'right' | 'justify';
+  /** line height as a multiple of the font size */
+  lineHeight: number;
+  /** extra space between characters, in px */
+  letterSpacing: number;
+  /** width of a text frame in px; 0 means artistic (unwrapped) text */
+  frameW: number;
+  /** id of a path shape the text runs along, or null */
+  pathId: string | null;
   fill: string | null;
   gradient: Gradient | null;
   stroke: string | null;
@@ -108,4 +122,32 @@ export interface Box {
   y: number;
   w: number;
   h: number;
+}
+
+export interface Artboard {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface Guide {
+  id: string;
+  axis: 'h' | 'v';
+  pos: number;
+}
+
+/** The undoable part of a document. */
+export interface Doc {
+  shapes: Shape[];
+  artboards: Artboard[];
+  guides: Guide[];
+}
+
+export interface Snapshot extends Doc {
+  id: string;
+  name: string;
+  time: number;
 }

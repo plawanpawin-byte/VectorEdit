@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { Effect, Shape } from '../types';
-import { pathD } from '../geometry';
+import { pathD, toPath } from '../geometry';
+import { layoutText } from '../textlayout';
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -40,7 +41,8 @@ function Filter({ id, effects }: { id: string; effects: Effect[] }) {
   );
 }
 
-export function ShapeEl({ shape: s }: { shape: Shape }) {
+/** Renders one shape. `all` lets text find the path it runs along. */
+export function ShapeEl({ shape: s, all }: { shape: Shape; all?: Shape[] }) {
   if (!s.visible) return null;
   const gid = `grad-${s.id}`;
   const fid = `fx-${s.id}`;
@@ -74,25 +76,49 @@ export function ShapeEl({ shape: s }: { shape: Shape }) {
     case 'path':
       body = <path d={pathD(s)} {...common} />;
       break;
-    case 'text':
+    case 'text': {
+      const path = s.pathId ? all?.find((q) => q.id === s.pathId && q.kind !== 'text') : undefined;
+      const textProps = {
+        fontFamily: `${s.fontFamily}, serif`,
+        fontSize: s.fontSize,
+        fontWeight: s.fontWeight,
+        fontStyle: s.italic ? ('italic' as const) : ('normal' as const),
+        letterSpacing: s.letterSpacing || undefined,
+        textDecoration: s.underline ? 'underline' : undefined,
+        fill,
+        opacity: s.opacity,
+        filter: common.filter,
+        style: { userSelect: 'none' as const, ...style },
+      };
+      if (path) {
+        body = (
+          <>
+            <defs>
+              <path id={`tp-${s.id}`} d={pathD(toPath(path))} />
+            </defs>
+            <text {...textProps}>
+              <textPath href={`#tp-${s.id}`}>{s.text.replace(/\n/g, ' ')}</textPath>
+            </text>
+          </>
+        );
+        break;
+      }
+      const lay = layoutText(s);
+      const lh = s.fontSize * (s.lineHeight || 1.2);
+      const baseline = (lh - s.fontSize) / 2 + s.fontSize * 0.85;
       body = (
-        <text
-          x={s.x}
-          y={s.y + s.fontSize * 0.95}
-          fontSize={s.fontSize}
-          fontFamily="Georgia, 'Times New Roman', serif"
-          fill={fill}
-          opacity={s.opacity}
-          filter={common.filter}
-          style={{ userSelect: 'none', ...style }}
-        >
-          {s.text.split('\n').map((line, i) => (
-            <tspan key={i} x={s.x} dy={i === 0 ? 0 : s.fontSize * 1.2}>
-              {line || ' '}
-            </tspan>
-          ))}
+        <text {...textProps} textAnchor={s.align === 'center' ? 'middle' : s.align === 'right' ? 'end' : 'start'}>
+          {lay.lines.map((l, i) => {
+            const justify = s.align === 'justify' && s.frameW > 0 && !l.last && l.text.includes(' ');
+            return (
+              <tspan key={i} x={l.x} y={l.y + baseline} {...(justify ? { textLength: s.frameW, lengthAdjust: 'spacing' as const } : {})}>
+                {l.text || '\u00a0'}
+              </tspan>
+            );
+          })}
         </text>
       );
+    }
   }
 
   const needsDefs = !!g || fx.length > 0;

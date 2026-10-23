@@ -5,6 +5,7 @@ import {
   arrange,
   deleteSelected,
   duplicateSelected,
+  activeBoard,
   booleanOp,
   convertToCurves,
   fitArtboard,
@@ -39,9 +40,10 @@ const zoomBy = (f: number) => {
   const { viewport } = getState();
   zoomAt(f, viewport.w / 2, viewport.h / 2);
 };
-export const doExport = (kind: 'png' | 'svg') => {
-  const { shapes, artboard } = getState();
-  (kind === 'png' ? exportPng : exportSvg)(shapes, artboard.w, artboard.h);
+export const doExport = (kind: 'png' | 'svg', all = false) => {
+  const st = getState();
+  const boards = all ? st.artboards : [activeBoard(st)];
+  boards.forEach((board, i) => setTimeout(() => (kind === 'png' ? exportPng : exportSvg)(st.shapes, board), i * 250));
 };
 
 function useOutside(close: () => void) {
@@ -85,8 +87,10 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
     { label: 'Open…', shortcut: 'Ctrl+O', action: openDoc },
     { label: 'Save', shortcut: 'Ctrl+S', action: () => saveDoc(false) },
     { label: 'Save As…', shortcut: 'Ctrl+Shift+S', action: () => saveDoc(true) },
-    { label: 'Export SVG…', action: () => doExport('svg') },
-    { label: 'Export PNG…', action: () => doExport('png') },
+    { label: 'Export artboard as SVG…', action: () => doExport('svg') },
+    { label: 'Export artboard as PNG…', action: () => doExport('png') },
+    { label: 'Export all artboards as PNG…', action: () => doExport('png', true) },
+    { label: 'Export all artboards as SVG…', action: () => doExport('svg', true) },
     { label: 'Edit', head: true },
     { label: 'Duplicate', shortcut: 'Ctrl+D', action: duplicateSelected },
     { label: 'Delete', shortcut: 'Del', action: deleteSelected },
