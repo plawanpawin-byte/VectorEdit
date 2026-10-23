@@ -739,3 +739,22 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']), select, te
 .toolbar .fillstroke { flex: none; }
 .flyout.up { top: auto; bottom: 0; }
 .toolbar { min-height: 0; } .toolbar-tools { overflow: visible; }
+
+/* ---------- Path Brushes, Quick FX and Styles panels ---------- */
+.preset-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px 8px 10px; }
+.preset-list > button, .style-row > button:first-child {
+  display: grid; grid-template-columns: 1fr; justify-items: start; gap: 3px; padding: 5px 6px 6px;
+  border-radius: 6px; background: var(--ui-1); color: var(--text); text-align: left; min-width: 0;
+}
+.preset-list > button:hover, .style-row > button:first-child:hover { background: var(--ui-4); }
+.preset-list > button.on { box-shadow: inset 0 0 0 1px var(--brand-hi); background: #163b37; }
+.preset-list > button span:last-child, .style-row > button span:last-child { font-size: 10.5px; color: var(--text-dim); }
+.preset-list > button svg { color: var(--text); }
+.preset-list > button:disabled { opacity: .4; }
+.fx-swatch { width: 100%; height: 18px; border-radius: 4px; background: linear-gradient(135deg, #5b9cf5, #17b3a3); border: 1px solid #000; }
+.fx-swatch[data-fx='glow'], .fx-swatch[data-fx='neon'] { background: radial-gradient(circle, #ffd24a 0%, #1b1b1b 75%); }
+.fx-swatch[data-fx='drop'], .fx-swatch[data-fx='soft'] { background: #5b9cf5; box-shadow: 3px 3px 5px #000; }
+.fx-swatch[data-fx='none'] { background: repeating-linear-gradient(45deg, #2a2a2a 0 4px, #1a1a1a 4px 8px); }
+.style-save { padding-bottom: 0; }
+.style-row { display: grid; grid-template-columns: 1fr 22px; gap: 4px; padding: 0 8px 4px; align-items: stretch; }
+.style-row > button:first-child { padding: 5px 6px; }

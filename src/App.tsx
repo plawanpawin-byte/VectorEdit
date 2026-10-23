@@ -39,6 +39,7 @@ import { placeFiles } from './images';
 import { RulerH, RulerV, RULER } from './components/Rulers';
 import { StatusBar } from './components/StatusBar';
 import { MenuBar } from './components/MenuBar';
+import { PathBrushesPanel, QuickFxPanel, StylesPanel } from './components/StylePanels';
 import { Toolbar } from './components/Toolbar';
 
 import { TOOLS, activateTool, isPixelWorkspace, toolDef, toolInWorkspace } from './tools/registry';
@@ -315,7 +316,15 @@ export function App() {
                     { id: 'styles', label: 'Styles', body: <TextStylesPanel /> },
                   ]
                 : []),
-              ...(workspace === 'vector' ? [{ id: 'pages', label: 'Pages', body: <PagesPanel /> }, { id: 'assets', label: 'Assets', body: <AssetsPanel /> }] : []),
+              ...(workspace === 'vector'
+                ? [
+                    { id: 'pathbrushes', label: 'Path Brushes', body: <PathBrushesPanel /> },
+                    { id: 'quickfx', label: 'Quick FX', body: <QuickFxPanel /> },
+                    { id: 'vstyles', label: 'Styles', body: <StylesPanel /> },
+                    { id: 'pages', label: 'Pages', body: <PagesPanel /> },
+                    { id: 'assets', label: 'Assets', body: <AssetsPanel /> },
+                  ]
+                : []),
             ]}
           />
           <Dock
