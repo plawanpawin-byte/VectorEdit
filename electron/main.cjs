@@ -37,9 +37,55 @@ function createWindow() {
   // keep the title we set (file name) instead of the page's <title>
   win.on('page-title-updated', (e) => e.preventDefault());
   win.on('closed', () => (win = null));
+  guardClose();
+  // the page's beforeunload prompt is for browsers; here the close guard above has already asked, so let the close through
+  win.webContents.on('will-prevent-unload', (e) => e.preventDefault());
+
 }
 
 const send = (channel) => win?.webContents.send(channel);
+
+/** Ask the page whether it has unsaved changes before the window closes. */
+let closing = false;
+function guardClose() {
+  win.on('close', async (e) => {
+    if (closing) return;
+    e.preventDefault();
+    let dirty = false;
+    try {
+      dirty = await win.webContents.executeJavaScript('window.__veDirty ? window.__veDirty() : false');
+    } catch {
+      /* page is gone: nothing to protect */
+    }
+    if (dirty) {
+      const choice = dialog.showMessageBoxSync(win, {
+        type: 'warning',
+        buttons: ['Cancel', 'Discard changes and quit'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Unsaved changes',
+        message: 'This document has unsaved changes.',
+        detail: 'Cancel to go back and save it, or discard the changes.',
+      });
+      if (choice === 0) return;
+    }
+    closing = true;
+    win.close();
+  });
+}
+
+/** A .vedit path given on the command line or by double-clicking the file. */
+const vedit = (argv) => argv.find((a) => /\.vedit$/i.test(a) && !a.startsWith('-'));
+let pendingFile = vedit(process.argv.slice(1));
+
+async function openPath(file) {
+  try {
+    const text = await fs.readFile(file, 'utf8');
+    win?.webContents.send('open-file', { path: file, text });
+  } catch (err) {
+    dialog.showErrorBox('Could not open the file', String(err && err.message ? err.message : err));
+  }
+}
 
 function buildMenu() {
   const mac = process.platform === 'darwin';
@@ -60,7 +106,9 @@ function buildMenu() {
         mac ? { role: 'close' } : { role: 'quit' },
       ],
     },
-    { label: 'View', submenu: [{ role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
+    // Ctrl+R (rulers) and Ctrl+Shift+I (import) belong to the editor, so reload and DevTools use the F keys
+    ...(mac ? [{ label: 'Edit', submenu: [{ role: 'cut' }, { role: 'copy' }, { role: 'paste' }] }] : []),
+    { label: 'View', submenu: [{ role: 'reload', accelerator: 'F5' }, { role: 'toggleDevTools', accelerator: 'F12' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -91,7 +139,39 @@ ipcMain.handle('file:export', async (_e, { name, ext, data }) => {
   return { path: r.filePath };
 });
 
+// The page asks for the file it was launched with once it is ready, so nothing is sent before it listens.
+ipcMain.handle('file:pending', async () => {
+  const file = pendingFile;
+  pendingFile = null;
+  if (!file) return null;
+  try {
+    return { path: file, text: await fs.readFile(file, 'utf8') };
+  } catch (err) {
+    dialog.showErrorBox('Could not open the file', String(err && err.message ? err.message : err));
+    return null;
+  }
+});
+
 ipcMain.on('title', (_e, title) => win?.setTitle(title));
+
+// one editor window: opening a second .vedit file hands it to the running one
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', (_e, argv) => {
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+    const f = vedit(argv.slice(1));
+    if (f) void openPath(f);
+  });
+}
+app.on('open-file', (e, file) => {
+  e.preventDefault();
+  if (win) void openPath(file);
+  else pendingFile = file;
+});
 
 app.whenReady().then(() => {
   buildMenu();

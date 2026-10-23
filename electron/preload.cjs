@@ -7,6 +7,12 @@ contextBridge.exposeInMainWorld('desktop', {
   saveFile: (payload) => ipcRenderer.invoke('file:save', payload),
   exportFile: (payload) => ipcRenderer.invoke('file:export', payload),
   setTitle: (title) => ipcRenderer.send('title', title),
+  takePendingFile: () => ipcRenderer.invoke('file:pending'),
+  onOpenFile: (handler) => {
+    const fn = (_e, payload) => handler(payload);
+    ipcRenderer.on('open-file', fn);
+    return () => ipcRenderer.removeListener('open-file', fn);
+  },
   onMenu: (handler) => {
     const subs = menuChannels.map((c) => {
       const fn = () => handler(c);

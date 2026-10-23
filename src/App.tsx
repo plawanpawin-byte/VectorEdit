@@ -337,7 +337,17 @@ function useDesktopBridge() {
   useEffect(() => {
     const d = window.desktop;
     if (!d) return;
-    return d.onMenu((c) => {
+    // a document the app was launched with (double-clicked in the file manager)
+    void d.takePendingFile().then((f) => {
+      if (f) {
+        setState({ newDocOpen: false });
+        void openDocText(f.text, f.path);
+      }
+    });
+    const offFile = d.onOpenFile((f) => {
+      if (confirmDiscard()) void openDocText(f.text, f.path);
+    });
+    const offMenu = d.onMenu((c) => {
       if (c === 'new') openNewDocument();
       else if (c === 'import') void importFilesDialog();
       else if (c === 'open') void openDoc();
@@ -346,6 +356,7 @@ function useDesktopBridge() {
       else if (c === 'export-svg') doExport('svg');
       else if (c === 'export-png') doExport('png');
     });
+    return () => (offFile(), offMenu());
   }, []);
   useEffect(() => {
     const name = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled';

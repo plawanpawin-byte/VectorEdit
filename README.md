@@ -25,6 +25,23 @@ The desktop build adds a native menu, Open/Save/Save As for `.vedit` documents, 
 the file name in the window title. In the browser, Save downloads a `.vedit` file and Open uses a file picker.
 Installers for Windows are best built on Windows, macOS ones on macOS.
 
+### Windows installer without building it yourself
+
+The **Build Windows app** workflow builds the installer (`VectorEdit-Setup-<version>.exe`) and a portable
+`VectorEdit-Portable-<version>.exe` on GitHub's Windows runners. Run it from the repository's *Actions* tab
+(*Build Windows app* → *Run workflow*) and download the files from the run's *Artifacts*. Pushing a tag
+such as `v0.1.0` also attaches both files to a GitHub release. The installer is not code-signed, so Windows
+SmartScreen shows a warning the first time (*More info → Run anyway*).
+
+Double-clicking a `.vedit` file opens it in the running app; closing the window with unsaved changes asks first.
+
+## Starting, opening and importing
+
+The app opens on a **New Document** dialog: A0–A6, Letter, Legal and Tabloid paper, screen, social and photo sizes, or a custom
+width and height in px, mm, cm, pt or in, in portrait or landscape. **File → Import images or SVG** (Ctrl+Shift+I in the desktop app),
+dragging files onto the window, and **Ctrl+V** all bring in PNG, JPG, GIF, WebP, BMP, AVIF, ICO and SVG. SVG files become editable
+shapes; pictures become image layers. Pasting a screenshot or SVG code works too.
+
 ## What works
 
 Nine workspaces (Vector, Pixel, Retouching, Colour Grading, Compositing, Layout, Typography, Slice, Scripting), each with its own toolbox and panels:

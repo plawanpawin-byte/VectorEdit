@@ -13,6 +13,8 @@ interface DesktopApi {
   exportFile(p: { name: string; ext: string; data: Uint8Array }): Promise<{ path: string } | null>;
   setTitle(title: string): void;
   onMenu(handler: (channel: string) => void): () => void;
+  takePendingFile(): Promise<{ path: string; text: string } | null>;
+  onOpenFile(handler: (file: { path: string; text: string }) => void): () => void;
 }
 
 declare global {
@@ -26,7 +28,7 @@ export const isDesktop = () => !!window.desktop;
 const serialize = () => serializeDoc(getState());
 
 /** Open a document from its text (used for files dropped on the window). */
-export const openDocText = (text: string) => load(text, null).catch((e) => alert(`Could not open the file.\n${(e as Error).message}`));
+export const openDocText = (text: string, path: string | null = null) => load(text, path).catch((e) => alert(`Could not open the file.\n${(e as Error).message}`));
 
 async function load(text: string, path: string | null) {
   const d = parseDoc(text);

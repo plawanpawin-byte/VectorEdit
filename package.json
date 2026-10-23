@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/plawanpawin-byte/vectoredit.git"
+    "url": "git+https://github.com/plawanpawin-byte/VectorEdit.git"
   },
   "keywords": [],
   "author": "plawanpawin-byte",
@@ -24,7 +24,7 @@
   "bugs": {
     "url": "https://github.com/plawanpawin-byte/vectoredit/issues"
   },
-  "homepage": "https://github.com/plawanpawin-byte/vectoredit#readme",
+  "homepage": "https://github.com/plawanpawin-byte/VectorEdit#readme",
   "private": "true",
   "type": "module",
   "dependencies": {
@@ -51,7 +51,8 @@
     "appId": "com.plawanpawin.vectoredit",
     "productName": "VectorEdit",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist/**",
@@ -60,21 +61,34 @@
     ],
     "win": {
       "target": [
-        "nsis",
-        "portable"
-      ]
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
     },
     "mac": {
       "target": [
         "dmg"
       ],
-      "category": "public.app-category.graphics-design"
+      "category": "public.app-category.graphics-design",
+      "icon": "build/icon.png"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "category": "Graphics"
+      "category": "Graphics",
+      "icon": "build/icon.png"
     },
     "fileAssociations": [
       {
@@ -82,6 +96,18 @@
         "name": "VectorEdit document",
         "role": "Editor"
       }
-    ]
+    ],
+    "artifactName": "VectorEdit-${version}-${os}-${arch}.${ext}",
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "perMachine": false,
+      "artifactName": "VectorEdit-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "VectorEdit-Portable-${version}.${ext}"
+    }
   }
 }
