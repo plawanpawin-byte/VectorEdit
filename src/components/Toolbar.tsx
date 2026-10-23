@@ -1,10 +1,57 @@
 import { useEffect, useRef, useState } from 'react';
 import { resetColors, setState, swapColors, useStore } from '../store';
 import { type ToolGroup, activateTool, groupsFor } from '../tools/registry';
+import type { Workspace } from '../types';
 import type { ToolDef } from '../tools/types';
 import { SwapArrows } from './Icons';
 
-function Slot({ group }: { group: ToolGroup }) {
+/**
+ * Display order for studios whose tool groups hold many tools: main tools get their own button and
+ * related ones share a flyout, like a desktop design app's toolbox. `g:<id>` takes a whole group,
+ * '|' draws a divider. Tools a studio has but the list misses land in a final slot, so none go missing.
+ */
+const ARRANGE: Partial<Record<Workspace, (string[] | '|')[]>> = {
+  vector: [
+    ['select'], ['direct', 'corner'], ['rotate'], '|',
+    ['pen'], ['pencil'], ['vbrush'], ['fill', 'transparency', 'meshedit', 'vflood'],
+    ['g:shapes'], ['shapebuilder', 'contour', 'blend'], ['g:text'], ['g:layout'],
+    ['vcrop'], ['knife', 'scissors', 'perspective', 'warp'], ['measure', 'areameasure'], ['eyedropper', 'colourpicker'], '|',
+    ['hand'], ['zoom'], ['artboard'],
+  ],
+  layout: [
+    ['select'], ['direct'], '|',
+    ['frametext', 'text'], ['table'], ['pen', 'pencil'], ['g:shapes'], ['frame-rect', 'frame-ellipse'], ['image'],
+    ['vcrop'], ['fill', 'transparency', 'meshedit'], ['rotate'], ['measure', 'areameasure'], ['eyedropper', 'colourpicker'], '|',
+    ['hand'], ['zoom'], ['artboard'],
+  ],
+};
+
+type Entry = ToolGroup | '|';
+
+export function slotsFor(ws: Workspace): Entry[] {
+  const groups = groupsFor(ws);
+  const plan = ARRANGE[ws];
+  if (!plan) return groups;
+  const all = groups.flatMap((g) => g.tools);
+  const used = new Set<string>();
+  const out: Entry[] = [];
+  for (const row of plan) {
+    if (row === '|') {
+      out.push('|');
+      continue;
+    }
+    const tools = row
+      .flatMap((id) => (id.startsWith('g:') ? groups.find((g) => g.id === id.slice(2))?.tools ?? [] : all.filter((t) => t.id === id)))
+      .filter((t) => !used.has(t.id));
+    tools.forEach((t) => used.add(t.id));
+    if (tools.length) out.push({ id: tools[0].group, tools });
+  }
+  const rest = all.filter((t) => !used.has(t.id));
+  if (rest.length) out.push({ id: rest[0].group, tools: rest });
+  return out;
+}
+
+function Slot({ group, arranged }: { group: ToolGroup; arranged?: boolean }) {
   const tool = useStore((s) => s.tool);
   const last = useStore((s) => s.lastTool[group.id]);
   const [open, setOpen] = useState(false);
@@ -24,7 +71,7 @@ function Slot({ group }: { group: ToolGroup }) {
   const wide = group.tools.length > 8;
 
   return (
-    <div className="slot" ref={ref} data-group={group.id}>
+    <div className="slot" ref={ref} data-group={arranged ? undefined : group.id}>
       <button
         className={'tool' + (active ? ' on' : '')}
         title={`${current.label}${current.key ? ` (${current.key.toUpperCase()})` : ''}`}
@@ -59,9 +106,9 @@ export function Toolbar() {
   const target = useStore((s) => s.colorTarget);
   return (
     <nav className="toolbar">
-      {groupsFor(workspace).map((g) => (
-        <Slot key={g.id} group={g} />
-      ))}
+      {slotsFor(workspace).map((g, i) =>
+        g === '|' ? <hr key={'sep' + i} className="tsep" /> : <Slot key={g.tools[0].id} group={g} arranged={workspace in ARRANGE} />,
+      )}
       <div className="spacer" />
       <div className="fillstroke">
         <button

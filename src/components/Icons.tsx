@@ -95,3 +95,17 @@ I.intersect = ui(<><path d="M3 3h8v8H3z" opacity=".5" /><path d="M7 7h8v8H7z" op
 I.xor = ui(<><path d="M3 3h8v4H7v4H3z" /><path d="M15 15H7v-4h4V7h4z" /></>);
 I.group = ui(<><rect x="2.5" y="2.5" width="13" height="13" strokeDasharray="2 1.6" /><rect x="5" y="5" width="4" height="4" /><rect x="9" y="9" width="4" height="4" /></>);
 I.ungroup = ui(<><rect x="2.5" y="2.5" width="5.5" height="5.5" /><rect x="10" y="10" width="5.5" height="5.5" /></>);
+
+const lf = (body: ReactNode) => (
+  <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round">
+    {body}
+  </svg>
+);
+
+/** Icons for the row under the Layers list. */
+export const LayerIcons = {
+  pixel: lf(<><rect x="2.5" y="2.5" width="11" height="11" /><path d="M2.5 8h11M8 2.5v11" /><path d="M2.5 2.5h5.5v5.5H2.5zM8 8h5.5v5.5H8z" fill="currentColor" stroke="none" /></>),
+  adjust: lf(<><circle cx="8" cy="8" r="5.5" /><path d="M8 2.5a5.5 5.5 0 010 11z" fill="currentColor" stroke="none" /></>),
+  mask: lf(<><rect x="2.5" y="2.5" width="11" height="11" rx="1" /><circle cx="8" cy="8" r="3" fill="currentColor" stroke="none" /></>),
+  release: lf(<><rect x="2.5" y="2.5" width="11" height="11" rx="1" /><circle cx="8" cy="8" r="3" /><path d="M11 5l3-3" /></>),
+};

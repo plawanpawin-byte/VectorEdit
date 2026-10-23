@@ -192,7 +192,7 @@ select {
 .num em { font-style: normal; color: var(--text-faint); font-size: 11px; }
 
 /* ---------- workspace ---------- */
-.workspace-row { display: grid; grid-template-columns: 40px 1fr 272px; min-height: 0; }
+.workspace-row { display: grid; grid-template-columns: 40px 1fr 248px; min-height: 0; }
 
 .toolbar {
   display: flex;
@@ -438,7 +438,7 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; background: #ec
 .contextbar select { height: 20px; }
 
 /* ---------- pages, assets, snapshots ---------- */
-.workspace-row.with-left { grid-template-columns: 40px 232px 1fr 272px; }
+.workspace-row.with-left { grid-template-columns: 40px 248px 1fr 248px; }
 .leftdock { display: flex; flex-direction: column; background: var(--ui-2); border-right: 1px solid var(--line); min-height: 0; }
 .leftdock .dock-group { flex: 1; }
 .pages { display: flex; flex-direction: column; height: 100%; }
@@ -580,10 +580,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 /* keep the top bar inside narrow windows: workspaces collapse to icons, the active one keeps its name */
 .app { grid-template-columns: minmax(0, 1fr); }
 .topbar { min-width: 0; }
-@media (max-width: 1700px) {
-  .modes button:not(.on) span { display: none; }
-}
-@media (max-width: 1350px) {
+@media (max-width: 1100px) {
   .modes button span { display: none; }
 }
 
@@ -687,3 +684,32 @@ body { font-size: 11.5px; }
 .menubar-item > button { height: 22px; padding: 0 9px; border-radius: 3px; color: var(--text); }
 .menubar-item > button:hover, .menubar-item > button.on { background: var(--ui-4); }
 .menubar .pop-panel { left: 0; right: auto; top: calc(100% + 1px); max-height: 80vh; }
+
+/* ---------- step 3: proportions and colours measured from the reference at 1902×1014 ---------- */
+:root { --line: #0d0d0d; }
+.app { grid-template-rows: 22px 53px 30px 1fr 21px; }
+.menubar { background: #282828; border-bottom-color: #222; }
+.menubar-item > button { height: 20px; }
+.topbar { padding: 0 10px; gap: 10px; }
+.modes { background: #1e1e1e; padding: 3px; border-radius: 13px; }
+.modes button { height: 25px; border-radius: 11px; }
+.doc-tabs { height: 27px; background: #363636; border-bottom-color: var(--line); }
+/* dock: #363636 panels separated by 5px dark gutters, list wells stay dark */
+.dock, .leftdock { background: #1f1f1f; gap: 5px; border-left: 2px solid var(--line); }
+.dock-group { background: #363636; }
+.dock-tabs { height: 26px; background: #363636; border-bottom: 1px solid #1f1f1f; }
+.dock-tabs button { padding: 2px 6px; border-radius: 3px; color: #cfcfcf; font-size: 11px; }
+.dock-tabs button.on { background: #1f1f1f; color: #fff; }
+.layer-list { background: #1f1f1f; }
+.layer { border-bottom-color: #2a2a2a; }
+.layer-foot { height: 31px; background: #363636; border-top-color: #1f1f1f; }
+.statusbar { border-top-color: var(--line); font-size: 11px; }
+.cmyk-row { gap: 4px; padding: 4px 10px 10px; }
+.cmyk-row label { grid-template-columns: 10px minmax(0, 1fr); gap: 3px; }
+.cmyk-row input { min-width: 0; }
+.layer-foot { gap: 1px; }
+.layer-foot button { width: 26px; height: 24px; }
+.dock-tabs { gap: 0; padding: 0 4px; } .dock-tabs button { padding: 2px 5px; }
+.toolbar { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+.toolbar .slot { flex: none; }
+.tsep { flex: none; width: 22px; height: 0; margin: 5px 0; border: 0; border-top: 1px solid #5a5a5a; }

@@ -25,7 +25,7 @@ import {
   useStore,
   endLive,
 } from '../store';
-import { Duplicate, Eye, I, Lock, Trash } from './Icons';
+import { Duplicate, Eye, I, LayerIcons, Lock, Trash } from './Icons';
 import { NumField, Section, UnitField } from './Fields';
 import { Artwork } from './Artwork';
 import { ShapeEl } from './ShapeEl';
@@ -820,10 +820,10 @@ export function Layers() {
         >
           {I.plusRect}
         </button>
-        <button title="New pixel layer" className="txt" onClick={() => addPixelLayer()}>+ Pixel</button>
+        <button title="New pixel layer" onClick={() => addPixelLayer()}>{LayerIcons.pixel}</button>
         <div className="pop">
-          <button title="New adjustment layer: filters everything below it, non-destructively" className="txt" onClick={() => setAdjMenu(!adjMenu)}>
-            + Adjust
+          <button title="New adjustment layer: filters everything below it, non-destructively" onClick={() => setAdjMenu(!adjMenu)}>
+            {LayerIcons.adjust}
           </button>
           {adjMenu && (
             <div className="menu-pop up" onMouseLeave={() => setAdjMenu(false)}>
@@ -833,8 +833,8 @@ export function Layers() {
             </div>
           )}
         </div>
-        <button title="Clip the selected layers to the top-most selected shape (clipping mask)" className="txt" onClick={makeClippingMask}>Mask</button>
-        <button title="Release clipping mask" className="txt" onClick={releaseClippingMask}>Release</button>
+        <button title="Clip the selected layers to the top-most selected shape (clipping mask)" onClick={makeClippingMask}>{LayerIcons.mask}</button>
+        <button title="Release clipping mask" onClick={releaseClippingMask}>{LayerIcons.release}</button>
         <div className="grow" />
         <button title="Duplicate (Ctrl+D)" onClick={duplicateSelected}><Duplicate /></button>
         <button title="Delete" onClick={deleteSelected}><Trash /></button>
