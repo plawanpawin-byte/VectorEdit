@@ -220,3 +220,21 @@ describe('layout helpers', () => {
     expect(s.w / s.h).toBeCloseTo(4, 0);
   });
 });
+
+describe('history memory', () => {
+  it('drops the oldest steps when pixel layers exceed the budget', async () => {
+    const { trimHistory } = await import('../src/store');
+    const layer = (src: string) => makeShape('rect', { src, raster: true, rw: 1, rh: 1, w: 1, h: 1 });
+    const docs = ['a'.repeat(100), 'b'.repeat(100), 'c'.repeat(100), 'd'.repeat(100)].map((src) => ({ shapes: [layer(src)], artboards: [], guides: [] }));
+    const kept = trimHistory(docs.slice(0, 3), docs[3], 250);
+    expect(kept.length).toBeLessThan(3);
+    expect(kept.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('keeps everything when under the budget and counts shared pixels once', async () => {
+    const { trimHistory } = await import('../src/store');
+    const shared = makeShape('rect', { src: 'x'.repeat(100), raster: true });
+    const docs = [1, 2, 3].map(() => ({ shapes: [shared], artboards: [], guides: [] }));
+    expect(trimHistory(docs, docs[0], 150)).toHaveLength(3);
+  });
+});

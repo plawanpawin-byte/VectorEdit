@@ -482,3 +482,36 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; background: #ec
 .style em { font-style: normal; font-size: 10px; color: var(--text-faint); }
 .style i { font-style: normal; padding: 0 8px; color: var(--text-faint); cursor: pointer; }
 .style i:hover { color: #d33; }
+
+/* ---------- pixel workspace ---------- */
+.brush-preview { width: 100%; height: 56px; border-radius: 4px; display: block; }
+.preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.preset-grid button { padding: 4px 6px; border: 1px solid var(--ui-4); border-radius: 4px; text-align: left; font-size: 11px; color: var(--text-dim); }
+.preset-grid button:hover { background: var(--ui-3); color: var(--text); }
+.preset-grid button.on { background: #1b4f4a; border-color: #1b4f4a; color: var(--brand-hi); }
+.op-list { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.op-list button { padding: 4px 6px; border-radius: 4px; text-align: left; font-size: 11.5px; color: var(--text); }
+.op-list button:hover { background: var(--sel); color: #fff; }
+.raster-dialog {
+  position: fixed; left: 70px; bottom: 40px; z-index: 80; width: 360px;
+  background: var(--ui-2); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 16px 40px rgba(0,0,0,.6);
+}
+.raster-dialog header { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--line-soft); }
+.rd-body { display: grid; gap: 8px; padding: 12px 14px; max-height: 46vh; overflow: auto; }
+.row .lbl.wide { width: 118px; font-size: 11px; }
+.raster-dialog footer { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line-soft); }
+.btn { padding: 5px 14px; border-radius: 5px; }
+.btn.ghost { border: 1px solid var(--ui-4); color: var(--text); }
+.btn.ghost:hover { background: var(--ui-3); }
+.btn.primary { background: var(--brand); color: #04201d; font-weight: 600; }
+.btn.primary:hover { background: var(--brand-hi); }
+
+.layer-foot button.txt { width: auto; padding: 0 8px; font-size: 11px; border: 1px solid var(--ui-4); }
+
+/* text-style popover buttons in the top bar, and scrollable dock tabs */
+.pop > .ibtn:has(> .txtbtn) { width: auto; height: auto; padding: 0; }
+.pop > .ibtn:has(> .txtbtn):hover { background: none; }
+.dock-tabs { overflow-x: auto; overflow-y: hidden; white-space: nowrap; scrollbar-width: none; }
+.dock-tabs::-webkit-scrollbar { display: none; }
+.dock-tabs button { flex: none; padding: 3px 6px; }
+.txtbtn { white-space: nowrap; }

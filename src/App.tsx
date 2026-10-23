@@ -26,6 +26,7 @@ import { I } from './components/Icons';
 import { Appearance, ColorPanel, History, Layers, Navigator, StrokePanel, Swatches, TransformPanel } from './components/Panels';
 import { TopBar, doExport } from './components/TopBar';
 import { AssetsPanel, PagesPanel } from './components/PagesPanel';
+import { AdjustmentsPanel, BrushPanel, FiltersPanel, RasterDialog, SelectionPanel } from './components/PixelPanels';
 import { CharacterPanel, ParagraphPanel, TextStylesPanel } from './components/TextPanels';
 import { isDesktop, openDoc, saveDoc } from './fileio';
 import { placeFiles } from './images';
@@ -34,8 +35,11 @@ import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
 
 import { TOOLS, activateTool, toolDef, toolInWorkspace } from './tools/registry';
+import type { Workspace } from './types';
+import { deselect, invertSelection, selectAll as selectAllPixels } from './raster/selection';
+import { targetLayer } from './raster/layer';
 
-const TOOL_KEYS = new Map(TOOLS.filter((t) => t.key).map((t) => [t.key!, t.id]));
+const keyMap = (ws: Workspace) => new Map(TOOLS.filter((t) => t.key && t.workspaces.includes(ws)).map((t) => [t.key!, t.id]));
 
 function usePasteImages() {
   useEffect(() => {
@@ -64,7 +68,18 @@ function useShortcuts() {
           z: () => (e.shiftKey ? redo() : undo()),
           y: redo,
           d: duplicateSelected,
-          a: () => setState({ selection: e.shiftKey ? [] : st.shapes.filter((s) => s.visible && !s.locked).map((s) => s.id) }),
+          a: () => {
+            if (st.workspace === 'pixel') {
+              const l = targetLayer();
+              if (!l) return;
+              return e.shiftKey ? deselect() : selectAllPixels(l);
+            }
+            setState({ selection: e.shiftKey ? [] : st.shapes.filter((s) => s.visible && !s.locked).map((s) => s.id) });
+          },
+          i: () => {
+            const l = targetLayer();
+            if (st.workspace === 'pixel' && l) invertSelection(l);
+          },
           '0': fitArtboard,
           '1': () => zoomTo(1),
           '=': () => zoomAt(1.25, st.viewport.w / 2, st.viewport.h / 2),
@@ -116,7 +131,11 @@ function useShortcuts() {
       if (key === 'x' && e.shiftKey) return swapColors();
       if (key === 'x') return setState({ colorTarget: st.colorTarget === 'fill' ? 'stroke' : 'fill' });
       if (key === 'd') return resetColors();
-      const tool = TOOL_KEYS.get(key);
+      if (st.workspace === 'pixel' && (key === '[' || key === ']')) {
+        const k = key === ']' ? 1.25 : 0.8;
+        return setState({ pbrush: { ...st.pbrush, size: Math.max(1, Math.min(1000, Math.round(st.pbrush.size * k))) } });
+      }
+      const tool = keyMap(st.workspace).get(key);
       if (tool && toolInWorkspace(tool, st.workspace)) activateTool(tool);
     };
     window.addEventListener('keydown', onKey);
@@ -254,8 +273,17 @@ export function App() {
             tabs={[
               { id: 'color', label: 'Color', body: <ColorPanel /> },
               { id: 'swatches', label: 'Swatches', body: <Swatches /> },
-              { id: 'stroke', label: 'Stroke', body: <StrokePanel /> },
-              { id: 'appearance', label: 'Appearance', body: <Appearance /> },
+              ...(workspace === 'pixel'
+                ? [
+                    { id: 'brushes', label: 'Brushes', body: <BrushPanel /> },
+                    { id: 'adjust', label: 'Adjust', body: <AdjustmentsPanel /> },
+                    { id: 'filters', label: 'Filters', body: <FiltersPanel /> },
+                    { id: 'selection', label: 'Selection', body: <SelectionPanel /> },
+                  ]
+                : [
+                    { id: 'stroke', label: 'Stroke', body: <StrokePanel /> },
+                    { id: 'appearance', label: 'Appearance', body: <Appearance /> },
+                  ]),
             ]}
           />
           <Dock
@@ -283,6 +311,7 @@ export function App() {
         </aside>
       </div>
       <StatusBar />
+      <RasterDialog />
       {help && <Help onClose={() => setHelp(false)} />}
     </div>
   );

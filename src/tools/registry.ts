@@ -7,6 +7,7 @@ import { knifeTool, scissorsTool } from './edit';
 import { eyedropperTool, fillTool, rotateTool } from './paint';
 import { cornerTool, nodeTool, selectTool } from './select';
 import { ellipseTool, lineTool, rectTool, rrectTool, shapeTools } from './shapes';
+import { pixelTools } from './pixel';
 import { frameTextTool, textTool } from './text';
 import type { ToolDef } from './types';
 import { handTool, measureTool, zoomTool } from './view';
@@ -39,6 +40,7 @@ export const TOOLS: ToolDef[] = [
   handTool,
   zoomTool,
   measureTool,
+  ...pixelTools,
 ];
 
 const BY_ID = new Map<string, ToolDef>(TOOLS.map((t) => [t.id, t]));
@@ -79,6 +81,7 @@ export interface WorkspaceDef {
 
 export const WORKSPACES: WorkspaceDef[] = [
   { id: 'vector', label: 'Vector', description: 'Illustration and graphic design' },
+  { id: 'pixel', label: 'Pixel', description: 'Paint, retouch and edit pixel layers' },
   { id: 'layout', label: 'Layout', description: 'Pages, text frames and structured layout' },
   { id: 'typography', label: 'Typography', description: 'Text tools and character/paragraph controls' },
 ];

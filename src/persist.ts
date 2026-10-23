@@ -1,5 +1,8 @@
 import { parseDoc, serializeDoc } from './document';
+import { preloadRasters } from './raster/cache';
+import { normalizeShape } from './shape';
 import { getState, loadDocument, setState } from './store';
+import type { Shape } from './types';
 
 const DB = 'vectoredit';
 const STORE = 'kv';
@@ -80,6 +83,7 @@ export async function restoreAutosave(): Promise<boolean> {
     const raw = (await idbGet()) ?? localGet();
     if (!raw) return false;
     const d = parseDoc(raw);
+    await preloadRasters(d.shapes.map(normalizeShape).filter((x): x is Shape => x !== null));
     loadDocument(d.shapes, d.artboards, null, { guides: d.guides, snapshots: d.snapshots });
     // the canvas refits once it knows its size
     setState({ viewport: { w: 0, h: 0 } });

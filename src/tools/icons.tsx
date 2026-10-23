@@ -21,6 +21,27 @@ export const toolIcon: Record<string, ReactNode> = {
       <circle cx="16.5" cy="4.5" r="1.8" fill="currentColor" stroke="none" />
     </>,
   ),
+  brush: svg(<><path d="M4 16.5c2.5-.3 3.5-2 3.8-3.6l.2-.7 2.8 2.8-.7.2c-1.6.4-3.3 1.4-6.1 1.300z" /><path d="M9.5 12.500l6.2-8.200a1.3 1.3 0 011.8 1.800l-8.2 6.2" /></>),
+  eraser: svg(<><path d="M8 16.500L3.7 12.200a1.3 1.3 0 010-1.800L10.5 3.600a1.3 1.3 0 011.8 0l4.1 4.100a1.3 1.3 0 010 1.800L11 16.500z" /><path d="M6.5 9l5.5 5.500M8 16.500h9" /></>),
+  bucket: svg(<><path d="M4.5 10.500l5-5.5 5.5 5.5-5 5.500z" /><path d="M9.5 5V3.500M15.5 12.500c1 1.2 1.5 2 1.5 2.800a1.5 1.5 0 01-3 0c0-.8.5-1.6 1.5-2.800z" /></>),
+  pgradient: svg(<><rect x="3.5" y="3.5" width="13" height="13" /><path d="M3.5 8.500h13M3.5 12.500h13" opacity=".35" /><path d="M6 14l8-8" /></>),
+  marquee: svg(<rect x="3.5" y="4.5" width="13" height="11" strokeDasharray="2.5 2" />),
+  'marquee-ellipse': svg(<ellipse cx="10" cy="10" rx="6.5" ry="5.5" strokeDasharray="2.5 2" />),
+  lasso: svg(<><path d="M10 4.500c4 0 6.5 1.5 6.5 3.500s-2.5 3.5-6.5 3.5-6.5-1.5-6.5-3.500S6 4.5 10 4.500z" strokeDasharray="2.5 2" /><path d="M7.5 11.500c-1 2 0 3.5 1.5 4s2.5-.5 2.5-1.5" /></>),
+  wand: svg(<><path d="M4 16l8-8" /><path d="M11.5 4.500v2.500M10.2 5.700h2.600M15.5 8v2M14.5 9h2M15 4l.5.5M7 4.500l.5.5" /></>),
+  selbrush: svg(<><circle cx="10" cy="10" r="5.5" strokeDasharray="2.5 2" /><path d="M7.5 12.500l5-5" /></>),
+  clone: svg(<><path d="M7 4.500h6v4H7z" /><path d="M5 8.500h10l1 3H4z" /><path d="M5 14.500h10v2H5z" /></>),
+  smudge: svg(<><path d="M5 14c1.5-4 4-6.5 8-7" /><path d="M10.5 11.500l3.5-1.5 2 2.5-3 3z" /><path d="M4 7h4" opacity=".5" /></>),
+  blurbrush: svg(<><path d="M10 3.500c2.5 3.2 4.5 5.5 4.5 8a4.5 4.5 0 01-9 0c0-2.5 2-4.8 4.5-8z" /><path d="M7.5 12.500c.4 1.2 1.3 1.8 2.5 1.8" opacity=".6" /></>),
+  sharpenbrush: svg(<><path d="M10 3.500l6 11.500H4z" /><path d="M10 8l2.5 4.500h-5z" opacity=".6" /></>),
+  dodge: svg(<><circle cx="10" cy="8" r="3.8" /><path d="M10 12v5M7.5 17h5" /></>),
+  burn: svg(<><circle cx="10" cy="8" r="3.8" fill="currentColor" stroke="none" opacity=".5" /><circle cx="10" cy="8" r="3.8" /><path d="M10 12v5M7.5 17h5" /></>),
+  saturate: svg(<><path d="M10 3.500c2.5 3.2 4.5 5.5 4.5 8a4.5 4.5 0 01-9 0c0-2.5 2-4.8 4.5-8z" fill="currentColor" stroke="none" opacity=".4" /><path d="M10 3.500c2.5 3.2 4.5 5.5 4.5 8a4.5 4.5 0 01-9 0c0-2.5 2-4.8 4.5-8z" /></>),
+  desaturate: svg(<><path d="M10 3.500c2.5 3.2 4.5 5.5 4.5 8a4.5 4.5 0 01-9 0c0-2.5 2-4.8 4.5-8z" /><path d="M10 3.500v12" /><path d="M10 6.500h2M10 9h3.500M10 11.500h4" opacity=".6" /></>),
+  blemish: svg(<><rect x="3.5" y="7.5" width="13" height="5" rx="2.5" transform="rotate(-35 10 10)" /><path d="M8.5 10h.1M11.5 10h.1M10 8.500h.1M10 11.500h.1" strokeWidth="1.8" /></>),
+  redeye: svg(<><path d="M2.5 10S5.5 5 10 5s7.5 5 7.5 5-3 5-7.5 5-7.5-5-7.5-5z" /><circle cx="10" cy="10" r="2.5" /><circle cx="10" cy="10" r=".9" fill="currentColor" stroke="none" /></>),
+  crop: svg(<><path d="M6 2.500v11.500h11.500M2.5 6H14v11.5" /></>),
+  picker: svg(<><path d="M12.6 3.400a2 2 0 012.8 2.800l-1.4 1.4-2.8-2.800zM10.4 5.600L4 12l-.5 3.500L7 15l6.4-6.4" /><rect x="14" y="13.5" width="3.5" height="3.5" fill="currentColor" stroke="none" /></>),
   artboard: svg(
     <>
       <path d="M6.5 2.5v15M13.5 2.5v15M2.5 6.5h15M2.5 13.5h15" />

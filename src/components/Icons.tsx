@@ -58,6 +58,7 @@ const ui = (children: ReactNode, size = 18) => (
 export const I: Record<string, React.ReactNode> = {
   vector: ui(<><path d="M3 14C5 5 12 4 15 6" /><rect x="1.5" y="12.5" width="3" height="3" fill="currentColor" /><rect x="13.5" y="4.5" width="3" height="3" fill="currentColor" /></>, 14),
   layout: ui(<><rect x="2.5" y="2.5" width="13" height="13" /><path d="M2.5 6.5h13M7 6.5v9" /></>, 14),
+  pixel: ui(<><rect x="2.5" y="2.5" width="5" height="5" fill="currentColor" stroke="none" /><rect x="10.5" y="2.5" width="5" height="5" /><rect x="2.5" y="10.5" width="5" height="5" /><rect x="10.5" y="10.5" width="5" height="5" fill="currentColor" stroke="none" /></>, 14),
   typo: ui(<path d="M3.5 4.5h11M9 4.5v10M6.5 14.5h5" />, 14),
   draw: ui(<path d="M3 15l1-3.5L12.5 3 15 5.5 6.5 14z M11 4.5l2.5 2.5" />, 14),
   more: ui(<g fill="currentColor" stroke="none"><circle cx="9" cy="4" r="1.3" /><circle cx="9" cy="9" r="1.3" /><circle cx="9" cy="14" r="1.3" /></g>),

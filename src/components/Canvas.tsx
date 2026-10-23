@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { Box } from '../types';
 import { bbox, inCtl, outCtl, pathD, unionBox } from '../geometry';
 import { commit, endLiveDoc, fitArtboard, getState, liveDoc, docOf, removeGuide, setState, snapV, updateShape, useStore, zoomAt } from '../store';
@@ -10,6 +10,7 @@ import { ShapeEl } from './ShapeEl';
 import { blankShape } from '../shape';
 import { layoutText } from '../textlayout';
 import { placeFiles } from '../images';
+import { overlayDataUrl } from '../raster/selection';
 
 const HANDLE_CURSOR: Record<string, string> = {
   nw: 'nwse-resize',
@@ -60,6 +61,9 @@ export function Canvas() {
   const grid = useStore((s) => s.grid);
   const pen = useStore((s) => s.pen);
   const penCursor = useStore((s) => (s.tool === 'pen' && s.pen ? s.cursor : null));
+  const pixelSel = useStore((s) => s.pixelSel);
+  const selOverlay = useMemo(() => (pixelSel ? overlayDataUrl(pixelSel) : null), [pixelSel]);
+  const selLayerShape = pixelSel ? shapes.find((x) => x.id === pixelSel.layerId) : undefined;
   const editingText = useStore((s) => s.editingText);
   const editShape = shapes.find((s) => s.id === editingText);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -237,6 +241,10 @@ export function Canvas() {
             </g>
           ))}
           <g>{shapes.map((s) => (s.id === editingText ? null : <ShapeEl key={s.id} shape={s} all={shapes} />))}</g>
+
+          {selOverlay && selLayerShape && (
+            <image href={selOverlay} x={selLayerShape.x} y={selLayerShape.y} width={selLayerShape.w} height={selLayerShape.h} preserveAspectRatio="none" pointerEvents="none" />
+          )}
 
           {/* selection outlines */}
           {chrome !== 'none' &&

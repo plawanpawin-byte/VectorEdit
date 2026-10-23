@@ -73,7 +73,7 @@ function withImage(s: Shape, body: React.ReactNode, common: Record<string, unkno
         </clipPath>
       </defs>
       <g clipPath={`url(#${cid})`} opacity={s.opacity} style={common.style as React.CSSProperties}>
-        <image href={s.src} x={box.x} y={box.y} width={box.w} height={box.h} preserveAspectRatio={s.fit === 'fit' ? 'xMidYMid meet' : 'xMidYMid slice'} />
+        <image href={s.src} x={box.x} y={box.y} width={box.w} height={box.h} preserveAspectRatio={s.raster ? 'none' : s.fit === 'fit' ? 'xMidYMid meet' : 'xMidYMid slice'} />
       </g>
       {s.stroke ? <path d={d} fill="none" stroke={s.stroke} strokeWidth={s.strokeWidth} strokeLinejoin="round" /> : null}
     </>

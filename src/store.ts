@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import type { PixelSel } from './raster/selection';
 import type { Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Snapshot, Tool, Workspace } from './types';
 import { bbox, rotateShape, scaleAbout, shearShape, toPath, translate, unionBox } from './geometry';
 import { type BoolOp, booleanPieces, canBoolean } from './boolean';
@@ -41,6 +42,11 @@ export interface State {
   brush: { size: number; profile: 'taper' | 'uniform' | 'calligraphic'; taper: number };
   gradientType: 'linear' | 'radial';
   table: { rows: number; cols: number };
+  /** pixel selection of the layer being edited (not saved, not undoable) */
+  pixelSel: PixelSel | null;
+  rasterDialog: import('./raster/dialog').RasterDialogState | null;
+  pbrush: import('./raster/brush').BrushParams & { preset: string };
+  pixel: { tolerance: number; contiguous: boolean; selectMode: 'replace' | 'add' | 'subtract' | 'intersect'; strength: number; fillMode: 'fill' | 'gradient' };
 }
 
 let counter = 0;
@@ -112,6 +118,10 @@ let state: State = {
   brush: { size: 12, profile: 'taper', taper: 0.7 },
   gradientType: 'linear',
   table: { rows: 4, cols: 3 },
+  pixelSel: null,
+  rasterDialog: null,
+  pbrush: { preset: 'round', size: 24, hardness: 0.85, opacity: 1, flow: 1, spacing: 0.12, roundness: 1, angle: 0, texture: 'none', jitter: 0 },
+  pixel: { tolerance: 32, contiguous: true, selectMode: 'replace', strength: 0.5, fillMode: 'fill' },
 };
 
 const listeners = new Set<() => void>();
@@ -140,12 +150,29 @@ let lastKey = '';
 let lastTime = 0;
 const MAX_HISTORY = 100;
 
+/** Characters of pixel data the undo history may hold before the oldest steps are dropped. */
+export const HISTORY_PIXEL_BUDGET = 160_000_000;
+
+/** Drop the oldest history entries while the distinct pixel layers they hold exceed the budget. */
+export function trimHistory(past: Doc[], current: Doc, budget = HISTORY_PIXEL_BUDGET): Doc[] {
+  const size = (docs: Doc[]) => {
+    const seen = new Set<string>();
+    let total = 0;
+    for (const d of docs) for (const s of d.shapes) if (s.src && !seen.has(s.src)) (seen.add(s.src), (total += s.src.length));
+    return total;
+  };
+  let start = 0;
+  while (start < past.length - 1 && size([...past.slice(start), current]) > budget) start++;
+  return start ? past.slice(start) : past;
+}
+
 function pushPast(entry: Doc, key?: string): Doc[] {
   const now = Date.now();
   const coalesce = !!key && key === lastKey && now - lastTime < 700;
   lastKey = key ?? '';
   lastTime = now;
-  return coalesce ? state.past : [...state.past, entry].slice(-MAX_HISTORY);
+  if (coalesce) return state.past;
+  return trimHistory([...state.past, entry].slice(-MAX_HISTORY), docOf());
 }
 
 export function commit(shapes: Shape[], opts: { selection?: string[]; key?: string; before?: Shape[] } = {}) {

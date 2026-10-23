@@ -26,6 +26,7 @@ import { NumField, Section } from './Fields';
 import { ShapeEl } from './ShapeEl';
 import { chooseImageInto } from '../images';
 import { shapeDef, defaultParams } from '../shapes';
+import { addPixelLayer } from '../raster/layer';
 import type { Effect, Shape } from '../types';
 
 const SWATCHES = [
@@ -482,6 +483,7 @@ export function Layers() {
         >
           {I.plusRect}
         </button>
+        <button title="New pixel layer" className="txt" onClick={() => addPixelLayer()}>+ Pixel</button>
         <div className="grow" />
         <button title="Duplicate (Ctrl+D)" onClick={duplicateSelected}><Duplicate /></button>
         <button title="Delete" onClick={deleteSelected}><Trash /></button>

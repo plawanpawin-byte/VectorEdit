@@ -21,6 +21,27 @@ export type BaseTool =
   | 'image'
   | 'table'
   | 'frame-rect'
+  | 'brush'
+  | 'eraser'
+  | 'bucket'
+  | 'pgradient'
+  | 'marquee'
+  | 'marquee-ellipse'
+  | 'lasso'
+  | 'wand'
+  | 'selbrush'
+  | 'clone'
+  | 'smudge'
+  | 'blurbrush'
+  | 'sharpenbrush'
+  | 'dodge'
+  | 'burn'
+  | 'saturate'
+  | 'desaturate'
+  | 'blemish'
+  | 'redeye'
+  | 'crop'
+  | 'picker'
   | 'frame-ellipse'
   | 'hand'
   | 'zoom';
@@ -28,7 +49,7 @@ export type BaseTool =
 /** Base tools plus one tool per registered parametric shape, e.g. `shape:cloud`. */
 export type Tool = BaseTool | `shape:${string}`;
 
-export type Workspace = 'vector' | 'layout' | 'typography';
+export type Workspace = 'vector' | 'pixel' | 'layout' | 'typography';
 
 /**
  * Anchor point. (hx, hy) is the outgoing handle offset. The incoming handle is its mirror unless
@@ -112,6 +133,10 @@ export interface Shape {
   fit: 'fill' | 'fit';
   /** picture frame: shows a placeholder until an image is placed */
   frame: boolean;
+  /** pixel layer: `src` holds editable pixels of size rw x rh */
+  raster: boolean;
+  rw: number;
+  rh: number;
   fill: string | null;
   gradient: Gradient | null;
   stroke: string | null;

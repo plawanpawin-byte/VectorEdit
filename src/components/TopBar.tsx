@@ -26,6 +26,11 @@ import {
 } from '../store';
 import { exportPng, exportSvg } from './exporter';
 import { openDoc, saveDoc } from '../fileio';
+import { openRasterOp } from '../raster/dialog';
+import { mergeDown, rasteriseSelection } from '../raster/rasterise';
+import { targetLayer } from '../raster/layer';
+import { RASTER_OPS } from '../raster/ops';
+import { deselect, featherSelection, growSelection, invertSelection, selectAll as selectAllPixels, smoothSelection } from '../raster/selection';
 import { I, Logo } from './Icons';
 
 interface Item {
@@ -69,7 +74,34 @@ function Popover({ button, children, className = '', title }: { button: React.Re
   );
 }
 
-const WS_ICON: Record<string, React.ReactNode> = { vector: I.vector, layout: I.layout, typography: I.typo };
+const WS_ICON: Record<string, React.ReactNode> = { vector: I.vector, pixel: I.pixel, layout: I.layout, typography: I.typo };
+
+function OpMenu({ label, kind }: { label: string; kind: 'adjust' | 'filter' }) {
+  const ops = RASTER_OPS.filter((o) => o.kind === kind);
+  const cats = Array.from(new Set(ops.map((o) => o.category)));
+  return (
+    <Popover button={<span className="txtbtn">{label}</span>} className="left">
+      {(close) => (
+        <div className="menu-list">
+          {cats.map((cat) => (
+            <div key={cat}>
+              <div className="menu-head">{cat}</div>
+              {ops
+                .filter((o) => o.category === cat)
+                .map((o) => (
+                  <button key={o.id} onClick={() => (close(), void openRasterOp(o.id))}>
+                    <span className="chk" />
+                    <span>{o.name}{o.params.length ? '…' : ''}</span>
+                    <span className="sc" />
+                  </button>
+                ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </Popover>
+  );
+}
 
 export function TopBar({ onHelp }: { onHelp: () => void }) {
   const workspace = useStore((s) => s.workspace);
@@ -100,6 +132,8 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
     { label: 'Group', shortcut: 'Ctrl+G', action: groupSelected },
     { label: 'Ungroup', shortcut: 'Shift+Ctrl+G', action: ungroupSelected },
     { label: 'Convert to Curves', action: convertToCurves },
+    { label: 'Rasterise Selection', action: () => void rasteriseSelection() },
+    { label: 'Merge Down (pixel layers)', action: () => void mergeDown() },
     { label: 'Rotate 90° Clockwise', action: () => rotateSelection(90) },
     { label: 'Rotate 90° Counter-clockwise', action: () => rotateSelection(-90) },
     { label: 'Lock Selection', action: () => (updateSelected((s) => ({ ...s, locked: true })), setState({ selection: [] })) },
@@ -148,6 +182,34 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
         <button className="ibtn" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo}>{I.undo}</button>
         <button className="ibtn" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo}>{I.redo}</button>
       </div>
+
+      {workspace === 'pixel' && (
+        <>
+          <OpMenu label="Adjust" kind="adjust" />
+          <OpMenu label="Filter" kind="filter" />
+          <Popover button={<span className="txtbtn">Select</span>} className="left">
+            {(close) => {
+              const l = () => targetLayer();
+              const act = (f: (layer: NonNullable<ReturnType<typeof l>>) => void) => () => {
+                close();
+                const layer = l();
+                if (layer) f(layer);
+              };
+              return (
+                <div className="menu-list">
+                  <button onClick={act(selectAllPixels)}><span className="chk" /><span>Select All</span><span className="sc">Ctrl+A</span></button>
+                  <button onClick={() => (close(), deselect())}><span className="chk" /><span>Deselect</span><span className="sc">Shift+Ctrl+A</span></button>
+                  <button onClick={act(invertSelection)}><span className="chk" /><span>Invert</span><span className="sc">Ctrl+I</span></button>
+                  <button onClick={act((x) => growSelection(x, 4))}><span className="chk" /><span>Grow 4 px</span><span className="sc" /></button>
+                  <button onClick={act((x) => growSelection(x, -4))}><span className="chk" /><span>Shrink 4 px</span><span className="sc" /></button>
+                  <button onClick={act((x) => featherSelection(x, 8))}><span className="chk" /><span>Feather 8 px</span><span className="sc" /></button>
+                  <button onClick={act((x) => smoothSelection(x, 5))}><span className="chk" /><span>Smooth</span><span className="sc" /></button>
+                </div>
+              );
+            }}
+          </Popover>
+        </>
+      )}
 
       <div className="grow" />
 
