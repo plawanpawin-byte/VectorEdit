@@ -33,6 +33,7 @@ import { chooseImageInto } from '../images';
 import { shapeDef, defaultParams } from '../shapes';
 import { addPixelLayer } from '../raster/layer';
 import { buildTree, membersOf, type TreeNode } from '../groups';
+import { defaultMesh } from '../mesh';
 import { ADJUSTMENTS, adjustDef, defaultAdjust } from '../adjustments';
 import type { AdjustType, ArrowKind, Effect, Pattern, Shape } from '../types';
 
@@ -311,6 +312,33 @@ export function Appearance() {
               </div>
             )}
           </>
+        )}
+        <div className="row">
+          <span className="lbl">Mesh</span>
+          <select
+            value={one.mesh?.n ?? 0}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              set({ mesh: n ? defaultMesh(n, one.fill) : null });
+            }}
+          >
+            <option value={0}>None</option>
+            {[2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>{n} × {n} colours</option>
+            ))}
+          </select>
+          {one.mesh && (
+            <button className="mini wide" title="Pick new random colours" onClick={() => set({ mesh: { ...one.mesh!, colors: one.mesh!.colors.map(() => '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')) } })}>
+              Shuffle
+            </button>
+          )}
+        </div>
+        {one.mesh && (
+          <div className="mesh-grid" style={{ gridTemplateColumns: `repeat(${one.mesh.n}, 1fr)` }}>
+            {one.mesh.colors.map((c, i) => (
+              <ColorBox key={i} value={c} onChange={(v) => set({ mesh: { ...one.mesh!, colors: one.mesh!.colors.map((x, k) => (k === i ? v : x)) } }, 'mesh' + i)} />
+            ))}
+          </div>
         )}
         <div className="row">
           <span className="lbl">Pattern</span>

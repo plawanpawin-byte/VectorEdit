@@ -119,6 +119,12 @@ export interface Adjust {
   region?: boolean;
 }
 
+/** A mesh gradient: n×n colours (row-major) blended across the shape. */
+export interface Mesh {
+  n: number;
+  colors: string[];
+}
+
 export interface Pattern {
   type: 'stripes' | 'dots' | 'grid' | 'cross' | 'checker' | 'waves' | 'bricks' | 'diamonds' | 'zigzag';
   color: string;
@@ -201,6 +207,7 @@ export interface Shape {
   fill: string | null;
   gradient: Gradient | null;
   pattern: Pattern | null;
+  mesh: Mesh | null;
   fade: Fade | null;
   /** set on adjustment layers */
   adjust: Adjust | null;

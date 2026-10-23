@@ -38,6 +38,7 @@ export function blankShape(id: string, kind: ShapeKind, p: Partial<Shape> = {}):
     fill: null,
     gradient: null,
     pattern: null,
+    mesh: null,
     fade: null,
     adjust: null,
     clip: null,
@@ -70,7 +71,9 @@ export function normalizeShape(raw: unknown): Shape | null {
   // documents from before the shape registry stored polygons and stars as their own kinds
   if (legacy === 'polygon') return blankShape(r.id, 'shape', { ...r, kind: 'shape', shapeId: 'polygon', params: { ...defaultParams('polygon'), sides: r.sides ?? 6 } });
   if (legacy === 'star') return blankShape(r.id, 'shape', { ...r, kind: 'shape', shapeId: 'star', params: { ...defaultParams('star'), points: r.sides ?? 5, inner: r.inner ?? 0.5 } });
+  const m = r.mesh as Shape['mesh'] | undefined;
+  const mesh = m && typeof m === 'object' && Number.isInteger(m.n) && m.n >= 2 && m.n <= 6 && Array.isArray(m.colors) && m.colors.length === m.n * m.n && m.colors.every((c) => typeof c === 'string') ? m : null;
   const adj = r.adjust as Shape['adjust'] | undefined;
   const adjust = adj && typeof adj === 'object' && typeof adj.type === 'string' ? { type: adj.type, a: Number(adj.a) || 0, b: Number(adj.b) || 0, region: !!adj.region } : null;
-  return blankShape(r.id, r.kind as ShapeKind, { ...r, adjust, clip: typeof r.clip === 'string' ? r.clip : null, mask: typeof r.mask === 'string' ? r.mask : '' });
+  return blankShape(r.id, r.kind as ShapeKind, { ...r, mesh, adjust, clip: typeof r.clip === 'string' ? r.clip : null, mask: typeof r.mask === 'string' ? r.mask : '' });
 }

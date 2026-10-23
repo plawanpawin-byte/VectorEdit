@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { ArrowKind, Effect, Pattern, Shape } from '../types';
 import { bbox as bboxOf, isClosed, pathD, toPath } from '../geometry';
+import { meshCells } from '../mesh';
 import { layoutText } from '../textlayout';
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
@@ -213,7 +214,7 @@ function PatternDef({ id, p }: { id: string; p: Pattern }) {
 /** Renders one shape. `all` lets text find the path it runs along. */
 export function ShapeEl({ shape: s, all }: { shape: Shape; all?: Shape[] }) {
   if (!s.visible) return null;
-  const id = { grad: `grad-${s.id}`, fx: `fx-${s.id}`, pat: `pat-${s.id}`, fade: `fade-${s.id}`, fadeG: `fadeg-${s.id}`, clip: `sclip-${s.id}`, omask: `omask-${s.id}`, mkS: `mks-${s.id}`, mkE: `mke-${s.id}` };
+  const id = { grad: `grad-${s.id}`, fx: `fx-${s.id}`, pat: `pat-${s.id}`, fade: `fade-${s.id}`, fadeG: `fadeg-${s.id}`, clip: `sclip-${s.id}`, mclip: `mclip-${s.id}`, omask: `omask-${s.id}`, mkS: `mks-${s.id}`, mkE: `mke-${s.id}` };
   const fx = (s.effects ?? []).filter((e) => e.enabled);
   const g = s.gradient;
   const fillRef = g ? `url(#${id.grad})` : (s.fill ?? 'none');
@@ -284,6 +285,14 @@ export function ShapeEl({ shape: s, all }: { shape: Shape; all?: Shape[] }) {
     }
   } else {
     const fillOnly = geom({ fill: fillRef, stroke: 'none' }, 'fill');
+    const meshFill =
+      s.mesh && closedGeom ? (
+        <g key="mesh" clipPath={`url(#${id.mclip})`}>
+          {meshCells(s.mesh, bboxOf(s), 48).map((c, i) => (
+            <rect key={i} x={c.x} y={c.y} width={c.w} height={c.h} fill={c.fill} />
+          ))}
+        </g>
+      ) : null;
     const pattern = s.pattern ? geom({ fill: `url(#${id.pat})`, stroke: 'none' }, 'pattern') : null;
     const strokeProps = { fill: 'none', stroke: s.stroke ?? 'none', ...strokeBase };
     let stroke: React.ReactNode = null;
@@ -306,7 +315,7 @@ export function ShapeEl({ shape: s, all }: { shape: Shape; all?: Shape[] }) {
     }
     body = (
       <>
-        {fillOnly}
+        {meshFill ?? fillOnly}
         {pattern}
         {stroke}
       </>
@@ -344,6 +353,7 @@ export function ShapeEl({ shape: s, all }: { shape: Shape; all?: Shape[] }) {
         </radialGradient>
       )}
       {s.pattern && <PatternDef id={id.pat} p={s.pattern} />}
+      {s.mesh && closedGeom && <clipPath id={id.mclip}>{geom({ fill: '#000' })}</clipPath>}
       {fx.length > 0 && <Filter id={id.fx} effects={fx} />}
       {lm && (
         <mask id={`lmask-${s.id}`} maskUnits="userSpaceOnUse" x={s.x} y={s.y} width={s.w} height={s.h} style={{ maskType: 'alpha' }}>

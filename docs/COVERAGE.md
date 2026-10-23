@@ -55,7 +55,8 @@ Triangle, diamond, trapezoid, parallelogram, polygon, star, double star, square 
 | --- | --- |
 | Solid, linear and radial gradient, transparency (fade) gradient | ✅ |
 | Hatch / pattern fills (9 patterns) | ✅ |
-| Diffusion, bitmap and gradient-mesh fills; conical/other gradient types | ❌ |
+| Mesh gradient fill (2×2 … 5×5 colour grid, smooth blend) | 🟡 (colour grid over the bounding box, not free-form mesh points) |
+| Diffusion and bitmap fills; conical/other gradient types | ❌ |
 | Stroke: weight, cap, join, dash, alignment (centre/inside/outside), arrowheads | ✅ |
 | Miter limit, balanced dashes | ❌ |
 | Effects: shadow, inner shadow, glow, inner glow, outline, colour overlay, bevel, blur | ✅ |
