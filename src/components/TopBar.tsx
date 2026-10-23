@@ -56,7 +56,7 @@ function Popover({ button, children, className = '', title }: { button: React.Re
 
 const PRIMARY = ['vector', 'pixel', 'layout'];
 
-const WS_ACCENT: Record<string, string> = { vector: '#4db6ff', pixel: '#8f9bff', retouching: '#c58bff', colour: '#ffb25c', compositing: '#6fd9a0', layout: '#ff806b', typography: '#ffd45c', slice: '#ff6b6b', scripting: '#a9b4c2' };
+const WS_ACCENT: Record<string, string> = { vector: '#05cde5', pixel: '#8f9bff', retouching: '#c58bff', colour: '#ffb25c', compositing: '#6fd9a0', layout: '#ff806b', typography: '#ffd45c', slice: '#ff6b6b', scripting: '#a9b4c2' };
 
 const WS_ICON: Record<string, React.ReactNode> = { vector: I.vector, pixel: I.pixel, layout: I.layout, typography: I.typo, slice: I.grid, scripting: I.code, retouching: I.retouch, colour: I.colour, compositing: I.composite };
 
