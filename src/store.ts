@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { PixelSel } from './raster/selection';
-import type { Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Snapshot, Tool, Workspace } from './types';
+import type { Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Slice, Snapshot, Tool, Workspace } from './types';
 import { bbox, rotateShape, scaleAbout, shearShape, toPath, translate, unionBox } from './geometry';
 import { type BoolOp, booleanPieces, canBoolean } from './boolean';
 import { blankShape, normalizeShape } from './shape';
@@ -18,6 +18,8 @@ export interface State {
   artboards: Artboard[];
   activeArtboard: string;
   guides: Guide[];
+  slices: Slice[];
+  activeSlice: string | null;
   guidesVisible: boolean;
   snapshots: Snapshot[];
   fill: string | null;
@@ -98,6 +100,8 @@ let state: State = {
   artboards: [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 800, h: 600 }],
   activeArtboard: 'a1',
   guides: [],
+  slices: [],
+  activeSlice: null,
   guidesVisible: true,
   snapshots: [],
   fill: '#5b9cf5',
@@ -147,7 +151,7 @@ export function useStore<T>(sel: (s: State) => T): T {
 
 /* ---------- history ---------- */
 
-export const docOf = (s: State = state): Doc => ({ shapes: s.shapes, artboards: s.artboards, guides: s.guides });
+export const docOf = (s: State = state): Doc => ({ shapes: s.shapes, artboards: s.artboards, guides: s.guides, slices: s.slices });
 
 let lastKey = '';
 let lastTime = 0;
@@ -179,12 +183,14 @@ function pushPast(entry: Doc, key?: string): Doc[] {
 }
 
 export function commit(shapes: Shape[], opts: { selection?: string[]; key?: string; before?: Shape[] } = {}) {
+  if (batchStart) return setState({ shapes, ...(opts.selection ? { selection: opts.selection } : {}) });
   const past = pushPast({ ...docOf(), shapes: opts.before ?? state.shapes }, opts.key);
   setState({ shapes, past, future: [], ...(opts.selection ? { selection: opts.selection } : {}) });
 }
 
 /** Commit a change to any part of the document (artboards, guides, shapes). */
 export function commitDoc(patch: Partial<Doc>, opts: { selection?: string[]; key?: string } = {}) {
+  if (batchStart) return setState({ ...patch, ...(opts.selection ? { selection: opts.selection } : {}) });
   const past = pushPast(docOf(), opts.key);
   setState({ ...patch, past, future: [], ...(opts.selection ? { selection: opts.selection } : {}) });
 }
@@ -208,7 +214,7 @@ export function endLive(before: Shape[]) {
 /** Like endLive, for gestures that changed more than the shapes. */
 export function endLiveDoc(before: Doc) {
   const now = docOf();
-  if (now.shapes !== before.shapes || now.artboards !== before.artboards || now.guides !== before.guides) {
+  if (now.shapes !== before.shapes || now.artboards !== before.artboards || now.guides !== before.guides || now.slices !== before.slices) {
     lastKey = '';
     setState({ past: [...state.past, before].slice(-MAX_HISTORY), future: [] });
   }
@@ -443,12 +449,14 @@ export function newDocument() {
     artboards: [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 800, h: 600 }],
     activeArtboard: 'a1',
     guides: [],
+    slices: [],
+    activeSlice: null,
     snapshots: [],
   });
   fitArtboard();
 }
 
-export function loadDocument(raw: unknown[], boards: Artboard[], filePath: string | null, extra: { guides?: Guide[]; snapshots?: Snapshot[] } = {}) {
+export function loadDocument(raw: unknown[], boards: Artboard[], filePath: string | null, extra: { guides?: Guide[]; slices?: Slice[]; snapshots?: Snapshot[] } = {}) {
   const shapes = raw.map(normalizeShape).filter((x): x is Shape => x !== null);
   if (!boards.length) boards = [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 800, h: 600 }];
   // keep generated ids unique against the loaded ones
@@ -458,6 +466,8 @@ export function loadDocument(raw: unknown[], boards: Artboard[], filePath: strin
     artboards: boards,
     activeArtboard: boards[0].id,
     guides: extra.guides ?? [],
+    slices: extra.slices ?? [],
+    activeSlice: null,
     snapshots: extra.snapshots ?? [],
     selection: [],
     past: [],
@@ -626,7 +636,7 @@ export function takeSnapshot(name?: string) {
 export function restoreSnapshot(id: string) {
   const snap = state.snapshots.find((x) => x.id === id);
   if (!snap) return;
-  commitDoc({ shapes: snap.shapes, artboards: snap.artboards, guides: snap.guides });
+  commitDoc({ shapes: snap.shapes, artboards: snap.artboards, guides: snap.guides, slices: snap.slices ?? [] });
   if (!snap.artboards.some((a) => a.id === state.activeArtboard)) setState({ activeArtboard: snap.artboards[0].id });
 }
 export function deleteSnapshot(id: string) {
@@ -726,4 +736,52 @@ export function expandStroke() {
   });
   commit(next, { selection: Array.from(replaced.values()).flat().map((p) => p.id) });
   return true;
+}
+
+/* ---------- slices ---------- */
+
+export function addSlice(rect: Box, p: Partial<Slice> = {}): Slice {
+  const n = state.slices.length + 1;
+  const slice: Slice = { id: `sl${Date.now().toString(36)}${n}`, name: `Slice ${n}`, x: Math.round(rect.x), y: Math.round(rect.y), w: Math.max(1, Math.round(rect.w)), h: Math.max(1, Math.round(rect.h)), format: 'png', scale: 1, ...p };
+  commitDoc({ slices: [...state.slices, slice] });
+  setState({ activeSlice: slice.id });
+  return slice;
+}
+
+export function updateSlice(id: string, patch: Partial<Slice>, key?: string) {
+  commitDoc({ slices: state.slices.map((s) => (s.id === id ? { ...s, ...patch } : s)) }, { key });
+}
+
+export function removeSlice(id: string) {
+  commitDoc({ slices: state.slices.filter((s) => s.id !== id) });
+  if (state.activeSlice === id) setState({ activeSlice: null });
+}
+
+export function slicesFromArtboards() {
+  const made = state.artboards.map((a, i) => ({ id: `sl${Date.now().toString(36)}a${i}`, name: a.name, x: a.x, y: a.y, w: a.w, h: a.h, format: 'png' as const, scale: 1 }));
+  commitDoc({ slices: [...state.slices, ...made] });
+}
+
+export function sliceFromSelection() {
+  const box = selectionBox();
+  if (box) addSlice(box, { name: selectedShapes()[0]?.name ?? undefined });
+}
+
+/* ---------- batching (scripts, macros): many edits become one undo step ---------- */
+
+let batchStart: Doc | null = null;
+
+export function beginBatch() {
+  if (!batchStart) batchStart = docOf();
+}
+
+export function endBatch() {
+  const start = batchStart;
+  batchStart = null;
+  if (!start) return;
+  const now = docOf();
+  if (now.shapes !== start.shapes || now.artboards !== start.artboards || now.guides !== start.guides || now.slices !== start.slices) {
+    lastKey = '';
+    setState({ past: [...state.past, start].slice(-MAX_HISTORY), future: [] });
+  }
 }

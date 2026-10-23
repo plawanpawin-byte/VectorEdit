@@ -9,12 +9,22 @@ describe('document files', () => {
       shapes: [shape],
       artboards: [{ id: 'a1', name: 'Cover', x: 0, y: 0, w: 100, h: 200 }],
       guides: [{ id: 'g1', axis: 'v', pos: 40 }],
+      slices: [{ id: 'sl1', name: 'Hero', x: 5, y: 6, w: 70, h: 30, format: 'jpg', scale: 2 }],
       snapshots: [],
     });
     const back = parseDoc(text);
     expect(back.artboards[0].name).toBe('Cover');
     expect(back.guides).toEqual([{ id: 'g1', axis: 'v', pos: 40 }]);
     expect(back.shapes).toHaveLength(1);
+    expect(back.slices[0]).toMatchObject({ name: 'Hero', format: 'jpg', scale: 2 });
+  });
+
+  it('repairs damaged slices', () => {
+    const d = parseDoc(JSON.stringify({ app: 'vectoredit', shapes: [], slices: [{ x: 1, y: 2, w: -5, format: 'bmp', scale: 99 }, 'junk'] }));
+    expect(d.slices).toHaveLength(1);
+    expect(d.slices[0].format).toBe('png');
+    expect(d.slices[0].w).toBeGreaterThanOrEqual(1);
+    expect(d.slices[0].scale).toBe(8);
   });
 
   it('opens version 1 files with a single artboard', () => {

@@ -27,25 +27,22 @@ Installers for Windows are best built on Windows, macOS ones on macOS.
 
 ## What works
 
-- **Tools:** Selection (V), Direct Selection (A), Pen (P), Type (T), Line (\\), Rectangle (M), Ellipse (L), Hand (H), Zoom (Z)
-- **Pen:** click to add points, drag to pull Bézier handles, click the first point to close, Enter or double-click to finish
-- **Direct selection:** move anchors and handles of paths
-- **Selection:** click, Shift-click, marquee, drag to move, 8-handle scaling (Shift keeps proportions)
-- **Tools (15):** Selection, Direct Selection, Rotate, Pen, Pencil, Type, Line, Rectangle, Rounded Rectangle, Ellipse, Polygon, Star, Eyedropper, Hand, Zoom
-- **Parametric shapes:** polygon sides, star points and inner radius, rectangle corner radius stay editable after drawing; Direct Selection or *Convert to Curves* turns them into paths
-- **Boolean operations:** add, subtract, intersect, exclude (results keep holes)
-- **Groups:** Ctrl+G / Shift+Ctrl+G, selecting one member selects the group
-- **Fill and stroke:** solid, linear and radial gradients; dashed/dotted lines; caps and joins
-- **Effects:** stackable drop shadow, outer glow and gaussian blur per object
-- **Safety:** the document is autosaved in the browser and restored on reload; a crash screen offers to discard a bad autosave
-- **Workspace modes:** Vector, Layout (grid on, layout tools), Draw (pen and shapes)
-- **Top bar:** undo/redo, arrange, flip, align (to artboard or selection), grid, snap to 10 px, export
-- **Panels:** Color (saturation/brightness picker + hue), Swatches, Stroke, Appearance · Layers (thumbnails, opacity, blend mode, lock, visibility, rename) · Transform, Navigator, History
-- **Text:** type directly on the canvas; double-click text to edit
-- **Document Setup:** artboard size and presets from the context bar
-- **View:** wheel to pan, Ctrl/Alt + wheel to zoom at the cursor, Space for temporary Hand, rulers, grid, fit artboard
-- **Edit:** undo/redo with coalescing, duplicate, delete, arrow-key nudging, z-order
-- **Export:** SVG and PNG (File menu)
+Six workspaces, each with its own toolbox and panels:
+
+| Workspace | Highlights |
+| --- | --- |
+| **Vector** | Pen, Pencil, Vector Brush, Node/Corner tools, Knife, Scissors, 21 parametric shapes (star, cog, spiral, heart…), Transparency and Contour tools, boolean ops, Expand Stroke, groups, gradients and patterns, stroke alignment and arrowheads, 8 stackable effects, blend modes, multiple artboards, guides, snapshots |
+| **Pixel** | Raster layers, 14 brush presets, selection tools (marquee, lasso, magic wand, colour range), clone/heal/dodge/burn/blur/smudge, fill and gradient, 45 live-preview adjustments and filters, merge down |
+| **Layout** | Pages panel, image and picture frames, tables, text frames, grid |
+| **Typography** | Artistic and frame text, Character / Paragraph / Text Styles panels, wrapping, alignment and justify |
+| **Slice** | Slice tool, Slices panel, per-slice format (PNG/JPEG/SVG) and scale, export all |
+| **Scripting** | JavaScript `app` API (add, update, remove, group, select, pages, undo), saved macros; a whole script is one undo step |
+
+Also: autosave (IndexedDB) with crash recovery, `.vedit` documents, SVG/PNG export, Electron desktop build, per-workspace shortcuts.
+
+## Limitations
+
+VectorEdit is a young project and does **not** have everything Affinity has. Missing today: non-destructive adjustment/filter layers, live masks, AI features, true master pages and spreads, pressure dynamics for brushes, mesh warp / perspective, and mesh or hatch fills. Text styles are stored per browser. Scripts are not sandboxed, so only run code you trust.
 
 ### Shortcuts
 
@@ -63,11 +60,19 @@ Installers for Windows are best built on Windows, macOS ones on macOS.
 
 ```
 src/
-  store.ts         document state, history, view, pen drafting
-  geometry.ts      bounds, hit-testing, Bézier flattening, scaling
-  components/      Canvas, Toolbar, MenuBar, OptionsBar, Panels, Rulers, StatusBar
+  store.ts, types.ts, document.ts   state, history, file format
+  geometry.ts, pathops.ts, boolean.ts, offset.ts   vector maths
+  tools/                            one file per tool family (plugin registry)
+  raster/                           pixel layers, brushes, filters
+  components/                       Canvas, panels, top bar
+  scripting.ts, slices.tsx          automation and slice export
+tests/                              Vitest suites
 ```
 
-## Not yet
+## Contributing
 
-Multiple artboards, guides, clipping masks, path text, brushes, code signing and auto-update for the desktop build.
+See [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed.
+
+## Disclaimer
+
+VectorEdit is an independent open-source project. It is not affiliated with, endorsed by or derived from Affinity, Canva or Serif. All code, icons and assets are original.

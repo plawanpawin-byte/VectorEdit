@@ -1,4 +1,4 @@
-import type { Artboard, Guide, Shape, Snapshot } from './types';
+import type { Artboard, Guide, Shape, Slice, Snapshot } from './types';
 import { normalizeShape } from './shape';
 
 /** The saved form of a document (.vedit and autosave). Version 1 had a single `artboard`. */
@@ -7,6 +7,7 @@ export interface DocFile {
   version: 2;
   artboards: Artboard[];
   guides: Guide[];
+  slices: Slice[];
   snapshots: Snapshot[];
   shapes: Shape[];
 }
@@ -15,6 +16,7 @@ export interface ParsedDoc {
   shapes: unknown[];
   artboards: Artboard[];
   guides: Guide[];
+  slices: Slice[];
   snapshots: Snapshot[];
 }
 
@@ -32,8 +34,24 @@ const normalizeGuides = (raw: unknown): Guide[] =>
     ? raw.filter((g) => g && (g.axis === 'h' || g.axis === 'v') && typeof g.pos === 'number').map((g, i) => ({ id: typeof g.id === 'string' ? g.id : `g${i}`, axis: g.axis, pos: g.pos }))
     : [];
 
-export function serializeDoc(d: { shapes: Shape[]; artboards: Artboard[]; guides: Guide[]; snapshots: Snapshot[] }): string {
-  const file: DocFile = { app: 'vectoredit', version: 2, artboards: d.artboards, guides: d.guides, snapshots: d.snapshots, shapes: d.shapes };
+const normalizeSlices = (raw: unknown): Slice[] =>
+  Array.isArray(raw)
+    ? raw
+        .filter((s) => s && typeof s === 'object' && typeof s.x === 'number' && typeof s.y === 'number')
+        .map((s, i) => ({
+          id: typeof s.id === 'string' ? s.id : `sl${i}`,
+          name: typeof s.name === 'string' ? s.name : `Slice ${i + 1}`,
+          x: s.x,
+          y: s.y,
+          w: Math.max(1, num(s.w, 100)),
+          h: Math.max(1, num(s.h, 100)),
+          format: s.format === 'jpg' || s.format === 'svg' ? s.format : 'png',
+          scale: Math.max(0.1, Math.min(8, num(s.scale, 1))),
+        }))
+    : [];
+
+export function serializeDoc(d: { shapes: Shape[]; artboards: Artboard[]; guides: Guide[]; slices: Slice[]; snapshots: Snapshot[] }): string {
+  const file: DocFile = { app: 'vectoredit', version: 2, artboards: d.artboards, guides: d.guides, slices: d.slices, snapshots: d.snapshots, shapes: d.shapes };
   return JSON.stringify(file);
 }
 
@@ -49,7 +67,7 @@ export function parseDoc(text: string): ParsedDoc {
   const snapshots = Array.isArray(doc.snapshots)
     ? (doc.snapshots as Snapshot[])
         .filter((s) => s && Array.isArray(s.shapes))
-        .map((s) => ({ ...s, shapes: s.shapes.map(normalizeShape).filter((x): x is Shape => x !== null), artboards: normalizeBoards(s.artboards).length ? normalizeBoards(s.artboards) : artboards, guides: normalizeGuides(s.guides) }))
+        .map((s) => ({ ...s, shapes: s.shapes.map(normalizeShape).filter((x): x is Shape => x !== null), artboards: normalizeBoards(s.artboards).length ? normalizeBoards(s.artboards) : artboards, guides: normalizeGuides(s.guides), slices: normalizeSlices(s.slices) }))
     : [];
-  return { shapes: doc.shapes, artboards, guides: normalizeGuides(doc.guides), snapshots };
+  return { shapes: doc.shapes, artboards, guides: normalizeGuides(doc.guides), slices: normalizeSlices(doc.slices), snapshots };
 }

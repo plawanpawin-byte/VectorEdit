@@ -27,7 +27,7 @@ async function load(text: string, path: string | null) {
   const d = parseDoc(text);
   // decode pixel layers first so painting can start the moment the document appears
   await preloadRasters(d.shapes.map(normalizeShape).filter((x): x is Shape => x !== null));
-  loadDocument(d.shapes, d.artboards, path, { guides: d.guides, snapshots: d.snapshots });
+  loadDocument(d.shapes, d.artboards, path, { guides: d.guides, slices: d.slices, snapshots: d.snapshots });
 }
 
 export async function openDoc() {

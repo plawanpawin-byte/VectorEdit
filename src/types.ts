@@ -21,6 +21,7 @@ export type BaseTool =
   | 'image'
   | 'table'
   | 'frame-rect'
+  | 'slice'
   | 'transparency'
   | 'contour'
   | 'brush'
@@ -51,7 +52,7 @@ export type BaseTool =
 /** Base tools plus one tool per registered parametric shape, e.g. `shape:cloud`. */
 export type Tool = BaseTool | `shape:${string}`;
 
-export type Workspace = 'vector' | 'pixel' | 'layout' | 'typography';
+export type Workspace = 'vector' | 'pixel' | 'layout' | 'typography' | 'slice' | 'scripting';
 
 /**
  * Anchor point. (hx, hy) is the outgoing handle offset. The incoming handle is its mirror unless
@@ -203,11 +204,24 @@ export interface Guide {
   pos: number;
 }
 
+export interface Slice {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  format: 'png' | 'jpg' | 'svg';
+  /** export scale: 1 = actual size */
+  scale: number;
+}
+
 /** The undoable part of a document. */
 export interface Doc {
   shapes: Shape[];
   artboards: Artboard[];
   guides: Guide[];
+  slices: Slice[];
 }
 
 export interface Snapshot extends Doc {

@@ -124,7 +124,7 @@ export const selectTool: ToolDef = {
   key: 'v',
   icon: toolIcon.select,
   group: 'select',
-  workspaces: ['vector', 'pixel', 'layout', 'typography'],
+  workspaces: ['vector', 'pixel', 'layout', 'typography', 'slice', 'scripting'],
   cursor: 'default',
   hint: '**Click** to select, **drag** to move or marquee-select. **Shift** adds, **Alt-drag** copies, drag handles to scale (**Alt** = from centre).',
   chrome: 'transform',

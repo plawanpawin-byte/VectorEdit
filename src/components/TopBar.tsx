@@ -75,7 +75,7 @@ function Popover({ button, children, className = '', title }: { button: React.Re
   );
 }
 
-const WS_ICON: Record<string, React.ReactNode> = { vector: I.vector, pixel: I.pixel, layout: I.layout, typography: I.typo };
+const WS_ICON: Record<string, React.ReactNode> = { vector: I.vector, pixel: I.pixel, layout: I.layout, typography: I.typo, slice: I.grid, scripting: I.code };
 
 function OpMenu({ label, kind }: { label: string; kind: 'adjust' | 'filter' }) {
   const ops = RASTER_OPS.filter((o) => o.kind === kind);

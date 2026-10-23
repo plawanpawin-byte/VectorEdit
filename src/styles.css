@@ -515,3 +515,16 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; background: #ec
 .dock-tabs::-webkit-scrollbar { display: none; }
 .dock-tabs button { flex: none; padding: 3px 6px; }
 .txtbtn { white-space: nowrap; }
+
+.slice-list { display: grid; gap: 6px; padding: 8px; }
+.slice { padding: 6px; border: 1px solid var(--line-soft); border-radius: 6px; display: grid; gap: 6px; }
+.slice.on { border-color: #ff5a4e; background: rgba(255,90,78,.08); }
+.slice-head { display: flex; gap: 6px; }
+.slice-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.slice-row em { font-style: normal; color: var(--text-faint); font-size: 11px; }
+.btn.wide-btn { width: 100%; }
+
+.script-panel .code { width: calc(100% - 16px); margin: 8px; height: 190px; resize: vertical; background: #0d0d0f; color: #d7dae0; border: 1px solid var(--line-soft); border-radius: 6px; padding: 8px; font: 12px/1.5 ui-monospace, Consolas, monospace; tab-size: 2; }
+.script-panel .row { display: flex; gap: 6px; }
+.script-out { margin: 0 8px 8px; padding: 8px; background: #0d0d0f; border-radius: 6px; font: 11px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; color: #9fd6a2; }
+.script-out.err { color: #ff8a80; }

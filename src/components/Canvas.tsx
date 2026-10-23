@@ -57,6 +57,9 @@ export function Canvas() {
   const activeId = useStore((s) => s.activeArtboard);
   const guides = useStore((s) => s.guides);
   const guidesVisible = useStore((s) => s.guidesVisible);
+  const slices = useStore((s) => s.slices);
+  const activeSlice = useStore((s) => s.activeSlice);
+  const workspace = useStore((s) => s.workspace);
   const viewport = useStore((s) => s.viewport);
   const grid = useStore((s) => s.grid);
   const pen = useStore((s) => s.pen);
@@ -305,6 +308,16 @@ export function Canvas() {
               ))}
             </g>
           )}
+
+          {(workspace === 'slice' || slices.length > 0) &&
+            slices.map((sl) => (
+              <g key={sl.id} pointerEvents="none" opacity={workspace === 'slice' ? 1 : 0.55}>
+                <rect x={sl.x} y={sl.y} width={sl.w} height={sl.h} fill={sl.id === activeSlice ? 'rgba(255,90,78,.12)' : 'none'} stroke="#ff5a4e" strokeWidth={(sl.id === activeSlice ? 2 : 1) * k} strokeDasharray={`${5 * k} ${3 * k}`} />
+                <text x={sl.x + 3 * k} y={sl.y + 11 * k} fontSize={10 * k} fill="#ff8a80" fontFamily="Segoe UI, sans-serif">
+                  {sl.name}
+                </text>
+              </g>
+            ))}
 
           {guidesVisible &&
             guides.map((g) => (

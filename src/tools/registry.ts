@@ -3,6 +3,7 @@ import { penFinish, setState, getState } from '../store';
 import { artboardTool } from './artboard';
 import { brushTool, penTool, pencilTool } from './draw';
 import { frameEllipseTool, frameRectTool, imageTool, tableTool } from './layout';
+import { sliceTool } from './slice';
 import { knifeTool, scissorsTool } from './edit';
 import { eyedropperTool, fillTool, rotateTool } from './paint';
 import { cornerTool, nodeTool, selectTool } from './select';
@@ -43,6 +44,7 @@ export const TOOLS: ToolDef[] = [
   handTool,
   zoomTool,
   measureTool,
+  sliceTool,
   ...pixelTools,
 ];
 
@@ -85,8 +87,10 @@ export interface WorkspaceDef {
 export const WORKSPACES: WorkspaceDef[] = [
   { id: 'vector', label: 'Vector', description: 'Illustration and graphic design' },
   { id: 'pixel', label: 'Pixel', description: 'Paint, retouch and edit pixel layers' },
+  { id: 'slice', label: 'Slice', description: 'Define slices and export them in bulk' },
   { id: 'layout', label: 'Layout', description: 'Pages, text frames and structured layout' },
   { id: 'typography', label: 'Typography', description: 'Text tools and character/paragraph controls' },
+  { id: 'scripting', label: 'Scripting', description: 'Automate the document with JavaScript' },
 ];
 
 export function setWorkspace(ws: Workspace) {

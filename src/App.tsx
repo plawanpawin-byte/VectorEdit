@@ -26,6 +26,8 @@ import { I } from './components/Icons';
 import { Appearance, ColorPanel, History, Layers, Navigator, StrokePanel, Swatches, TransformPanel } from './components/Panels';
 import { TopBar, doExport } from './components/TopBar';
 import { AssetsPanel, PagesPanel } from './components/PagesPanel';
+import { ScriptPanel } from './components/ScriptPanel';
+import { SlicesPanel } from './components/SlicesPanel';
 import { AdjustmentsPanel, BrushPanel, FiltersPanel, RasterDialog, SelectionPanel } from './components/PixelPanels';
 import { CharacterPanel, ParagraphPanel, TextStylesPanel } from './components/TextPanels';
 import { isDesktop, openDoc, saveDoc } from './fileio';
@@ -178,7 +180,10 @@ function Help({ onClose }: { onClose: () => void }) {
 }
 
 function Dock({ tabs, grow }: { tabs: { id: string; label: string; body: React.ReactNode }[]; grow?: number }) {
-  const [active, setActive] = useState(tabs[0].id);
+  const [chosen, setActive] = useState(tabs[0].id);
+  // the chosen tab may vanish when the workspace changes
+  const current = tabs.find((t) => t.id === chosen) ?? tabs[0];
+  const active = current.id;
   const [open, setOpen] = useState(true);
   return (
     <div className={'dock-group' + (open ? '' : ' closed')} style={{ flexGrow: open ? grow ?? 1 : 0 }}>
@@ -196,7 +201,7 @@ function Dock({ tabs, grow }: { tabs: { id: string; label: string; body: React.R
           </svg>
         </button>
       </div>
-      {open && <div className="dock-body">{tabs.find((t) => t.id === active)!.body}</div>}
+      {open && <div className="dock-body">{current.body}</div>}
     </div>
   );
 }
@@ -289,6 +294,8 @@ export function App() {
           <Dock
             grow={1.2}
             tabs={[
+              ...(workspace === 'scripting' ? [{ id: 'script', label: 'Script', body: <ScriptPanel /> }] : []),
+              ...(workspace === 'slice' ? [{ id: 'slices', label: 'Slices', body: <SlicesPanel /> }] : []),
               { id: 'layers', label: 'Layers', body: <Layers /> },
               ...(workspace !== 'vector'
                 ? [

@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   addArtboard,
+  addSlice,
+  beginBatch,
+  endBatch,
+  removeSlice,
+  updateSlice,
   addGuide,
   booleanOp,
   deleteArtboard,
@@ -133,6 +138,7 @@ describe('artboards, guides and snapshots', () => {
       artboards: [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 800, h: 600 }],
       activeArtboard: 'a1',
       guides: [],
+      slices: [],
       snapshots: [],
     });
   });
@@ -225,7 +231,7 @@ describe('history memory', () => {
   it('drops the oldest steps when pixel layers exceed the budget', async () => {
     const { trimHistory } = await import('../src/store');
     const layer = (src: string) => makeShape('rect', { src, raster: true, rw: 1, rh: 1, w: 1, h: 1 });
-    const docs = ['a'.repeat(100), 'b'.repeat(100), 'c'.repeat(100), 'd'.repeat(100)].map((src) => ({ shapes: [layer(src)], artboards: [], guides: [] }));
+    const docs = ['a'.repeat(100), 'b'.repeat(100), 'c'.repeat(100), 'd'.repeat(100)].map((src) => ({ shapes: [layer(src)], artboards: [], guides: [], slices: [] }));
     const kept = trimHistory(docs.slice(0, 3), docs[3], 250);
     expect(kept.length).toBeLessThan(3);
     expect(kept.length).toBeGreaterThanOrEqual(1);
@@ -234,7 +240,44 @@ describe('history memory', () => {
   it('keeps everything when under the budget and counts shared pixels once', async () => {
     const { trimHistory } = await import('../src/store');
     const shared = makeShape('rect', { src: 'x'.repeat(100), raster: true });
-    const docs = [1, 2, 3].map(() => ({ shapes: [shared], artboards: [], guides: [] }));
+    const docs = [1, 2, 3].map(() => ({ shapes: [shared], artboards: [], guides: [], slices: [] }));
     expect(trimHistory(docs, docs[0], 150)).toHaveLength(3);
+  });
+});
+
+describe('slices and batches', () => {
+  beforeEach(reset);
+
+  it('adds, edits and removes slices with undo', () => {
+    const sl = addSlice({ x: 10.4, y: 20.6, w: 100, h: 50 });
+    expect(getState().slices[0]).toMatchObject({ x: 10, y: 21, w: 100, h: 50, format: 'png' });
+    updateSlice(sl.id, { format: 'jpg', scale: 2 });
+    expect(getState().slices[0].scale).toBe(2);
+    undo();
+    expect(getState().slices[0].scale).toBe(1);
+    removeSlice(sl.id);
+    expect(getState().slices).toHaveLength(0);
+    undo();
+    expect(getState().slices).toHaveLength(1);
+  });
+
+  it('collapses a batch of edits into one undo step', () => {
+    beginBatch();
+    add(0);
+    add(100);
+    add(200);
+    endBatch();
+    expect(getState().shapes).toHaveLength(3);
+    undo();
+    expect(getState().shapes).toHaveLength(0);
+    redo();
+    expect(getState().shapes).toHaveLength(3);
+  });
+
+  it('an empty batch leaves no history', () => {
+    const before = getState().past.length;
+    beginBatch();
+    endBatch();
+    expect(getState().past.length).toBe(before);
   });
 });
