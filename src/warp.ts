@@ -133,3 +133,49 @@ export const boxOfShapes = (shapes: Shape[]) => {
   const x2 = Math.max(...bs.map((b) => b.x + b.w)), y2 = Math.max(...bs.map((b) => b.y + b.h));
   return { x, y, w: x2 - x, h: y2 - y };
 };
+
+type Box = { x: number; y: number; w: number; h: number };
+
+/** Inverse of `perspectiveMap`: takes a point on the quad back to the box. Exact (3×3 matrix inverse). */
+export function inversePerspective(box: Box, q: [XY, XY, XY, XY]): Mapping {
+  const [p0, p1, p2, p3] = q;
+  const dx1 = p1.x - p2.x, dx2 = p3.x - p2.x, dx3 = p0.x - p1.x + p2.x - p3.x;
+  const dy1 = p1.y - p2.y, dy2 = p3.y - p2.y, dy3 = p0.y - p1.y + p2.y - p3.y;
+  const den = dx1 * dy2 - dx2 * dy1;
+  const g = Math.abs(den) < 1e-9 ? 0 : (dx3 * dy2 - dx2 * dy3) / den;
+  const h = Math.abs(den) < 1e-9 ? 0 : (dx1 * dy3 - dx3 * dy1) / den;
+  const a = p1.x - p0.x + g * p1.x, b = p3.x - p0.x + h * p3.x, c = p0.x;
+  const d = p1.y - p0.y + g * p1.y, e = p3.y - p0.y + h * p3.y, f = p0.y;
+  // adjugate of [[a b c][d e f][g h 1]]
+  const A = e - f * h, B = c * h - b, C = b * f - c * e;
+  const D = f * g - d, E = a - c * g, F = c * d - a * f;
+  const G = d * h - e * g, H = b * g - a * h, I = a * e - b * d;
+  return (pt) => {
+    const w = G * pt.x + H * pt.y + I;
+    const u = (A * pt.x + B * pt.y + C) / (w || 1e-12);
+    const v = (D * pt.x + E * pt.y + F) / (w || 1e-12);
+    return { x: box.x + u * box.w, y: box.y + v * box.h };
+  };
+}
+
+/** Numerically invert any smooth forward map with Newton's method (used for envelope warps). */
+export function invertMap(forward: Mapping, iterations = 8): Mapping {
+  return (target) => {
+    let x = target.x, y = target.y;
+    for (let i = 0; i < iterations; i++) {
+      const f = forward({ x, y });
+      const ex = f.x - target.x, ey = f.y - target.y;
+      if (Math.abs(ex) + Math.abs(ey) < 1e-3) break;
+      const e = 0.5;
+      const fx = forward({ x: x + e, y });
+      const fy = forward({ x, y: y + e });
+      const a = (fx.x - f.x) / e, c = (fx.y - f.y) / e;
+      const b = (fy.x - f.x) / e, d = (fy.y - f.y) / e;
+      const det = a * d - b * c;
+      if (Math.abs(det) < 1e-9) break;
+      x -= (d * ex - b * ey) / det;
+      y -= (-c * ex + a * ey) / det;
+    }
+    return { x, y };
+  };
+}

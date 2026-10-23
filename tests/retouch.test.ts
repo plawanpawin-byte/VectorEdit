@@ -110,3 +110,14 @@ describe('more retouch brushes', () => {
     expect(px(b, 29, 5)[1]).toBeLessThan(200); // picked up red along the way
   });
 });
+
+describe('healing brush', () => {
+  it('copies texture from the source but keeps the destination tone', () => {
+    const b = solid(61, 21, [200, 200, 200]);
+    for (let y = 0; y < 21; y++) for (let x = 0; x < 30; x++) b.data.set([60 + (x % 2) * 20, 60 + (x % 2) * 20, 60 + (x % 2) * 20, 255], (y * 61 + x) * 4); // dark textured source on the left
+    dab(b, 'heal', 45, 10, 6, 1, 1, { source: { dx: -30, dy: 0 } });
+    const v = [px(b, 44, 10)[0], px(b, 45, 10)[0]];
+    expect(v[0]).not.toBe(v[1]); // texture arrived
+    expect(Math.min(...v)).toBeGreaterThan(150); // but tone stayed bright like the destination
+  });
+});

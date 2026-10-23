@@ -37,7 +37,7 @@ import { RulerH, RulerV, RULER } from './components/Rulers';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
 
-import { TOOLS, activateTool, toolDef, toolInWorkspace } from './tools/registry';
+import { TOOLS, activateTool, isPixelWorkspace, toolDef, toolInWorkspace } from './tools/registry';
 import type { Workspace } from './types';
 import { deselect, invertSelection, selectAll as selectAllPixels } from './raster/selection';
 import { targetLayer } from './raster/layer';
@@ -72,7 +72,7 @@ function useShortcuts() {
           y: redo,
           d: duplicateSelected,
           a: () => {
-            if (st.workspace === 'pixel') {
+            if (isPixelWorkspace(st.workspace)) {
               const l = targetLayer();
               if (!l) return;
               return e.shiftKey ? deselect() : selectAllPixels(l);
@@ -81,7 +81,7 @@ function useShortcuts() {
           },
           i: () => {
             const l = targetLayer();
-            if (st.workspace === 'pixel' && l) invertSelection(l);
+            if (isPixelWorkspace(st.workspace) && l) invertSelection(l);
           },
           '0': fitArtboard,
           '1': () => zoomTo(1),
@@ -134,7 +134,7 @@ function useShortcuts() {
       if (key === 'x' && e.shiftKey) return swapColors();
       if (key === 'x') return setState({ colorTarget: st.colorTarget === 'fill' ? 'stroke' : 'fill' });
       if (key === 'd') return resetColors();
-      if (st.workspace === 'pixel' && (key === '[' || key === ']')) {
+      if (isPixelWorkspace(st.workspace) && (key === '[' || key === ']')) {
         const k = key === ']' ? 1.25 : 0.8;
         return setState({ pbrush: { ...st.pbrush, size: Math.max(1, Math.min(1000, Math.round(st.pbrush.size * k))) } });
       }
@@ -279,7 +279,7 @@ export function App() {
             tabs={[
               { id: 'color', label: 'Color', body: <ColorPanel /> },
               { id: 'swatches', label: 'Swatches', body: <Swatches /> },
-              ...(workspace === 'pixel'
+              ...(isPixelWorkspace(workspace)
                 ? [
                     { id: 'brushes', label: 'Brushes', body: <BrushPanel /> },
                     { id: 'adjust', label: 'Adjust', body: <AdjustmentsPanel /> },

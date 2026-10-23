@@ -57,3 +57,37 @@ describe('warp', () => {
     expect(b.w).toBeCloseTo(100, 0);
   });
 });
+
+import { inversePerspective, invertMap } from '../src/warp';
+import { warpBuf } from '../src/raster/warp';
+import { newBuf } from '../src/raster/pixels';
+
+describe('inverse maps and raster warping', () => {
+  const q: [any, any, any, any] = [{ x: 15, y: 0 }, { x: 85, y: 10 }, { x: 100, y: 50 }, { x: 0, y: 40 }];
+  it('inverse perspective undoes the forward map', () => {
+    const fwd = perspectiveMap(box, q);
+    const inv = inversePerspective(box, q);
+    for (const p of [{ x: 10, y: 10 }, { x: 70, y: 35 }, { x: 99, y: 1 }]) {
+      const back = inv(fwd(p));
+      expect(back.x).toBeCloseTo(p.x, 4);
+      expect(back.y).toBeCloseTo(p.y, 4);
+    }
+  });
+  it('Newton inversion undoes an envelope warp', () => {
+    const net = neutralNet(box, 4);
+    net[5] = { x: net[5].x + 8, y: net[5].y - 12 };
+    const fwd = envelopeMap(box, net, 4);
+    const inv = invertMap(fwd);
+    const p = { x: 40, y: 20 };
+    const back = inv(fwd(p));
+    expect(back.x).toBeCloseTo(p.x, 1);
+    expect(back.y).toBeCloseTo(p.y, 1);
+  });
+  it('shifts pixels with a translation and leaves uncovered areas transparent', () => {
+    const src = newBuf(10, 10);
+    for (let i = 0; i < src.data.length; i += 4) src.data.set([200, 0, 0, 255], i);
+    const out = warpBuf(src, { x: 0, y: 0, w: 10, h: 10, rw: 10, rh: 10 }, (p) => ({ x: p.x - 4, y: p.y }));
+    expect(out.data[(5 * 10 + 6) * 4 + 3]).toBe(255);
+    expect(out.data[(5 * 10 + 1) * 4 + 3]).toBe(0);
+  });
+});

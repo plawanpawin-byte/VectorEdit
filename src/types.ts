@@ -30,6 +30,7 @@ export type BaseTool =
   | 'shapebuilder'
   | 'vflood'
   | 'areameasure'
+  | 'heal'
   | 'medianbrush'
   | 'colourreplace'
   | 'bgeraser'
@@ -68,7 +69,7 @@ export type BaseTool =
 /** Base tools plus one tool per registered parametric shape, e.g. `shape:cloud`. */
 export type Tool = BaseTool | `shape:${string}`;
 
-export type Workspace = 'vector' | 'pixel' | 'layout' | 'typography' | 'slice' | 'scripting';
+export type Workspace = 'vector' | 'pixel' | 'retouching' | 'colour' | 'compositing' | 'layout' | 'typography' | 'slice' | 'scripting';
 
 /**
  * Anchor point. (hx, hy) is the outgoing handle offset. The incoming handle is its mirror unless

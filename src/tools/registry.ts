@@ -58,6 +58,19 @@ export const TOOLS: ToolDef[] = [
   ...pixelTools2,
 ];
 
+/** Studios that reuse tools defined for other workspaces. */
+const STUDIO_TOOLS: Partial<Record<Workspace, Tool[]>> = {
+  retouching: ['select', 'crop', 'marquee', 'marquee-ellipse', 'lasso', 'wand', 'selbrush', 'brush', 'eraser', 'adjustbrush', 'filterbrush', 'dodge', 'burn', 'saturate', 'desaturate', 'clone', 'heal', 'smudge', 'blurbrush', 'sharpenbrush', 'medianbrush', 'blemish', 'redeye', 'picker', 'hand', 'zoom'],
+  colour: ['select', 'crop', 'marquee', 'marquee-ellipse', 'lasso', 'wand', 'selbrush', 'brush', 'adjustbrush', 'filterbrush', 'colourreplace', 'bucket', 'pgradient', 'eraser', 'picker', 'hand', 'zoom'],
+  compositing: ['select', 'crop', 'frame-rect', 'frame-ellipse', 'marquee', 'marquee-ellipse', 'colmarquee', 'rowmarquee', 'lasso', 'wand', 'selbrush', 'brush', 'eraser', 'bgeraser', 'floderase', 'perspective', 'warp', 'hand', 'zoom'],
+};
+for (const t of TOOLS) {
+  const extra = (Object.entries(STUDIO_TOOLS) as [Workspace, Tool[]][]).filter(([, ids]) => ids.includes(t.id)).map(([ws]) => ws);
+  if (extra.length) t.workspaces = [...t.workspaces, ...extra.filter((w) => !t.workspaces.includes(w))];
+}
+
+export { isPixelWorkspace } from './workspaces';
+
 const BY_ID = new Map<string, ToolDef>(TOOLS.map((t) => [t.id, t]));
 export const toolDef = (id: Tool): ToolDef | undefined => BY_ID.get(id);
 
@@ -97,6 +110,9 @@ export interface WorkspaceDef {
 export const WORKSPACES: WorkspaceDef[] = [
   { id: 'vector', label: 'Vector', description: 'Illustration and graphic design' },
   { id: 'pixel', label: 'Pixel', description: 'Paint, retouch and edit pixel layers' },
+  { id: 'retouching', label: 'Retouching', description: 'Portrait and photo retouching tools' },
+  { id: 'colour', label: 'Colour Grading', description: 'Adjustments, brushes and colour replacement' },
+  { id: 'compositing', label: 'Compositing', description: 'Combine, mask, warp and blend layers' },
   { id: 'slice', label: 'Slice', description: 'Define slices and export them in bulk' },
   { id: 'layout', label: 'Layout', description: 'Pages, text frames and structured layout' },
   { id: 'typography', label: 'Typography', description: 'Text tools and character/paragraph controls' },

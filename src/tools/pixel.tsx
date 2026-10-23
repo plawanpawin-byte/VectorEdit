@@ -167,19 +167,19 @@ export function retouchDown(kind: RetouchKind) {
     const layer = activeLayerOrCreate();
     const st = getState();
     // clone: Alt-click chooses the source point
-    if (kind === 'clone' && c.alt) {
+    if ((kind === 'clone' || kind === 'heal') && c.alt) {
       cloneSource = toPixel(layer, c.raw.x, c.raw.y);
       return;
     }
     const start = toPixel(layer, c.raw.x, c.raw.y);
-    if (kind === 'clone' && !cloneSource) {
+    if ((kind === 'clone' || kind === 'heal') && !cloneSource) {
       alert('Alt-click on the image first to choose where to copy from.');
       return;
     }
     const before = st.shapes;
     const radius = Math.max(1, (st.pbrush.size * pixelScale(layer).sx) / 2);
     const strength = kind === 'blemish' || kind === 'redeye' ? 1 : st.pixel.strength;
-    const source = kind === 'clone' && cloneSource ? { dx: cloneSource.x - start.x, dy: cloneSource.y - start.y } : null;
+    const source = (kind === 'clone' || kind === 'heal') && cloneSource ? { dx: cloneSource.x - start.x, dy: cloneSource.y - start.y } : null;
     return lazy(workingCanvas(layer), (canvas) => {
       const ctx = canvas.getContext('2d')!;
       const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -251,6 +251,7 @@ export const dodgeTool = retouch('dodge', 'Dodge', 'k', 'tone', 'dodge', '**Drag
 export const burnTool = retouch('burn', 'Burn', 'n', 'tone', 'burn', '**Drag** to darken areas.');
 export const saturateTool = retouch('saturate', 'Saturate Brush', undefined, 'tone', 'saturate', '**Drag** to intensify colour.');
 export const desaturateTool = retouch('desaturate', 'Desaturate Brush', undefined, 'tone', 'desaturate', '**Drag** to drain colour.');
+export const healTool = retouch('heal', 'Healing Brush', undefined, 'heal', 'heal', '**Alt-click** to choose a source, then **drag**: texture comes from the source while tone and colour blend with the destination.');
 export const blemishTool = retouch('blemish', 'Blemish Remover', 'j', 'heal', 'blemish', '**Click** a spot to replace it with the colour around it. Set the size to cover the blemish.');
 export const redEyeTool = retouch('redeye', 'Red Eye Removal', 'y', 'heal', 'redeye', '**Click** a red pupil to neutralise it. Set the size to match the eye.');
 
@@ -675,6 +676,7 @@ export const pixelTools: ToolDef[] = [
   burnTool,
   saturateTool,
   desaturateTool,
+  healTool,
   blemishTool,
   redEyeTool,
   cropTool,

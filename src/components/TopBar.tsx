@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { WORKSPACES, setWorkspace } from '../tools/registry';
+import { WORKSPACES, isPixelWorkspace, setWorkspace } from '../tools/registry';
 import {
   align,
   arrange,
@@ -76,7 +76,7 @@ function Popover({ button, children, className = '', title }: { button: React.Re
   );
 }
 
-const WS_ICON: Record<string, React.ReactNode> = { vector: I.vector, pixel: I.pixel, layout: I.layout, typography: I.typo, slice: I.grid, scripting: I.code };
+const WS_ICON: Record<string, React.ReactNode> = { vector: I.vector, pixel: I.pixel, layout: I.layout, typography: I.typo, slice: I.grid, scripting: I.code, retouching: I.retouch, colour: I.colour, compositing: I.composite };
 
 function OpMenu({ label, kind }: { label: string; kind: 'adjust' | 'filter' }) {
   const ops = RASTER_OPS.filter((o) => o.kind === kind);
@@ -243,7 +243,7 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
         <button className="ibtn" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo}>{I.redo}</button>
       </div>
 
-      {workspace === 'pixel' && (
+      {isPixelWorkspace(workspace) && (
         <>
           <OpMenu label="Adjust" kind="adjust" />
           <OpMenu label="Filter" kind="filter" />

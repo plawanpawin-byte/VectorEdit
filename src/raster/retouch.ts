@@ -3,7 +3,7 @@ import { type Buf, clamp, copyBuf, hslToRgb, luma, rgbToHsl, sample } from './pi
 /* Retouching brushes. Each stamp changes pixels inside a circle, weighted by a soft falloff, the brush
    strength and (optionally) a selection mask. All functions edit a buffer in place and are DOM-free. */
 
-export type RetouchKind = 'blur' | 'sharpen' | 'smudge' | 'dodge' | 'burn' | 'clone' | 'blemish' | 'redeye' | 'saturate' | 'desaturate' | 'median' | 'colourreplace' | 'bgerase' | 'mixer';
+export type RetouchKind = 'blur' | 'sharpen' | 'smudge' | 'dodge' | 'burn' | 'clone' | 'blemish' | 'redeye' | 'saturate' | 'desaturate' | 'heal' | 'median' | 'colourreplace' | 'bgerase' | 'mixer';
 
 export interface DabOptions {
   mask?: Uint8Array | null;
@@ -132,6 +132,24 @@ export function dab(buf: Buf, kind: RetouchKind, cx: number, cy: number, r: numb
           nb = sample(buf, x + o.source.dx, y + o.source.dy, 2);
           break;
         }
+        case 'heal': {
+          if (!o.source) break;
+          // keep the texture of the source but the tone and colour of the destination
+          let dl = [0, 0, 0];
+          let sl = [0, 0, 0];
+          for (let dy = -2; dy <= 2; dy++)
+            for (let dx = -2; dx <= 2; dx++)
+              for (let c = 0; c < 3; c++) {
+                dl[c] += at(x + dx, y + dy, c);
+                sl[c] += sample(buf, x + dx + o.source.dx, y + dy + o.source.dy, c);
+              }
+          dl = dl.map((v) => v / 25);
+          sl = sl.map((v) => v / 25);
+          nr = dl[0] + sample(buf, x + o.source.dx, y + o.source.dy, 0) - sl[0];
+          ng = dl[1] + sample(buf, x + o.source.dx, y + o.source.dy, 1) - sl[1];
+          nb = dl[2] + sample(buf, x + o.source.dx, y + o.source.dy, 2) - sl[2];
+          break;
+        }
         case 'blemish': {
           if (ring) [nr, ng, nb] = ring;
           break;
@@ -167,9 +185,9 @@ export function dab(buf: Buf, kind: RetouchKind, cx: number, cy: number, r: numb
           break;
         }
       }
-      data[i] = clamp(r0 + (nr - r0) * (kind === 'clone' || kind === 'blemish' ? Math.min(1, wt * 1.4) : wt));
-      data[i + 1] = clamp(g0 + (ng - g0) * (kind === 'clone' || kind === 'blemish' ? Math.min(1, wt * 1.4) : wt));
-      data[i + 2] = clamp(b0 + (nb - b0) * (kind === 'clone' || kind === 'blemish' ? Math.min(1, wt * 1.4) : wt));
+      data[i] = clamp(r0 + (nr - r0) * (kind === 'clone' || kind === 'heal' || kind === 'blemish' ? Math.min(1, wt * 1.4) : wt));
+      data[i + 1] = clamp(g0 + (ng - g0) * (kind === 'clone' || kind === 'heal' || kind === 'blemish' ? Math.min(1, wt * 1.4) : wt));
+      data[i + 2] = clamp(b0 + (nb - b0) * (kind === 'clone' || kind === 'heal' || kind === 'blemish' ? Math.min(1, wt * 1.4) : wt));
       if (kind === 'smudge' || kind === 'mixer') {
         // keep carrying what we just wrote
         const cxp = Math.min(carried!.width - 1, Math.max(0, Math.round(x - cx + r)));

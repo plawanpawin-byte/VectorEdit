@@ -1,6 +1,9 @@
 import { endLive, live, setState, useStore } from '../store';
-import { envelopeMap, neutralNet, perspectiveMap, boxOfShapes, warpShape, type XY } from '../warp';
+import { commitPixels, targetLayer, workingCanvas } from '../raster/layer';
+import { warpBuf } from '../raster/warp';
+import { envelopeMap, invertMap, inversePerspective, neutralNet, perspectiveMap, boxOfShapes, warpShape, type XY } from '../warp';
 import { toolIcon } from './icons';
+import { isPixelWorkspace } from './workspaces';
 import type { PointerCtx, Session, ToolDef } from './types';
 import { editableSelection } from './util';
 
@@ -42,17 +45,19 @@ function make(mode: 'perspective' | 'warp'): ToolDef {
     key: undefined,
     icon: persp ? toolIcon.perspective : toolIcon.warp,
     group: 'edit',
-    workspaces: ['vector'],
+    workspaces: ['vector', 'pixel'],
     cursor: 'crosshair',
     hint: persp
-      ? '**Drag** a corner of the selection to apply perspective. Shapes are converted to curves.'
+      ? '**Drag** a corner of the selection to apply perspective. Shapes are converted to curves; a pixel layer is resampled.'
       : '**Drag** any handle of the mesh (size in the context bar) to bend the selection like an envelope. Shapes are converted to curves.',
     chrome: 'outline',
     Options: persp ? undefined : WarpOptions,
     down(c): Session | void {
-      const sel = eligible(c);
-      if (!sel.length) return;
-      const box = boxOfShapes(sel);
+      const raster = isPixelWorkspace(c.st.workspace) ? targetLayer() : null;
+      if (isPixelWorkspace(c.st.workspace) && !raster) return;
+      const sel = raster ? [] : eligible(c);
+      if (!raster && !sel.length) return;
+      const box = raster ? { x: raster.x, y: raster.y, w: raster.w, h: raster.h } : boxOfShapes(sel);
       const n = persp ? 2 : c.st.warpGrid;
       const net = neutralNet(box, n);
       // a 2×2 net is the four corners in TL, TR, BL, BR order; perspective wants TL, TR, BR, BL
@@ -84,16 +89,29 @@ function make(mode: 'perspective' | 'warp'): ToolDef {
       const before = c.st.shapes;
       const ids = new Set(sel.map((s) => s.id));
       const originals = new Map(sel.map((s) => [s.id, s]));
+      let moved = handles;
       return {
         move(m) {
-          const moved = handles.map((h, i) => (i === best ? { x: m.p.x, y: m.p.y } : h));
-          const map = persp ? perspectiveMap(box, moved as [XY, XY, XY, XY]) : envelopeMap(box, net.map((q, i) => (i === best ? { x: m.p.x, y: m.p.y } : q)), n);
-          live(m.st.shapes.map((s) => (ids.has(s.id) ? warpShape(originals.get(s.id)!, map) : s)));
+          moved = handles.map((h, i) => (i === best ? { x: m.p.x, y: m.p.y } : h));
+          if (!raster) {
+            const map = persp ? perspectiveMap(box, moved as [XY, XY, XY, XY]) : envelopeMap(box, net.map((q, i) => (i === best ? { x: m.p.x, y: m.p.y } : q)), n);
+            live(m.st.shapes.map((s) => (ids.has(s.id) ? warpShape(originals.get(s.id)!, map) : s)));
+          }
           show(moved, best);
         },
         up(m) {
           m.setOverlay(null);
-          endLive(before);
+          if (!raster) return endLive(before);
+          // pixel layers are resampled once, when the handle is released
+          const inverse = persp ? inversePerspective(box, moved as [XY, XY, XY, XY]) : invertMap(envelopeMap(box, moved, n));
+          void Promise.resolve(workingCanvas(raster)).then((canvas) => {
+            const ctx = canvas.getContext('2d')!;
+            const src = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const out = warpBuf(src, { x: raster.x, y: raster.y, w: raster.w, h: raster.h, rw: raster.rw, rh: raster.rh }, inverse);
+            src.data.set(out.data);
+            ctx.putImageData(src, 0, 0);
+            commitPixels(raster.id, canvas, before);
+          });
         },
       };
     },
