@@ -25,7 +25,7 @@ import {
   zoomAt,
   zoomTo,
 } from '../store';
-import { exportPng, exportSvg } from './exporter';
+import { exportPdf, exportPng, exportSvg } from './exporter';
 import { importSvgFile, openDoc, saveDoc } from '../fileio';
 import { openRasterOp } from '../raster/dialog';
 import { divideSelected, joinSelected, reverseSelected, separateSelected, setAll, smoothSelected, stepRepeatSelected, strokeWeight, traceSelected } from '../objectcmds';
@@ -181,6 +181,8 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
     { label: 'Save As…', shortcut: 'Ctrl+Shift+S', action: () => saveDoc(true) },
     { label: 'Export artboard as SVG…', action: () => doExport('svg') },
     { label: 'Export artboard as PNG…', action: () => doExport('png') },
+    { label: 'Export artboard as PDF…', action: () => void exportPdf(getState().shapes, [activeBoard()], activeBoard().name) },
+    { label: 'Export all artboards as PDF…', action: () => void exportPdf(getState().shapes, getState().artboards, 'document') },
     { label: 'Export all artboards as PNG…', action: () => doExport('png', true) },
     { label: 'Export all artboards as SVG…', action: () => doExport('svg', true) },
     { label: 'Edit', head: true },

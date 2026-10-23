@@ -80,11 +80,12 @@ Triangle, diamond, trapezoid, parallelogram, polygon, star, double star, square 
 | Macros: record filters, replay as one undo step, import/export | ✅ |
 | Layer masks (Mask Brush) | ✅ |
 | Non-destructive filter/adjustment layers on pixel layers, live masks | ❌ |
-| Brush dynamics: pen pressure → size and/or opacity | 🟡 (no tilt, velocity or custom curves) |
+| Brush dynamics: pen pressure → size/opacity, speed → size, tilt → width | 🟡 (no custom response curves or per-parameter controllers) |
 | ~200 brush presets | ❌ (15 presets) |
 | AI: generative fill, remove background, select subject, colourise | ❌ (out of scope for an offline app) |
 
 ## Document
 Multiple pages, master pages, guides, snapshots, history panel, autosave and recovery, `.vedit` format, SVG/PNG export, slices, Electron desktop build — ✅.
 SVG import (shapes, paths with all commands, groups, transforms, solid colours; File → Import SVG) — 🟡: no gradients, text, images or filters.
-Import of other editors' file formats, PDF export, colour profiles (CMYK/ICC), bleed and print marks — ❌.
+PDF export (one page per artboard; pages are JPEG images, not vector) — 🟡.
+Import of other editors' file formats, vector PDF, colour profiles (CMYK/ICC), bleed and print marks — ❌.

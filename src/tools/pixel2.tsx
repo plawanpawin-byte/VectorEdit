@@ -394,7 +394,7 @@ export const maskBrushTool: ToolDef = {
     }), (canvas) => {
       const stroke = new Stroke(canvas, st.pbrush, pixelScale(layer).sx, [255, 255, 255], reveal ? 'paint' : 'erase', null);
       const p0 = toPixel(layer, c.raw.x, c.raw.y);
-      stroke.begin(p0.x, p0.y, c.pressure);
+      stroke.begin(p0.x, p0.y, c.pressure, c.tilt);
       const commitMask = () => {
         const src = encodeCanvas(stroke.result);
         commit(getState().shapes.map((s) => (s.id === layer.id ? { ...s, mask: src } : s)), { before });
@@ -402,7 +402,7 @@ export const maskBrushTool: ToolDef = {
       return {
         move(m) {
           const p = toPixel(layer, m.raw.x, m.raw.y);
-          stroke.lineTo(p.x, p.y, m.pressure);
+          stroke.lineTo(p.x, p.y, m.pressure, m.tilt);
           setState({ shapes: getState().shapes.map((s) => (s.id === layer.id ? { ...s, mask: stroke.result.toDataURL('image/png') } : s)) });
         },
         up() {

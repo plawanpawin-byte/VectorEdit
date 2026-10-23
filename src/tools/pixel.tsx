@@ -74,12 +74,12 @@ export function paintDown(mode: 'paint' | 'erase') {
       const stroke = new Stroke(canvas, params, pixelScale(layer).sx, colour, mode, mask);
       const preview = makePreview(layer.id, () => stroke.result);
       const p0 = toPixel(layer, c.raw.x, c.raw.y);
-      stroke.begin(p0.x, p0.y, c.pressure);
+      stroke.begin(p0.x, p0.y, c.pressure, c.tilt);
       preview.schedule();
       return {
         move(m) {
           const p = toPixel(layer, m.raw.x, m.raw.y);
-          stroke.lineTo(p.x, p.y, m.pressure);
+          stroke.lineTo(p.x, p.y, m.pressure, m.tilt);
           preview.schedule();
         },
         up() {
@@ -124,7 +124,11 @@ export function BrushOptions() {
         <option value="size">Size</option>
         <option value="opacity">Opacity</option>
         <option value="both">Size + opacity</option>
+        <option value="velocity">Speed → thinner</option>
       </select>
+      <label className="check" title="A tilted pen draws a wider tip">
+        <input type="checkbox" checked={!!b.tilt} onChange={(e) => set({ tilt: e.target.checked })} /> Tilt
+      </label>
     </>
   );
 }

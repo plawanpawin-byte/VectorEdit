@@ -19,7 +19,9 @@ export interface BrushParams {
   /** random scatter of dabs as a fraction of the size */
   jitter: number;
   /** what pen pressure controls (a mouse always reports full pressure) */
-  dynamics?: 'none' | 'size' | 'opacity' | 'both';
+  dynamics?: 'none' | 'size' | 'opacity' | 'both' | 'velocity';
+  /** a tilted pen draws a wider tip */
+  tilt?: boolean;
 }
 
 export interface BrushPreset {
@@ -146,12 +148,14 @@ export class Stroke {
   }
 
   private pressure = 1;
+  private tilt = 0;
+  private speed = 0;
 
   private stamp(x: number, y: number) {
     const ctx = this.strokeCanvas.getContext('2d')!;
     const tip = this.tips[this.dabCount++ % this.tips.length];
     const dyn = this.p.dynamics ?? 'none';
-    const sizeK = dyn === 'size' || dyn === 'both' ? Math.max(0.08, this.pressure) : 1;
+    const sizeK = (dyn === 'size' || dyn === 'both' ? Math.max(0.08, this.pressure) : 1) * (dyn === 'velocity' ? 1 - 0.65 * this.speed : 1) * (this.p.tilt ? 1 + this.tilt : 1);
     ctx.globalAlpha = this.p.flow * (dyn === 'opacity' || dyn === 'both' ? Math.max(0.05, this.pressure) : 1);
     let px = x;
     let py = y;
@@ -164,15 +168,19 @@ export class Stroke {
     ctx.drawImage(tip, px - (tip.width * sizeK) / 2, py - (tip.height * sizeK) / 2, tip.width * sizeK, tip.height * sizeK);
   }
 
-  begin(x: number, y: number, pressure = 1) {
+  begin(x: number, y: number, pressure = 1, tilt = 0) {
     this.pressure = pressure;
+    this.tilt = tilt;
     this.stamp(x, y);
     this.last = { x, y };
     this.render();
   }
 
-  lineTo(x: number, y: number, pressure = 1) {
-    if (!this.last) return this.begin(x, y, pressure);
+  lineTo(x: number, y: number, pressure = 1, tilt = 0) {
+    if (!this.last) return this.begin(x, y, pressure, tilt);
+    this.tilt = tilt;
+    // fast strokes get thinner when velocity dynamics is on; smoothed so the width does not flicker
+    this.speed += (Math.min(1, Math.hypot(x - this.last.x, y - this.last.y) / (this.diameter * 1.5)) - this.speed) * 0.35;
     const p0 = this.pressure;
     const total = Math.hypot(x - this.last.x, y - this.last.y) || 1;
     const from = { x: this.last.x, y: this.last.y };

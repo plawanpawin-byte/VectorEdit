@@ -81,3 +81,22 @@ export function renderBoardPixels(shapes: Shape[], board: Artboard, maxSize = 48
     img.src = url;
   });
 }
+
+/** One PDF with a page per artboard (raster pages at 2×, JPEG-compressed). */
+export async function exportPdf(shapes: Shape[], boards: Artboard[], name = 'document') {
+  const { buildPdf } = await import('../pdf');
+  const pages = [];
+  for (const board of boards) {
+    const scale = 2;
+    const img = await renderBoardPixels(shapes, board, Math.max(board.w, board.h) * scale);
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    c.getContext('2d')!.putImageData(img, 0, 0);
+    const blob: Blob | null = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92));
+    if (!blob) continue;
+    pages.push({ width: board.w, height: board.h, jpeg: new Uint8Array(await blob.arrayBuffer()), pxWidth: img.width, pxHeight: img.height });
+  }
+  if (!pages.length) return;
+  download(new Blob([buildPdf(pages, name).buffer as ArrayBuffer], { type: 'application/pdf' }), `${name.replace(/[^\w.-]+/g, '_') || 'document'}.pdf`);
+}

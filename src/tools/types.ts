@@ -17,6 +17,8 @@ export interface PointerCtx {
   screen: XY;
   /** pen pressure 0..1; always 1 for a mouse */
   pressure: number;
+  /** pen tilt 0..1 (0 = upright); always 0 for a mouse */
+  tilt: number;
   shift: boolean;
   alt: boolean;
   ctrl: boolean;
