@@ -32,6 +32,7 @@ import { ShapeEl } from './ShapeEl';
 import { chooseImageInto } from '../images';
 import { shapeDef, defaultParams } from '../shapes';
 import { addPixelLayer } from '../raster/layer';
+import { cmykToRgb, rgbToCmyk } from '../cmyk';
 import { buildTree, membersOf, type TreeNode } from '../groups';
 import { defaultMesh } from '../mesh';
 import { ADJUSTMENTS, adjustDef, defaultAdjust } from '../adjustments';
@@ -172,6 +173,32 @@ export function ColorPanel() {
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
         />
       </div>
+      {value && (
+        <div className="cmyk-row" title="Plain conversion without a colour profile">
+          {(['C', 'M', 'Y', 'K'] as const).map((label, i) => {
+            const cmyk = rgbToCmyk(...hex2rgb(hex));
+            return (
+              <label key={label}>
+                {label}
+                <input
+                  key={hex + i}
+                  type="number"
+                  min={0}
+                  max={100}
+                  defaultValue={Math.round(cmyk[i] * 100)}
+                  onKeyDown={(e) => (e.stopPropagation(), e.key === 'Enter' && (e.target as HTMLInputElement).blur())}
+                  onBlur={(e) => {
+                    const next = [...cmyk] as typeof cmyk;
+                    next[i] = Math.max(0, Math.min(100, Number(e.target.value) || 0)) / 100;
+                    const [r, g, b] = cmykToRgb(...next);
+                    setColor(target, '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join(''));
+                  }}
+                />
+              </label>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
