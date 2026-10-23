@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Box, Pt, Shape } from '../types';
 import { bbox, boxesIntersect, hitTest, pathD, scaleAbout, translate, unionBox } from '../geometry';
 import {
+  commit,
   endLive,
   fitArtboard,
   getState,
@@ -13,6 +14,8 @@ import {
   penFinish,
   setState,
   setTool,
+  snapV,
+  updateShape,
   useStore,
   zoomAt,
 } from '../store';
@@ -83,6 +86,18 @@ export function Canvas() {
   const grid = useStore((s) => s.grid);
   const pen = useStore((s) => s.pen);
   const penCursor = useStore((s) => (s.tool === 'pen' && s.pen ? s.cursor : null));
+  const editingText = useStore((s) => s.editingText);
+  const editShape = shapes.find((s) => s.id === editingText);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    // focus after the click that created the text has finished moving focus
+    if (!editingText) return;
+    const id = requestAnimationFrame(() => {
+      textRef.current?.focus();
+      textRef.current?.select();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [editingText]);
 
   // viewport size + initial fit
   useEffect(() => {
@@ -143,6 +158,10 @@ export function Canvas() {
     const st = getState();
     return { x: (e.clientX - rect.left - st.panX) / st.zoom, y: (e.clientY - rect.top - st.panY) / st.zoom };
   };
+  const toDocSnap = (e: { clientX: number; clientY: number }): XY => {
+    const p = toDoc(e);
+    return { x: snapV(p.x), y: snapV(p.y) };
+  };
 
   const toScreen = (e: { clientX: number; clientY: number }): XY => {
     const rect = ref.current!.getBoundingClientRect();
@@ -152,7 +171,7 @@ export function Canvas() {
   function onDown(e: React.PointerEvent) {
     if (e.button === 2) return;
     const st = getState();
-    const p = toDoc(e);
+    const p = toDocSnap(e);
     const target = e.target as SVGElement;
     ref.current!.setPointerCapture(e.pointerId);
 
@@ -183,10 +202,11 @@ export function Canvas() {
 
     if (st.tool === 'text') {
       const before = st.shapes;
-      const t = makeShape('text', { x: p.x, y: p.y, fill: st.fill ?? '#1c1c1c' });
+      const t = makeShape('text', { x: p.x, y: p.y - 12, text: '', fill: st.fill ?? '#1c1c1c' });
       live([...before, t], [t.id]);
       endLive(before);
       setTool('select');
+      setState({ editingText: t.id });
       return;
     }
 
@@ -243,7 +263,7 @@ export function Canvas() {
 
   function onMove(e: React.PointerEvent) {
     const st = getState();
-    const p = toDoc(e);
+    const p = toDocSnap(e);
     setState({ cursor: { x: Math.round(p.x), y: Math.round(p.y) } });
     const d = drag.current;
     if (!d) return;
@@ -361,10 +381,7 @@ export function Canvas() {
     } else if (st.tool === 'select' || st.tool === 'direct') {
       const p = toDoc(e);
       const t = [...st.shapes].reverse().find((s) => s.kind === 'text' && hitTest(s, p.x, p.y, 4 / st.zoom));
-      if (t) {
-        setState({ selection: [t.id] });
-        document.getElementById('text-content')?.focus();
-      }
+      if (t) setState({ selection: [t.id], editingText: t.id });
     }
   }
 
@@ -386,12 +403,10 @@ export function Canvas() {
     >
       <svg width="100%" height="100%" style={{ display: 'block' }}>
         <g transform={`translate(${panX} ${panY}) scale(${zoom})`}>
-          <rect x={0} y={0} width={artboard.w} height={artboard.h} fill="#fff" filter="url(#shadow)" />
+          <rect x={0} y={0} width={artboard.w} height={artboard.h} fill="#fff" stroke="#111" strokeWidth={k} filter="url(#shadow)" />
           {grid && <rect x={0} y={0} width={artboard.w} height={artboard.h} fill="url(#grid)" pointerEvents="none" />}
           <g>
-            {shapes.map((s) => (
-              <ShapeEl key={s.id} shape={s} />
-            ))}
+            {shapes.map((s) => (s.id === editingText ? null : <ShapeEl key={s.id} shape={s} />))}
           </g>
 
           {/* selection chrome */}
@@ -489,16 +504,39 @@ export function Canvas() {
         </g>
         <defs>
           <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
-            <feDropShadow dx="0" dy="2" stdDeviation="5" floodColor="#000" floodOpacity="0.35" />
+            <feDropShadow dx="0" dy="2" stdDeviation="5" floodColor="#000" floodOpacity="0.55" />
           </filter>
           <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
             <path d="M10 0H0V10" fill="none" stroke="#9aa0a6" strokeWidth={0.3} opacity={0.5} />
           </pattern>
         </defs>
       </svg>
-      <div className="artboard-label" style={{ left: panX, top: panY - 16 }}>
-        Artboard 1
-      </div>
+      {editShape && (
+        <textarea
+          ref={textRef}
+          className="text-edit"
+          placeholder="Type…"
+          value={editShape.text}
+          spellCheck={false}
+          onPointerDown={(e) => e.stopPropagation()}
+          onChange={(e) => updateShape(editShape.id, { text: e.target.value }, 'text-edit')}
+          onKeyDown={(e) => e.key === 'Escape' && (e.target as HTMLTextAreaElement).blur()}
+          onBlur={() => {
+            const st = getState();
+            const cur = st.shapes.find((s) => s.id === editShape.id);
+            setState({ editingText: null });
+            if (cur && !cur.text.trim()) commit(st.shapes.filter((s) => s.id !== cur.id), { selection: [], key: 'text-edit' });
+          }}
+          style={{
+            left: panX + editShape.x * zoom,
+            top: panY + editShape.y * zoom,
+            fontSize: editShape.fontSize * zoom,
+            color: editShape.fill ?? '#1c1c1c',
+            width: Math.max(120, (Math.max(4, ...editShape.text.split('\n').map((l) => l.length)) + 2) * editShape.fontSize * 0.58 * zoom),
+            height: (editShape.text.split('\n').length * 1.2 + 0.3) * editShape.fontSize * zoom,
+          }}
+        />
+      )}
     </div>
   );
 }

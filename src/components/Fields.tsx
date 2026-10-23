@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export function NumField({
   label,
@@ -18,12 +18,14 @@ export function NumField({
   step?: number;
 }) {
   const fmt = (v: number | null) => (v === null ? '' : String(Math.round(v * 100) / 100));
-  const [text, setText] = useState(fmt(value));
-  useEffect(() => setText(fmt(value)), [value]);
+  // draft text only exists while the field is being edited; otherwise show the live value
+  const [draft, setDraft] = useState<string | null>(null);
+  const text = draft ?? fmt(value);
+  const setText = (t: string) => setDraft(t);
   const commit = () => {
     const n = parseFloat(text);
-    if (Number.isFinite(n) && (min === undefined || n >= min)) onCommit(n);
-    else setText(fmt(value));
+    if (draft !== null && Number.isFinite(n) && (min === undefined || n >= min) && n !== value) onCommit(n);
+    setDraft(null);
   };
   return (
     <label className={'num' + (disabled ? ' disabled' : '')}>
@@ -39,7 +41,7 @@ export function NumField({
             e.preventDefault();
             const n = parseFloat(text) || 0;
             const v = n + (e.key === 'ArrowUp' ? step : -step) * (e.shiftKey ? 10 : 1);
-            setText(fmt(v));
+            setDraft(null);
             onCommit(v);
           }
         }}

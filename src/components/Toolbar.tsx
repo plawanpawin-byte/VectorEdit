@@ -1,5 +1,5 @@
 import type { Tool } from '../types';
-import { getState, resetColors, setState, setTool, swapColors, useStore } from '../store';
+import { MODE_TOOLS, resetColors, setState, setTool, swapColors, useStore } from '../store';
 import { SwapArrows, toolIcons } from './Icons';
 
 const TOOLS: { id: Tool; label: string; key: string; gap?: boolean }[] = [
@@ -19,9 +19,11 @@ export function Toolbar() {
   const fill = useStore((s) => s.fill);
   const stroke = useStore((s) => s.stroke);
   const target = useStore((s) => s.colorTarget);
+  const mode = useStore((s) => s.mode);
+  const allowed = MODE_TOOLS[mode];
   return (
     <nav className="toolbar">
-      {TOOLS.map((t) => (
+      {TOOLS.filter((t) => allowed.includes(t.id)).map((t) => (
         <button
           key={t.id}
           className={'tool' + (tool === t.id ? ' on' : '') + (t.gap ? ' gap' : '')}
@@ -55,13 +57,6 @@ export function Toolbar() {
           <b />
         </button>
       </div>
-      <button
-        className="mode"
-        title="Cycle colour target"
-        onClick={() => setState({ colorTarget: getState().colorTarget === 'fill' ? 'stroke' : 'fill' })}
-      >
-        {target === 'fill' ? 'Fill' : 'Stroke'}
-      </button>
     </nav>
   );
 }

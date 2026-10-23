@@ -17,6 +17,8 @@ export interface Pt {
   hy: number;
 }
 
+export type Mode = 'vector' | 'layout' | 'draw';
+
 export type ShapeKind = 'rect' | 'ellipse' | 'line' | 'path' | 'text';
 
 export interface Shape {
@@ -35,6 +37,7 @@ export interface Shape {
   stroke: string | null;
   strokeWidth: number;
   opacity: number;
+  blend: string;
   visible: boolean;
   locked: boolean;
 }

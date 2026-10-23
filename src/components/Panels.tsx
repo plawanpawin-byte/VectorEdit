@@ -1,224 +1,153 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { bbox, unionBox } from '../geometry';
 import {
-  arrange,
   deleteSelected,
   duplicateSelected,
   getState,
+  historyJump,
+  live,
+  makeShape,
   setColor,
   setState,
   setTransform,
   updateSelected,
   updateShape,
   useStore,
+  endLive,
 } from '../store';
-import { Duplicate, Eye, Lock, Trash } from './Icons';
+import { Duplicate, Eye, I, Lock, Trash } from './Icons';
 import { NumField, Section } from './Fields';
+import { ShapeEl } from './ShapeEl';
 
 const SWATCHES = [
-  '#000000', '#2b2b2b', '#555555', '#808080', '#aaaaaa', '#d4d4d4', '#f2efe8', '#ffffff',
+  '#000000', '#262626', '#4d4d4d', '#808080', '#b3b3b3', '#d9d9d9', '#f2efe8', '#ffffff',
   '#d93025', '#f08a24', '#f4c20d', '#6fbf4a', '#1aa391', '#2fd3bd', '#2d8cf0', '#5b9cf5',
   '#7a4de0', '#b84fc4', '#e0457b', '#8c5a3c', '#0e3b38', '#17325c', '#4a1c3d', '#5c2a14',
 ];
 
-const hex2rgb = (h: string) => {
+const BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity'];
+const label = (b: string) => b.replace(/(^|-)(\w)/g, (_, d, c) => (d ? ' ' : '') + c.toUpperCase());
+
+/* ---------- colour maths ---------- */
+
+const hex2rgb = (h: string): [number, number, number] => {
   const m = /^#?([0-9a-f]{6})$/i.exec(h);
   const n = m ? parseInt(m[1], 16) : 0;
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255] as const;
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 };
 const rgb2hex = (r: number, g: number, b: number) =>
   '#' + [r, g, b].map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
 
-function Swatch({ color, size = 18, onClick, title }: { color: string | null; size?: number; onClick?: () => void; title?: string }) {
-  return (
-    <button
-      className={'swatch' + (color === null ? ' none' : '')}
-      title={title ?? color ?? 'None'}
-      style={{ width: size, height: size, background: color ?? undefined }}
-      onClick={onClick}
-    />
-  );
-}
-
-function ColorRow({ label, target }: { label: string; target: 'fill' | 'stroke' }) {
-  const value = useStore((s) => s[target]);
-  return (
-    <div className="row">
-      <span className="lbl">{label}</span>
-      <label className="swatch-input" style={{ background: value ?? undefined }} data-none={value === null}>
-        <input type="color" value={value ?? '#000000'} onChange={(e) => setColor(target, e.target.value)} />
-      </label>
-      <input
-        className="hex"
-        value={value ?? 'None'}
-        onChange={() => {}}
-        onBlur={(e) => {
-          const v = e.target.value.trim();
-          if (/^#[0-9a-f]{6}$/i.test(v)) setColor(target, v.toLowerCase());
-        }}
-        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-        key={value}
-        defaultValue={value ?? 'None'}
-      />
-      <button className="mini" title="No colour" onClick={() => setColor(target, null)}>
-        ∅
-      </button>
-    </div>
-  );
-}
-
-export function Properties() {
-  const shapes = useStore((s) => s.shapes);
-  const selection = useStore((s) => s.selection);
-  const artboard = useStore((s) => s.artboard);
-  const rulers = useStore((s) => s.rulers);
-  const grid = useStore((s) => s.grid);
-  const strokeWidth = useStore((s) => s.strokeWidth);
-  const sel = shapes.filter((s) => selection.includes(s.id));
-  const box = unionBox(sel.map(bbox));
-  const one = sel.length === 1 ? sel[0] : null;
-
-  if (!sel.length) {
-    return (
-      <div className="panel-body">
-        <Section title="Document">
-          <div className="grid2">
-            <NumField label="W" value={artboard.w} suffix="px" min={1} onCommit={(w) => setState({ artboard: { ...artboard, w } })} />
-            <NumField label="H" value={artboard.h} suffix="px" min={1} onCommit={(h) => setState({ artboard: { ...artboard, h } })} />
-          </div>
-          <label className="check">
-            <input type="checkbox" checked={rulers} onChange={(e) => setState({ rulers: e.target.checked })} /> Show rulers
-          </label>
-          <label className="check">
-            <input type="checkbox" checked={grid} onChange={(e) => setState({ grid: e.target.checked })} /> Show grid
-          </label>
-        </Section>
-        <Section title="Defaults for new objects">
-          <ColorRow label="Fill" target="fill" />
-          <ColorRow label="Stroke" target="stroke" />
-          <div className="row">
-            <NumField label="Weight" value={strokeWidth} suffix="pt" min={0} step={0.5} onCommit={(v) => setState({ strokeWidth: v })} />
-          </div>
-        </Section>
-        <p className="hint">Select an object to edit its properties.</p>
-      </div>
-    );
+function rgb2hsv(r: number, g: number, b: number): [number, number, number] {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  let h = 0;
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
   }
+  return [h, max ? d / max : 0, max];
+}
 
+function hsv2hex(h: number, s: number, v: number) {
+  const f = (n: number) => {
+    const k = (n + h / 60) % 6;
+    return v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+  };
+  return rgb2hex(f(5) * 255, f(3) * 255, f(1) * 255);
+}
+
+/* ---------- colour ---------- */
+
+function FillStrokeChips() {
+  const fill = useStore((s) => s.fill);
+  const stroke = useStore((s) => s.stroke);
+  const target = useStore((s) => s.colorTarget);
   return (
-    <div className="panel-body">
-      <div className="obj-title">{one ? one.name : `${sel.length} objects`}</div>
-      {box && (
-        <Section title="Transform">
-          <div className="grid2">
-            <NumField label="X" value={box.x} suffix="px" onCommit={(x) => setTransform(box, { x })} />
-            <NumField label="Y" value={box.y} suffix="px" onCommit={(y) => setTransform(box, { y })} />
-            <NumField label="W" value={box.w} suffix="px" min={0.01} onCommit={(w) => setTransform(box, { w })} />
-            <NumField label="H" value={box.h} suffix="px" min={0.01} onCommit={(h) => setTransform(box, { h })} />
-          </div>
-        </Section>
-      )}
-      <Section title="Appearance">
-        <div className="row">
-          <span className="lbl">Fill</span>
-          <label className="swatch-input" style={{ background: one?.fill ?? undefined }} data-none={!one?.fill}>
-            <input type="color" value={one?.fill ?? '#000000'} onChange={(e) => updateSelected((s) => ({ ...s, fill: e.target.value }), 'fill')} />
-          </label>
-          <button className="mini" title="No fill" onClick={() => updateSelected((s) => ({ ...s, fill: null }))}>∅</button>
-        </div>
-        <div className="row">
-          <span className="lbl">Stroke</span>
-          <label className="swatch-input" style={{ background: one?.stroke ?? undefined }} data-none={!one?.stroke}>
-            <input type="color" value={one?.stroke ?? '#000000'} onChange={(e) => updateSelected((s) => ({ ...s, stroke: e.target.value }), 'stroke')} />
-          </label>
-          <NumField label="" value={one?.strokeWidth ?? null} suffix="pt" min={0} step={0.5} onCommit={(v) => updateSelected((s) => ({ ...s, strokeWidth: v }), 'sw')} />
-          <button className="mini" title="No stroke" onClick={() => updateSelected((s) => ({ ...s, stroke: null }))}>∅</button>
-        </div>
-        <div className="row">
-          <span className="lbl">Opacity</span>
-          <input
-            className="range"
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round((one?.opacity ?? 1) * 100)}
-            onChange={(e) => updateSelected((s) => ({ ...s, opacity: Number(e.target.value) / 100 }), 'opacity')}
-          />
-          <span className="val">{Math.round((one?.opacity ?? 1) * 100)}%</span>
-        </div>
-      </Section>
-      {one?.kind === 'text' && (
-        <Section title="Text">
-          <textarea
-            id="text-content"
-            className="textarea"
-            rows={3}
-            value={one.text}
-            onChange={(e) => updateShape(one.id, { text: e.target.value }, 'text')}
-          />
-          <div className="grid2">
-            <NumField label="Size" value={one.fontSize} suffix="px" min={1} onCommit={(fontSize) => updateShape(one.id, { fontSize }, 'fs')} />
-          </div>
-        </Section>
-      )}
-      <Section title="Arrange">
-        <div className="btn-row">
-          <button onClick={() => arrange('front')}>To front</button>
-          <button onClick={() => arrange('forward')}>Forward</button>
-          <button onClick={() => arrange('backward')}>Backward</button>
-          <button onClick={() => arrange('back')}>To back</button>
-        </div>
-      </Section>
+    <div className="chips">
+      <button className={'chip' + (target === 'fill' ? ' on' : '')} onClick={() => setState({ colorTarget: 'fill' })}>
+        <b style={{ background: fill ?? undefined }} data-none={fill === null} />
+        Fill
+      </button>
+      <button className={'chip' + (target === 'stroke' ? ' on' : '')} onClick={() => setState({ colorTarget: 'stroke' })}>
+        <b className="ring" style={{ borderColor: stroke ?? '#555' }} data-none={stroke === null} />
+        Stroke
+      </button>
+      <button className="chip none" title="Set to none" onClick={() => setColor(getState().colorTarget, null)}>
+        <b data-none="true" />
+      </button>
     </div>
   );
 }
 
 export function ColorPanel() {
   const target = useStore((s) => s.colorTarget);
-  const fill = useStore((s) => s.fill);
-  const stroke = useStore((s) => s.stroke);
-  const value = (target === 'fill' ? fill : stroke) ?? '#000000';
-  const [r, g, b] = hex2rgb(value);
-  const channel = (name: string, v: number, idx: 0 | 1 | 2) => {
-    const lo = [r, g, b];
-    const hi = [r, g, b];
-    lo[idx] = 0;
-    hi[idx] = 255;
-    return (
-      <div className="slider-row" key={name}>
-        <span>{name}</span>
-        <input
-          type="range"
-          min={0}
-          max={255}
-          value={v}
-          className="ch"
-          style={{ background: `linear-gradient(90deg, ${rgb2hex(lo[0], lo[1], lo[2])}, ${rgb2hex(hi[0], hi[1], hi[2])})` }}
-          onChange={(e) => {
-            const c = [r, g, b];
-            c[idx] = Number(e.target.value);
-            setColor(target, rgb2hex(c[0], c[1], c[2]));
-          }}
-        />
-        <input className="chv" value={v} readOnly />
-      </div>
-    );
+  const value = useStore((s) => s[s.colorTarget]);
+  const hex = value ?? '#ffffff';
+  const [h0, s0, v0] = rgb2hsv(...hex2rgb(hex));
+  const [hue, setHue] = useState(h0);
+  const last = useRef(hex);
+  useEffect(() => {
+    // keep hue stable for greys, otherwise follow the colour
+    if (hex !== last.current && s0 > 0.01) setHue(h0);
+    last.current = hex;
+  }, [hex, h0, s0]);
+
+  const sq = useRef<HTMLDivElement>(null);
+  const pickSV = (e: React.PointerEvent) => {
+    const r = sq.current!.getBoundingClientRect();
+    const s = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    const v = Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / r.height));
+    const out = hsv2hex(hue, s, v);
+    last.current = out;
+    setColor(target, out);
   };
+
   return (
-    <div className="panel-body">
-      <div className="tabs-mini">
-        <button className={target === 'fill' ? 'on' : ''} onClick={() => setState({ colorTarget: 'fill' })}>Fill</button>
-        <button className={target === 'stroke' ? 'on' : ''} onClick={() => setState({ colorTarget: 'stroke' })}>Stroke</button>
+    <div className="panel-body color-panel">
+      <FillStrokeChips />
+      <div
+        ref={sq}
+        className="sv"
+        style={{ background: `hsl(${hue} 100% 50%)` }}
+        onPointerDown={(e) => {
+          (e.target as HTMLElement).setPointerCapture(e.pointerId);
+          pickSV(e);
+        }}
+        onPointerMove={(e) => e.buttons && pickSV(e)}
+      >
+        <div className="sv-white" />
+        <div className="sv-black" />
+        <i style={{ left: `${s0 * 100}%`, top: `${(1 - v0) * 100}%` }} />
       </div>
-      {channel('R', r, 0)}
-      {channel('G', g, 1)}
-      {channel('B', b, 2)}
-      <div className="row">
-        <span className="lbl">Hex</span>
+      <input
+        type="range"
+        className="hue"
+        min={0}
+        max={359}
+        value={Math.round(hue)}
+        onChange={(e) => {
+          const h = Number(e.target.value);
+          setHue(h);
+          const out = hsv2hex(h, s0 || 0.8, v0 || 0.8);
+          last.current = out;
+          setColor(target, out);
+        }}
+      />
+      <div className="color-read">
+        <span>H {Math.round(hue)}°</span>
+        <span>S {Math.round(s0 * 100)}%</span>
+        <span>B {Math.round(v0 * 100)}%</span>
         <input
           className="hex"
-          key={value}
-          defaultValue={value}
+          key={hex}
+          defaultValue={value ?? 'none'}
           onBlur={(e) => /^#[0-9a-f]{6}$/i.test(e.target.value) && setColor(target, e.target.value.toLowerCase())}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
         />
@@ -229,44 +158,128 @@ export function ColorPanel() {
 
 export function Swatches() {
   const target = useStore((s) => s.colorTarget);
+  const value = useStore((s) => s[s.colorTarget]);
   return (
     <div className="panel-body">
+      <FillStrokeChips />
       <div className="swatch-grid">
-        <Swatch color={null} title="None" onClick={() => setColor(target, null)} />
         {SWATCHES.map((c) => (
-          <Swatch key={c} color={c} onClick={() => setColor(target, c)} />
+          <button key={c} className={'swatch' + (value === c ? ' on' : '')} title={c} style={{ background: c }} onClick={() => setColor(target, c)} />
         ))}
       </div>
     </div>
   );
 }
 
+/* ---------- stroke ---------- */
+
+export function StrokePanel() {
+  const shapes = useStore((s) => s.shapes);
+  const selection = useStore((s) => s.selection);
+  const def = useStore((s) => s.strokeWidth);
+  const one = shapes.find((s) => selection.includes(s.id));
+  const width = one ? one.strokeWidth : def;
+  const apply = (v: number) => {
+    setState({ strokeWidth: v });
+    updateSelected((s) => ({ ...s, strokeWidth: v }), 'sw');
+  };
+  return (
+    <div className="panel-body pad">
+      <div className="row">
+        <span className="lbl">Width</span>
+        <input type="range" min={0} max={40} step={0.5} value={width} onChange={(e) => apply(Number(e.target.value))} />
+        <NumField label="" value={width} suffix="pt" min={0} step={0.5} onCommit={apply} />
+      </div>
+      <div className="stroke-preview">
+        <svg viewBox="0 0 200 40" width="100%" height="40">
+          <path d="M10 28C50 0 90 40 130 14S180 10 190 20" fill="none" stroke="#d6d6d6" strokeWidth={Math.max(0.5, width)} strokeLinecap="round" />
+        </svg>
+      </div>
+      <p className="hint">{one ? `Editing ${selection.length > 1 ? 'selected objects' : one.name}` : 'Default for new objects'}</p>
+    </div>
+  );
+}
+
+/* ---------- appearance ---------- */
+
+export function Appearance() {
+  const shapes = useStore((s) => s.shapes);
+  const selection = useStore((s) => s.selection);
+  const sel = shapes.filter((s) => selection.includes(s.id));
+  const one = sel[0];
+  if (!one) return <p className="hint pad">Select an object to edit its appearance.</p>;
+  return (
+    <div className="panel-body">
+      <Section title="Fill & stroke">
+        <div className="row">
+          <span className="lbl">Fill</span>
+          <label className="swatch-input" style={{ background: one.fill ?? undefined }} data-none={!one.fill}>
+            <input type="color" value={one.fill ?? '#000000'} onChange={(e) => updateSelected((s) => ({ ...s, fill: e.target.value }), 'fill')} />
+          </label>
+          <button className="mini" title="No fill" onClick={() => updateSelected((s) => ({ ...s, fill: null }))}>∅</button>
+        </div>
+        <div className="row">
+          <span className="lbl">Stroke</span>
+          <label className="swatch-input" style={{ background: one.stroke ?? undefined }} data-none={!one.stroke}>
+            <input type="color" value={one.stroke ?? '#000000'} onChange={(e) => updateSelected((s) => ({ ...s, stroke: e.target.value }), 'stroke')} />
+          </label>
+          <button className="mini" title="No stroke" onClick={() => updateSelected((s) => ({ ...s, stroke: null }))}>∅</button>
+        </div>
+      </Section>
+      {sel.length === 1 && one.kind === 'text' && (
+        <Section title="Text">
+          <textarea id="text-content" className="textarea" rows={3} value={one.text} onChange={(e) => updateShape(one.id, { text: e.target.value }, 'text')} />
+          <NumField label="Size" value={one.fontSize} suffix="px" min={1} onCommit={(fontSize) => updateShape(one.id, { fontSize }, 'fs')} />
+        </Section>
+      )}
+    </div>
+  );
+}
+
+/* ---------- layers ---------- */
+
 export function Layers() {
   const shapes = useStore((s) => s.shapes);
   const selection = useStore((s) => s.selection);
   const [editing, setEditing] = useState<string | null>(null);
+  const one = shapes.find((s) => selection.includes(s.id));
   const list = [...shapes].reverse();
   return (
     <div className="layers">
+      <div className="layer-opts">
+        <span>Opacity</span>
+        <select
+          disabled={!one}
+          value={one ? Math.round(one.opacity * 10) * 10 : 100}
+          onChange={(e) => updateSelected((s) => ({ ...s, opacity: Number(e.target.value) / 100 }))}
+        >
+          {[100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0].map((v) => (
+            <option key={v} value={v}>{v} %</option>
+          ))}
+        </select>
+        <select disabled={!one} value={one?.blend ?? 'normal'} onChange={(e) => updateSelected((s) => ({ ...s, blend: e.target.value }))}>
+          {BLENDS.map((b) => (
+            <option key={b} value={b}>{label(b)}</option>
+          ))}
+        </select>
+      </div>
       <div className="layer-list">
         {list.length === 0 && <p className="hint">No objects yet.</p>}
         {list.map((s) => (
           <div
             key={s.id}
-            className={'layer' + (selection.includes(s.id) ? ' sel' : '')}
+            className={'layer' + (selection.includes(s.id) ? ' sel' : '') + (s.visible ? '' : ' hidden')}
             onClick={(e) => {
               if (s.locked) return;
               const sl = getState().selection;
               setState({ selection: e.shiftKey ? (sl.includes(s.id) ? sl.filter((i) => i !== s.id) : [...sl, s.id]) : [s.id] });
             }}
           >
-            <button className={'ic' + (s.visible ? '' : ' off')} title="Toggle visibility" onClick={(e) => (e.stopPropagation(), updateShape(s.id, { visible: !s.visible }))}>
-              <Eye off={!s.visible} />
-            </button>
-            <button className={'ic' + (s.locked ? ' on' : ' faint')} title="Toggle lock" onClick={(e) => (e.stopPropagation(), updateShape(s.id, { locked: !s.locked }))}>
-              <Lock on={s.locked} />
-            </button>
-            <span className="thumb" style={{ background: s.fill ?? 'transparent', borderColor: s.stroke ?? '#555' }} />
+            <span className="thumb">
+              <svg viewBox={(() => { const b = bbox(s); const pad = Math.max(b.w, b.h) * 0.08 + 1; return `${b.x - pad} ${b.y - pad} ${b.w + pad * 2} ${b.h + pad * 2}`; })()} width="22" height="22" preserveAspectRatio="xMidYMid meet">
+                <ShapeEl shape={{ ...s, visible: true, blend: 'normal' }} />
+              </svg>
+            </span>
             {editing === s.id ? (
               <input
                 className="rename"
@@ -277,20 +290,125 @@ export function Layers() {
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="name" onDoubleClick={() => setEditing(s.id)}>{s.name}</span>
+              <span className="name" onDoubleClick={() => setEditing(s.id)}>
+                {s.name}
+                <em>{s.kind === 'rect' ? 'Rectangle' : s.kind === 'ellipse' ? 'Ellipse' : s.kind === 'text' ? 'Text' : 'Curve'}</em>
+              </span>
             )}
+            <button className={'ic' + (s.locked ? ' on' : ' faint')} title="Lock" onClick={(e) => (e.stopPropagation(), updateShape(s.id, { locked: !s.locked }))}>
+              <Lock on={s.locked} />
+            </button>
+            <button className={'ic' + (s.visible ? '' : ' off')} title="Visibility" onClick={(e) => (e.stopPropagation(), updateShape(s.id, { visible: !s.visible }))}>
+              <Eye off={!s.visible} />
+            </button>
           </div>
         ))}
       </div>
       <footer className="layer-foot">
-        <span>{shapes.length} {shapes.length === 1 ? 'item' : 'items'}</span>
-        <div>
-          <button title="Duplicate (Ctrl+D)" onClick={duplicateSelected}><Duplicate /></button>
-          <button title="Delete" onClick={deleteSelected}><Trash /></button>
-        </div>
+        <button
+          title="New rectangle"
+          onClick={() => {
+            const st = getState();
+            const r = makeShape('rect', { x: st.artboard.w / 2 - 60, y: st.artboard.h / 2 - 40, w: 120, h: 80 });
+            const before = st.shapes;
+            live([...before, r], [r.id]);
+            endLive(before);
+          }}
+        >
+          {I.plusRect}
+        </button>
+        <div className="grow" />
+        <button title="Duplicate (Ctrl+D)" onClick={duplicateSelected}><Duplicate /></button>
+        <button title="Delete" onClick={deleteSelected}><Trash /></button>
       </footer>
     </div>
   );
 }
 
-export { Swatch };
+/* ---------- transform / navigator / history ---------- */
+
+export function TransformPanel() {
+  const shapes = useStore((s) => s.shapes);
+  const selection = useStore((s) => s.selection);
+  const box = unionBox(shapes.filter((s) => selection.includes(s.id)).map(bbox));
+  return (
+    <div className="panel-body pad">
+      <div className="grid2">
+        <NumField label="X" value={box?.x ?? null} suffix="px" disabled={!box} onCommit={(x) => box && setTransform(box, { x })} />
+        <NumField label="W" value={box?.w ?? null} suffix="px" min={0.01} disabled={!box} onCommit={(w) => box && setTransform(box, { w })} />
+        <NumField label="Y" value={box?.y ?? null} suffix="px" disabled={!box} onCommit={(y) => box && setTransform(box, { y })} />
+        <NumField label="H" value={box?.h ?? null} suffix="px" min={0.01} disabled={!box} onCommit={(h) => box && setTransform(box, { h })} />
+      </div>
+    </div>
+  );
+}
+
+export function Navigator() {
+  const shapes = useStore((s) => s.shapes);
+  const artboard = useStore((s) => s.artboard);
+  const zoom = useStore((s) => s.zoom);
+  const panX = useStore((s) => s.panX);
+  const panY = useStore((s) => s.panY);
+  const viewport = useStore((s) => s.viewport);
+  const ref = useRef<SVGSVGElement>(null);
+  const pad = Math.max(artboard.w, artboard.h) * 0.1;
+  const vb = { x: -pad, y: -pad, w: artboard.w + pad * 2, h: artboard.h + pad * 2 };
+  const center = (e: React.PointerEvent) => {
+    const r = ref.current!.getBoundingClientRect();
+    const scale = Math.max(vb.w / r.width, vb.h / r.height);
+    const ox = (r.width - vb.w / scale) / 2;
+    const oy = (r.height - vb.h / scale) / 2;
+    const dx = vb.x + (e.clientX - r.left - ox) * scale;
+    const dy = vb.y + (e.clientY - r.top - oy) * scale;
+    setState({ panX: viewport.w / 2 - dx * zoom, panY: viewport.h / 2 - dy * zoom });
+  };
+  return (
+    <div className="panel-body pad">
+      <svg
+        ref={ref}
+        className="nav"
+        viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
+        onPointerDown={(e) => ((e.target as Element).setPointerCapture(e.pointerId), center(e))}
+        onPointerMove={(e) => e.buttons && center(e)}
+      >
+        <rect width={artboard.w} height={artboard.h} fill="#fff" />
+        {shapes.map((s) => (
+          <ShapeEl key={s.id} shape={s} />
+        ))}
+        <rect x={-panX / zoom} y={-panY / zoom} width={viewport.w / zoom} height={viewport.h / zoom} fill="none" stroke="#ff5a4e" strokeWidth={vb.w / 120} />
+      </svg>
+      <div className="row">
+        <span className="lbl">Zoom</span>
+        <input type="range" min={5} max={800} value={Math.round(zoom * 100)} onChange={(e) => {
+          const st = getState();
+          const nz = Number(e.target.value) / 100;
+          const k = nz / st.zoom;
+          setState({ zoom: nz, panX: st.viewport.w / 2 - (st.viewport.w / 2 - st.panX) * k, panY: st.viewport.h / 2 - (st.viewport.h / 2 - st.panY) * k });
+        }} />
+        <span className="val">{Math.round(zoom * 100)}%</span>
+      </div>
+    </div>
+  );
+}
+
+export function History() {
+  const past = useStore((s) => s.past.length);
+  const future = useStore((s) => s.future.length);
+  const total = past + future;
+  return (
+    <div className="panel-body pad">
+      <div className="row">
+        <span className="lbl">Position</span>
+        <input type="range" min={0} max={total} value={past} disabled={!total} onChange={(e) => historyJump(Number(e.target.value))} />
+        <span className="val">{past}/{total}</span>
+      </div>
+      <div className="history-list">
+        {Array.from({ length: total + 1 }, (_, i) => (
+          <button key={i} className={(i === past ? 'on' : '') + (i > past ? ' future' : '')} onClick={() => historyJump(i)}>
+            {i === 0 ? 'Open document' : `Step ${i}`}
+          </button>
+        )).reverse()}
+      </div>
+    </div>
+  );
+}

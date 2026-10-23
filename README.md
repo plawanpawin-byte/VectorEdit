@@ -17,7 +17,11 @@ npm run build    # typecheck + production bundle in dist/
 - **Pen:** click to add points, drag to pull Bézier handles, click the first point to close, Enter or double-click to finish
 - **Direct selection:** move anchors and handles of paths
 - **Selection:** click, Shift-click, marquee, drag to move, 8-handle scaling (Shift keeps proportions)
-- **Panels:** Properties (transform, fill, stroke, opacity, text, arrange), Color, Swatches, Layers (visibility, lock, rename)
+- **Workspace modes:** Vector, Layout (grid on, layout tools), Draw (pen and shapes)
+- **Top bar:** undo/redo, arrange, flip, align (to artboard or selection), grid, snap to 10 px, export
+- **Panels:** Color (saturation/brightness picker + hue), Swatches, Stroke, Appearance · Layers (thumbnails, opacity, blend mode, lock, visibility, rename) · Transform, Navigator, History
+- **Text:** type directly on the canvas; double-click text to edit
+- **Document Setup:** artboard size and presets from the context bar
 - **View:** wheel to pan, Ctrl/Alt + wheel to zoom at the cursor, Space for temporary Hand, rulers, grid, fit artboard
 - **Edit:** undo/redo with coalescing, duplicate, delete, arrow-key nudging, z-order
 - **Export:** SVG and PNG (File menu)

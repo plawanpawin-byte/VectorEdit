@@ -10,6 +10,7 @@ export function ShapeEl({ shape: s }: { shape: Shape }) {
     opacity: s.opacity,
     strokeLinejoin: 'round' as const,
     strokeLinecap: 'round' as const,
+    style: s.blend !== 'normal' ? { mixBlendMode: s.blend as React.CSSProperties['mixBlendMode'] } : undefined,
   };
   switch (s.kind) {
     case 'rect':
@@ -28,7 +29,7 @@ export function ShapeEl({ shape: s }: { shape: Shape }) {
           fontFamily="Georgia, 'Times New Roman', serif"
           fill={s.fill ?? 'none'}
           opacity={s.opacity}
-          style={{ userSelect: 'none' }}
+          style={{ userSelect: 'none', mixBlendMode: s.blend as React.CSSProperties['mixBlendMode'] }}
         >
           {s.text.split('\n').map((line, i) => (
             <tspan key={i} x={s.x} dy={i === 0 ? 0 : s.fontSize * 1.2}>

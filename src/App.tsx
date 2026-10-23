@@ -21,9 +21,10 @@ import {
   zoomTo,
 } from './store';
 import { Canvas } from './components/Canvas';
-import { MenuBar } from './components/MenuBar';
-import { OptionsBar } from './components/OptionsBar';
-import { ColorPanel, Layers, Properties, Swatches } from './components/Panels';
+import { ContextBar } from './components/ContextBar';
+import { I } from './components/Icons';
+import { Appearance, ColorPanel, History, Layers, Navigator, StrokePanel, Swatches, TransformPanel } from './components/Panels';
+import { TopBar } from './components/TopBar';
 import { RulerH, RulerV, RULER } from './components/Rulers';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
@@ -110,18 +111,62 @@ function useShortcuts() {
   }, []);
 }
 
-function Dock({ tabs }: { tabs: { id: string; label: string; body: React.ReactNode }[] }) {
-  const [active, setActive] = useState(tabs[0].id);
+const SHORTCUTS: [string, string][] = [
+  ['V / A', 'Selection / Direct selection'],
+  ['P', 'Pen'],
+  ['T', 'Text'],
+  ['M / L / \\', 'Rectangle / Ellipse / Line'],
+  ['H / Space', 'Hand'],
+  ['Z', 'Zoom (Alt to zoom out)'],
+  ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / Redo'],
+  ['Ctrl+D', 'Duplicate'],
+  ['Ctrl+] / Ctrl+[', 'Forward / Backward'],
+  ['Ctrl+0 / Ctrl+1', 'Fit / 100%'],
+  ['X / Shift+X / D', 'Fill-stroke target / Swap / Defaults'],
+  ['Arrows', 'Nudge (Shift = 10 px)'],
+];
+
+function Help({ onClose }: { onClose: () => void }) {
   return (
-    <div className="dock-group">
+    <div className="modal-back" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+        <header>
+          <span>Keyboard Shortcuts</span>
+          <button className="ibtn" onClick={onClose}>{I.close}</button>
+        </header>
+        <dl>
+          {SHORTCUTS.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </div>
+  );
+}
+
+function Dock({ tabs, grow }: { tabs: { id: string; label: string; body: React.ReactNode }[]; grow?: number }) {
+  const [active, setActive] = useState(tabs[0].id);
+  const [open, setOpen] = useState(true);
+  return (
+    <div className={'dock-group' + (open ? '' : ' closed')} style={{ flexGrow: open ? grow ?? 1 : 0 }}>
       <div className="dock-tabs">
         {tabs.map((t) => (
-          <button key={t.id} className={active === t.id ? 'on' : ''} onClick={() => setActive(t.id)}>
+          <button key={t.id} className={active === t.id && open ? 'on' : ''} onClick={() => (setActive(t.id), setOpen(true))}>
             {t.label}
           </button>
         ))}
+        <div className="grow" />
+        <button className="collapse" title={open ? 'Collapse' : 'Expand'} onClick={() => setOpen(!open)}>
+          <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="1.3" style={{ transform: open ? undefined : 'rotate(-90deg)' }}>
+            <rect x="1" y="1" width="10" height="10" rx="2" />
+            <path d="M3.5 5l2.5 2.5L8.5 5" />
+          </svg>
+        </button>
       </div>
-      <div className="dock-body">{tabs.find((t) => t.id === active)!.body}</div>
+      {open && <div className="dock-body">{tabs.find((t) => t.id === active)!.body}</div>}
     </div>
   );
 }
@@ -130,18 +175,21 @@ export function App() {
   useShortcuts();
   const rulers = useStore((s) => s.rulers);
   const zoom = useStore((s) => s.zoom);
+  const [help, setHelp] = useState(false);
 
   return (
     <div className="app">
-      <MenuBar />
-      <OptionsBar />
+      <TopBar onHelp={() => setHelp(true)} />
+      <ContextBar />
       <div className="workspace-row">
         <Toolbar />
         <main className="stage">
           <div className="doc-tabs">
             <div className="doc-tab">
-              <span>Untitled-1 @ {Math.round(zoom * 100)}% (RGB/Preview)</span>
+              <span>&lt;Untitled&gt; @ {Math.round(zoom * 100)}%</span>
             </div>
+            <div className="grow" />
+            <button className="ibtn" title="Close document" onClick={newDocument}>{I.close}</button>
           </div>
           <div className="canvas-wrap" style={{ ['--ruler' as string]: rulers ? `${RULER}px` : '0px' }}>
             {rulers && (
@@ -156,16 +204,27 @@ export function App() {
         </main>
         <aside className="dock">
           <Dock
+            grow={1.1}
             tabs={[
-              { id: 'props', label: 'Properties', body: <Properties /> },
               { id: 'color', label: 'Color', body: <ColorPanel /> },
               { id: 'swatches', label: 'Swatches', body: <Swatches /> },
+              { id: 'stroke', label: 'Stroke', body: <StrokePanel /> },
+              { id: 'appearance', label: 'Appearance', body: <Appearance /> },
             ]}
           />
-          <Dock tabs={[{ id: 'layers', label: 'Layers', body: <Layers /> }]} />
+          <Dock grow={1.2} tabs={[{ id: 'layers', label: 'Layers', body: <Layers /> }]} />
+          <Dock
+            grow={0.8}
+            tabs={[
+              { id: 'transform', label: 'Transform', body: <TransformPanel /> },
+              { id: 'navigator', label: 'Navigator', body: <Navigator /> },
+              { id: 'history', label: 'History', body: <History /> },
+            ]}
+          />
         </aside>
       </div>
       <StatusBar />
+      {help && <Help onClose={() => setHelp(false)} />}
     </div>
   );
 }

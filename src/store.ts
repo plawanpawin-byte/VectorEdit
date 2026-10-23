@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { Box, Pt, Shape, ShapeKind, Tool } from './types';
+import type { Box, Mode, Pt, Shape, ShapeKind, Tool } from './types';
 import { bbox, scaleAbout, translate, unionBox } from './geometry';
 
 export interface State {
@@ -17,10 +17,13 @@ export interface State {
   colorTarget: 'fill' | 'stroke';
   rulers: boolean;
   grid: boolean;
+  snap: boolean;
+  mode: Mode;
   past: Shape[][];
   future: Shape[][];
   cursor: { x: number; y: number };
   pen: Pt[] | null;
+  editingText: string | null;
 }
 
 let counter = 0;
@@ -42,6 +45,7 @@ function seed(): Shape[] {
     stroke: null,
     strokeWidth: 1,
     opacity: 1,
+    blend: 'normal',
     visible: true,
     locked: false,
     ...p,
@@ -93,10 +97,13 @@ let state: State = {
   colorTarget: 'fill',
   rulers: true,
   grid: false,
+  snap: false,
+  mode: 'vector',
   past: [],
   future: [],
   cursor: { x: 0, y: 0 },
   pen: null,
+  editingText: null,
 };
 
 const listeners = new Set<() => void>();
@@ -206,6 +213,7 @@ export function makeShape(kind: ShapeKind, p: Partial<Shape> = {}): Shape {
     stroke: kind === 'text' ? null : (st.stroke ?? (kind === 'line' ? '#1c1c1c' : null)),
     strokeWidth: st.strokeWidth,
     opacity: 1,
+    blend: 'normal',
     visible: true,
     locked: false,
     ...p,
@@ -377,3 +385,50 @@ export function fitArtboard() {
 export function newDocument() {
   setState({ shapes: [], selection: [], past: [], future: [], pen: null });
 }
+
+/* ---------- align / flip / history ---------- */
+
+export function align(how: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom') {
+  const sel = selectedShapes().filter((s) => !s.locked);
+  if (!sel.length) return;
+  const ref: Box =
+    sel.length === 1 ? { x: 0, y: 0, w: state.artboard.w, h: state.artboard.h } : unionBox(sel.map(bbox))!;
+  const ids = new Set(sel.map((s) => s.id));
+  commit(
+    state.shapes.map((s) => {
+      if (!ids.has(s.id)) return s;
+      const b = bbox(s);
+      const dx =
+        how === 'left' ? ref.x - b.x : how === 'right' ? ref.x + ref.w - (b.x + b.w) : how === 'hcenter' ? ref.x + ref.w / 2 - (b.x + b.w / 2) : 0;
+      const dy =
+        how === 'top' ? ref.y - b.y : how === 'bottom' ? ref.y + ref.h - (b.y + b.h) : how === 'vcenter' ? ref.y + ref.h / 2 - (b.y + b.h / 2) : 0;
+      return translate(s, dx, dy);
+    }),
+  );
+}
+
+export function flip(axis: 'h' | 'v') {
+  const box = selectionBox();
+  if (!box) return;
+  const cx = box.x + box.w / 2;
+  const cy = box.y + box.h / 2;
+  updateSelected((s) => (s.kind === 'text' ? s : scaleAbout(s, axis === 'h' ? -1 : 1, axis === 'v' ? -1 : 1, cx, cy)));
+}
+
+export function historyJump(target: number) {
+  while (state.past.length > target && state.past.length) undo();
+  while (state.past.length < target && state.future.length) redo();
+}
+
+export const MODE_TOOLS: Record<Mode, Tool[]> = {
+  vector: ['select', 'direct', 'pen', 'text', 'line', 'rect', 'ellipse', 'hand', 'zoom'],
+  layout: ['select', 'text', 'rect', 'line', 'hand', 'zoom'],
+  draw: ['select', 'pen', 'line', 'ellipse', 'rect', 'hand', 'zoom'],
+};
+
+export function setMode(mode: Mode) {
+  if (!MODE_TOOLS[mode].includes(state.tool)) setTool('select');
+  setState({ mode, grid: mode === 'layout' ? true : state.grid });
+}
+
+export const snapV = (v: number) => (state.snap ? Math.round(v / 10) * 10 : v);
