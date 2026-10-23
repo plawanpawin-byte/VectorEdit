@@ -26,6 +26,7 @@ import { I } from './components/Icons';
 import { Appearance, ColorPanel, History, Layers, Navigator, SnapshotsPanel, StrokePanel, Swatches, TransformPanel } from './components/Panels';
 import { TopBar, doExport } from './components/TopBar';
 import { AssetsPanel, PagesPanel } from './components/PagesPanel';
+import { LibraryPanel } from './components/LibraryPanel';
 import { DataPanel } from './components/DataPanel';
 import { ScriptPanel } from './components/ScriptPanel';
 import { SlicesPanel } from './components/SlicesPanel';
@@ -287,6 +288,7 @@ export function App() {
                     { id: 'adjust', label: 'Adjust', body: <AdjustmentsPanel /> },
                     { id: 'filters', label: 'Filters', body: <FiltersPanel /> },
                     { id: 'selection', label: 'Selection', body: <SelectionPanel /> },
+                    ...(workspace === 'colour' ? [{ id: 'library', label: 'Library', body: <LibraryPanel /> }] : []),
                     { id: 'macros', label: 'Macros', body: <MacroPanel /> },
                     { id: 'scopes', label: 'Scopes', body: <ScopesPanel /> },
                     ...(workspace === 'retouching' ? [{ id: 'snapshots', label: 'Snapshots', body: <div className="panel-body pad"><SnapshotsPanel /></div> }] : []),

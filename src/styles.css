@@ -645,3 +645,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--sel); box-shadow
 .anchor-grid button { border-radius: 1px; background: #555; }
 .anchor-grid button:hover { background: #888; }
 .anchor-grid button.on { background: var(--sel); box-shadow: 0 0 0 1px #fff; }
+
+.library-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px 10px; }
+.library-card { display: grid; gap: 4px; text-align: center; padding: 4px; border: 1px solid var(--line-soft); border-radius: 4px; background: var(--ui-0); }
+.library-card:hover { border-color: var(--brand); }
+.library-card canvas, .library-card .ph { width: 100%; height: 74px; object-fit: cover; border-radius: 2px; background: #333; }
