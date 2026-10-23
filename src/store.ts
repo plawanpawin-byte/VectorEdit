@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import type { Box, Mode, Pt, Shape, ShapeKind, Tool } from './types';
-import { bbox, rotateShape, scaleAbout, translate, unionBox } from './geometry';
+import { bbox, rotateShape, scaleAbout, toPath, translate, unionBox } from './geometry';
+import { type BoolOp, booleanPieces, canBoolean } from './boolean';
+import { blankShape, normalizeShape } from './shape';
 
 export interface State {
   shapes: Shape[];
@@ -32,28 +34,7 @@ export interface State {
 let counter = 0;
 
 function seed(): Shape[] {
-  const base = (kind: ShapeKind, p: Partial<Shape>): Shape => ({
-    id: `s${++counter}`,
-    kind,
-    name: '',
-    x: 0,
-    y: 0,
-    w: 0,
-    h: 0,
-    radius: 0,
-    pts: [],
-    closed: false,
-    text: '',
-    fontSize: 24,
-    fill: null,
-    stroke: null,
-    strokeWidth: 1,
-    opacity: 1,
-    blend: 'normal',
-    visible: true,
-    locked: false,
-    ...p,
-  });
+  const base = (kind: ShapeKind, p: Partial<Shape>): Shape => blankShape(`s${++counter}`, kind, { fontSize: 24, ...p });
   return [
     base('rect', { name: 'Background', x: 80, y: 80, w: 640, h: 440, fill: '#f2efe8', stroke: null }),
     base('ellipse', { name: 'Sun', x: 470, y: 140, w: 160, h: 160, fill: '#f08a24', stroke: null }),
@@ -196,6 +177,8 @@ export function redo() {
 const NAMES: Record<ShapeKind, string> = {
   rect: 'Rectangle',
   ellipse: 'Ellipse',
+  polygon: 'Polygon',
+  star: 'Star',
   line: 'Line',
   path: 'Path',
   text: 'Text',
@@ -204,28 +187,16 @@ const NAMES: Record<ShapeKind, string> = {
 export function makeShape(kind: ShapeKind, p: Partial<Shape> = {}): Shape {
   const st = state;
   const count = st.shapes.filter((s) => s.kind === kind).length + 1;
-  return {
-    id: `s${++counter}`,
-    kind,
+  const isLine = kind === 'line';
+  return blankShape(`s${++counter}`, kind, {
     name: `${NAMES[kind]} ${count}`,
-    x: 0,
-    y: 0,
-    w: 0,
-    h: 0,
-    radius: 0,
-    pts: [],
-    closed: false,
     text: 'Type here',
-    fontSize: 24,
-    fill: kind === 'line' ? null : st.fill,
-    stroke: kind === 'text' ? null : (st.stroke ?? (kind === 'line' ? '#1c1c1c' : null)),
+    sides: kind === 'star' ? st.starPoints : st.sides,
+    fill: isLine ? null : st.fill,
+    stroke: kind === 'text' ? null : (st.stroke ?? (isLine ? '#1c1c1c' : null)),
     strokeWidth: st.strokeWidth,
-    opacity: 1,
-    blend: 'normal',
-    visible: true,
-    locked: false,
     ...p,
-  };
+  });
 }
 
 export function selectedShapes(): Shape[] {
@@ -394,7 +365,8 @@ export function newDocument() {
   setState({ shapes: [], selection: [], past: [], future: [], pen: null, filePath: null });
 }
 
-export function loadDocument(shapes: Shape[], artboard: { w: number; h: number }, filePath: string | null) {
+export function loadDocument(raw: unknown[], artboard: { w: number; h: number }, filePath: string | null) {
+  const shapes = raw.map(normalizeShape).filter((x): x is Shape => x !== null);
   // keep generated ids unique against the loaded ones
   counter = Math.max(counter, ...shapes.map((s) => Number(/^s(\d+)$/.exec(s.id)?.[1] ?? 0)));
   setState({ shapes, artboard, selection: [], past: [], future: [], pen: null, editingText: null, filePath });
@@ -459,3 +431,71 @@ export function setMode(mode: Mode) {
 }
 
 export const snapV = (v: number) => (state.snap ? Math.round(v / 10) * 10 : v);
+
+/* ---------- groups ---------- */
+
+let groupCounter = 0;
+
+export function expandToGroups(ids: string[], shapes: Shape[] = state.shapes): string[] {
+  const groups = new Set(shapes.filter((s) => ids.includes(s.id) && s.group).map((s) => s.group));
+  if (!groups.size) return ids;
+  return Array.from(new Set([...ids, ...shapes.filter((s) => s.group && groups.has(s.group)).map((s) => s.id)]));
+}
+
+export function groupSelected() {
+  const sel = new Set(state.selection);
+  const members = state.shapes.filter((s) => sel.has(s.id) && !s.locked);
+  if (members.length < 2) return;
+  const gid = `g${Date.now().toString(36)}${++groupCounter}`;
+  const topIndex = Math.max(...members.map((m) => state.shapes.indexOf(m)));
+  const ids = new Set(members.map((m) => m.id));
+  const rest = state.shapes.filter((s) => !ids.has(s.id));
+  // keep the group's members together, at the position of its top-most member
+  const before = state.shapes.slice(0, topIndex + 1).filter((s) => !ids.has(s.id)).length;
+  const grouped = members.map((m) => ({ ...m, group: gid }));
+  commit([...rest.slice(0, before), ...grouped, ...rest.slice(before)], { selection: grouped.map((g) => g.id) });
+}
+
+export function ungroupSelected() {
+  const groups = new Set(state.shapes.filter((s) => state.selection.includes(s.id) && s.group).map((s) => s.group));
+  if (!groups.size) return;
+  commit(state.shapes.map((s) => (s.group && groups.has(s.group) ? { ...s, group: null } : s)));
+}
+
+/* ---------- curves & boolean ---------- */
+
+export function convertToCurves() {
+  updateSelected((s) => (s.kind === 'text' ? s : toPath(s)));
+}
+
+/** Returns false when fewer than two eligible shapes are selected. */
+export function booleanOp(op: BoolOp): boolean {
+  const sel = new Set(state.selection);
+  const ordered = state.shapes.filter((s) => sel.has(s.id) && canBoolean(s));
+  if (ordered.length < 2) return false;
+  const pieces = booleanPieces(ordered, op);
+  const style = ordered[0];
+  const ids = new Set(ordered.map((s) => s.id));
+  const made = pieces.map((piece, i) =>
+    makeShape('path', {
+      name: pieces.length > 1 ? `${op === 'subtract' ? 'Subtract' : op[0].toUpperCase() + op.slice(1)} ${i + 1}` : op[0].toUpperCase() + op.slice(1),
+      closed: true,
+      pts: piece.outer,
+      extra: piece.holes,
+      fill: style.fill,
+      gradient: style.gradient,
+      stroke: style.stroke,
+      strokeWidth: style.strokeWidth,
+      dash: style.dash,
+      cap: style.cap,
+      join: style.join,
+      opacity: style.opacity,
+      effects: style.effects,
+    }),
+  );
+  const at = Math.min(...ordered.map((s) => state.shapes.indexOf(s)));
+  const rest = state.shapes.filter((s) => !ids.has(s.id));
+  const insertAt = state.shapes.slice(0, at).filter((s) => !ids.has(s.id)).length;
+  commit([...rest.slice(0, insertAt), ...made, ...rest.slice(insertAt)], { selection: made.map((m) => m.id) });
+  return true;
+}

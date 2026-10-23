@@ -9,6 +9,7 @@ Everything (UI, tools, state) is original code: React, TypeScript and plain CSS,
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # typecheck + production bundle in dist/
+npm test         # unit tests (geometry, boolean ops, history, groups)
 ```
 
 ## Desktop app (Electron)
@@ -30,6 +31,13 @@ Installers for Windows are best built on Windows, macOS ones on macOS.
 - **Pen:** click to add points, drag to pull Bézier handles, click the first point to close, Enter or double-click to finish
 - **Direct selection:** move anchors and handles of paths
 - **Selection:** click, Shift-click, marquee, drag to move, 8-handle scaling (Shift keeps proportions)
+- **Tools (15):** Selection, Direct Selection, Rotate, Pen, Pencil, Type, Line, Rectangle, Rounded Rectangle, Ellipse, Polygon, Star, Eyedropper, Hand, Zoom
+- **Parametric shapes:** polygon sides, star points and inner radius, rectangle corner radius stay editable after drawing; Direct Selection or *Convert to Curves* turns them into paths
+- **Boolean operations:** add, subtract, intersect, exclude (results keep holes)
+- **Groups:** Ctrl+G / Shift+Ctrl+G, selecting one member selects the group
+- **Fill and stroke:** solid, linear and radial gradients; dashed/dotted lines; caps and joins
+- **Effects:** stackable drop shadow, outer glow and gaussian blur per object
+- **Safety:** the document is autosaved in the browser and restored on reload; a crash screen offers to discard a bad autosave
 - **Workspace modes:** Vector, Layout (grid on, layout tools), Draw (pen and shapes)
 - **Top bar:** undo/redo, arrange, flip, align (to artboard or selection), grid, snap to 10 px, export
 - **Panels:** Color (saturation/brightness picker + hue), Swatches, Stroke, Appearance · Layers (thumbnails, opacity, blend mode, lock, visibility, rename) · Transform, Navigator, History
@@ -62,4 +70,4 @@ src/
 
 ## Not yet
 
-Boolean path operations, gradients, groups, multiple artboards, clipping masks, code signing and auto-update for the desktop build.
+Multiple artboards, guides, clipping masks, path text, brushes, code signing and auto-update for the desktop build.

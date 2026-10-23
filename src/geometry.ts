@@ -1,19 +1,29 @@
-import type { Box, Shape } from './types';
+import type { Box, Pt, Shape } from './types';
 
 interface P2 {
   x: number;
   y: number;
 }
 
-export function flatten(s: Shape, steps = 14): P2[] {
+/** Anchor list of a shape; polygons and stars are generated from their box and parameters. */
+export function ptsOf(s: Shape): Pt[] {
+  if (s.kind === 'polygon') return ngonPts(s, Math.max(3, Math.round(s.sides ?? 6)), null);
+  if (s.kind === 'star') return ngonPts(s, Math.max(3, Math.round(s.sides ?? 5)), clamp01(s.inner ?? 0.5));
+  return s.pts ?? [];
+}
+
+const clamp01 = (n: number) => Math.max(0.05, Math.min(0.95, n));
+const isClosed = (s: Shape) => s.closed || s.kind === 'polygon' || s.kind === 'star';
+
+function flattenRing(pts: Pt[], closed: boolean, steps: number): P2[] {
   const out: P2[] = [];
-  const n = s.pts.length;
+  const n = pts.length;
   if (!n) return out;
-  out.push({ x: s.pts[0].x, y: s.pts[0].y });
-  const segs = s.closed ? n : n - 1;
+  out.push({ x: pts[0].x, y: pts[0].y });
+  const segs = closed ? n : n - 1;
   for (let i = 0; i < segs; i++) {
-    const a = s.pts[i];
-    const b = s.pts[(i + 1) % n];
+    const a = pts[i];
+    const b = pts[(i + 1) % n];
     if (!a.hx && !a.hy && !b.hx && !b.hy) {
       out.push({ x: b.x, y: b.y });
       continue;
@@ -34,6 +44,18 @@ export function flatten(s: Shape, steps = 14): P2[] {
   return out;
 }
 
+export function flatten(s: Shape, steps = 14): P2[] {
+  return flattenRing(ptsOf(s), isClosed(s), steps);
+}
+
+/** Flattened closed rings of a shape (outer contour first, then extras). */
+export function rings(s: Shape, steps = 14): P2[][] {
+  const t = toPath(s);
+  const main = flattenRing(ptsOf(t), true, steps);
+  const extra = (t.extra ?? []).map((r) => flattenRing(r, true, steps));
+  return [main, ...extra].filter((r) => r.length >= 3);
+}
+
 export function textBox(s: Shape): Box {
   const lines = s.text.split('\n');
   const longest = Math.max(1, ...lines.map((l) => l.length));
@@ -41,9 +63,9 @@ export function textBox(s: Shape): Box {
 }
 
 export function bbox(s: Shape): Box {
-  if (s.kind === 'rect' || s.kind === 'ellipse') return { x: s.x, y: s.y, w: s.w, h: s.h };
+  if (s.kind === 'rect' || s.kind === 'ellipse' || s.kind === 'polygon' || s.kind === 'star') return { x: s.x, y: s.y, w: s.w, h: s.h };
   if (s.kind === 'text') return textBox(s);
-  const pts = flatten(s);
+  const pts = [...flatten(s), ...(s.extra ?? []).flatMap((r) => flattenRing(r, true, 14))];
   if (!pts.length) return { x: 0, y: 0, w: 0, h: 0 };
   let x0 = Infinity;
   let y0 = Infinity;
@@ -79,6 +101,7 @@ export function translate(s: Shape, dx: number, dy: number): Shape {
     x: s.x + dx,
     y: s.y + dy,
     pts: s.pts.map((p) => ({ ...p, x: p.x + dx, y: p.y + dy })),
+    extra: (s.extra ?? []).map((r) => r.map((p) => ({ ...p, x: p.x + dx, y: p.y + dy }))),
   };
 }
 
@@ -102,32 +125,39 @@ export function scaleAbout(s: Shape, sx: number, sy: number, ox: number, oy: num
     w,
     h,
     fontSize: s.kind === 'text' ? Math.max(1, s.fontSize * Math.abs(sy)) : s.fontSize,
-    pts: s.pts.map((p) => ({
-      x: ox + (p.x - ox) * sx,
-      y: oy + (p.y - oy) * sy,
-      hx: p.hx * sx,
-      hy: p.hy * sy,
-    })),
+    pts: s.pts.map((p) => scalePt(p, sx, sy, ox, oy)),
+    extra: (s.extra ?? []).map((ring) => ring.map((p) => scalePt(p, sx, sy, ox, oy))),
   };
 }
 
+const scalePt = (p: Pt, sx: number, sy: number, ox: number, oy: number): Pt => ({
+  x: ox + (p.x - ox) * sx,
+  y: oy + (p.y - oy) * sy,
+  hx: p.hx * sx,
+  hy: p.hy * sy,
+});
+
 const r = (n: number) => Math.round(n * 100) / 100;
 
-export function pathD(s: Shape): string {
-  const n = s.pts.length;
+function ringD(pts: Pt[], closed: boolean): string {
+  const n = pts.length;
   if (!n) return '';
-  let d = `M${r(s.pts[0].x)} ${r(s.pts[0].y)}`;
-  const segs = s.closed ? n : n - 1;
+  let d = `M${r(pts[0].x)} ${r(pts[0].y)}`;
+  const segs = closed ? n : n - 1;
   for (let i = 0; i < segs; i++) {
-    const a = s.pts[i];
-    const b = s.pts[(i + 1) % n];
+    const a = pts[i];
+    const b = pts[(i + 1) % n];
     if (!a.hx && !a.hy && !b.hx && !b.hy) {
       d += `L${r(b.x)} ${r(b.y)}`;
     } else {
       d += `C${r(a.x + a.hx)} ${r(a.y + a.hy)} ${r(b.x - b.hx)} ${r(b.y - b.hy)} ${r(b.x)} ${r(b.y)}`;
     }
   }
-  return s.closed ? d + 'Z' : d;
+  return closed ? d + 'Z' : d;
+}
+
+export function pathD(s: Shape): string {
+  return ringD(ptsOf(s), isClosed(s)) + (s.extra ?? []).map((ring) => ringD(ring, true)).join('');
 }
 
 function distToSeg(px: number, py: number, a: P2, b: P2): number {
@@ -156,7 +186,7 @@ export function hitTest(s: Shape, x: number, y: number, tol: number): boolean {
   if (s.kind === 'rect') {
     const inOuter = x >= s.x - half && x <= s.x + s.w + half && y >= s.y - half && y <= s.y + s.h + half;
     if (!inOuter) return false;
-    if (s.fill) return true;
+    if (s.fill || s.gradient) return true;
     return !(x > s.x + half && x < s.x + s.w - half && y > s.y + half && y < s.y + s.h - half);
   }
   if (s.kind === 'ellipse') {
@@ -166,7 +196,7 @@ export function hitTest(s: Shape, x: number, y: number, tol: number): boolean {
     const nx = (x - (s.x + rx)) / (rx + half);
     const ny = (y - (s.y + ry)) / (ry + half);
     if (nx * nx + ny * ny > 1) return false;
-    if (s.fill) return true;
+    if (s.fill || s.gradient) return true;
     const ix = (x - (s.x + rx)) / Math.max(1, rx - half);
     const iy = (y - (s.y + ry)) / Math.max(1, ry - half);
     return ix * ix + iy * iy >= 1;
@@ -175,12 +205,18 @@ export function hitTest(s: Shape, x: number, y: number, tol: number): boolean {
     const b = textBox(s);
     return x >= b.x - tol && x <= b.x + b.w + tol && y >= b.y - tol && y <= b.y + b.h + tol;
   }
-  const pts = flatten(s);
-  if (s.closed && s.fill && inPolygon(x, y, pts)) return true;
-  for (let i = 0; i < pts.length - 1; i++) {
-    if (distToSeg(x, y, pts[i], pts[i + 1]) <= half) return true;
+  const all = [flatten(s), ...(s.extra ?? []).map((ring) => flattenRing(ring, true, 14))];
+  const closed = isClosed(s);
+  if (closed && (s.fill || s.gradient)) {
+    const hits = all.filter((ring) => inPolygon(x, y, ring)).length;
+    if (hits % 2 === 1) return true;
   }
-  if (s.closed && pts.length > 1 && distToSeg(x, y, pts[pts.length - 1], pts[0]) <= half) return true;
+  for (const pts of all) {
+    for (let i = 0; i < pts.length - 1; i++) {
+      if (distToSeg(x, y, pts[i], pts[i + 1]) <= half) return true;
+    }
+    if (closed && pts.length > 1 && distToSeg(x, y, pts[pts.length - 1], pts[0]) <= half) return true;
+  }
   return false;
 }
 
@@ -192,6 +228,7 @@ const KAPPA = 0.5522847498;
 
 /** Turn rectangles and ellipses into editable paths; other kinds are returned unchanged. */
 export function toPath(s: Shape): Shape {
+  if (s.kind === 'polygon' || s.kind === 'star') return { ...s, kind: 'path', closed: true, pts: ptsOf(s) };
   if (s.kind === 'rect') {
     const { x, y, w, h } = s;
     const pt = (px: number, py: number) => ({ x: px, y: py, hx: 0, hy: 0 });
@@ -223,24 +260,22 @@ export function rotateShape(s: Shape, deg: number, cx: number, cy: number): Shap
   const cos = Math.cos(a);
   const sin = Math.sin(a);
   const p = toPath(s);
-  return {
-    ...p,
-    pts: p.pts.map((q) => ({
-      x: cx + (q.x - cx) * cos - (q.y - cy) * sin,
-      y: cy + (q.x - cx) * sin + (q.y - cy) * cos,
-      hx: q.hx * cos - q.hy * sin,
-      hy: q.hx * sin + q.hy * cos,
-    })),
-  };
+  const rot = (q: Pt): Pt => ({
+    x: cx + (q.x - cx) * cos - (q.y - cy) * sin,
+    y: cy + (q.x - cx) * sin + (q.y - cy) * cos,
+    hx: q.hx * cos - q.hy * sin,
+    hy: q.hx * sin + q.hy * cos,
+  });
+  return { ...p, pts: p.pts.map(rot), extra: (p.extra ?? []).map((ring) => ring.map(rot)) };
 }
 
 /** Regular polygon or star inscribed in the box. */
-export function ngonPts(b: Box, points: number, inner: number | null) {
+export function ngonPts(b: Box, points: number, inner: number | null): Pt[] {
   const rx = b.w / 2;
   const ry = b.h / 2;
   const cx = b.x + rx;
   const cy = b.y + ry;
-  const out = [];
+  const out: Pt[] = [];
   const n = inner === null ? points : points * 2;
   for (let i = 0; i < n; i++) {
     const k = inner === null ? 1 : i % 2 === 0 ? 1 : inner;

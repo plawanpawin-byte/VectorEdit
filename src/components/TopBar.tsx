@@ -5,15 +5,20 @@ import {
   arrange,
   deleteSelected,
   duplicateSelected,
+  booleanOp,
+  convertToCurves,
   fitArtboard,
   flip,
   getState,
+  groupSelected,
   newDocument,
   redo,
+  rotateSelection,
   selectAll,
   setMode,
   setState,
   undo,
+  ungroupSelected,
   updateSelected,
   useStore,
   zoomAt,
@@ -75,6 +80,7 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
   const grid = useStore((s) => s.grid);
   const snap = useStore((s) => s.snap);
   const hasSel = useStore((s) => s.selection.length > 0);
+  const sel = useStore((s) => s.selection.length);
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
 
@@ -92,6 +98,11 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
     { label: 'Select All', shortcut: 'Ctrl+A', action: selectAll },
     { label: 'Deselect', shortcut: 'Esc', action: () => setState({ selection: [] }) },
     { label: 'Object', head: true },
+    { label: 'Group', shortcut: 'Ctrl+G', action: groupSelected },
+    { label: 'Ungroup', shortcut: 'Shift+Ctrl+G', action: ungroupSelected },
+    { label: 'Convert to Curves', action: convertToCurves },
+    { label: 'Rotate 90° Clockwise', action: () => rotateSelection(90) },
+    { label: 'Rotate 90° Counter-clockwise', action: () => rotateSelection(-90) },
     { label: 'Lock Selection', action: () => (updateSelected((s) => ({ ...s, locked: true })), setState({ selection: [] })) },
     { label: 'Unlock All', action: () => setState({ shapes: getState().shapes.map((s) => ({ ...s, locked: false })) }) },
     { label: 'Hide Selection', action: () => (updateSelected((s) => ({ ...s, visible: false })), setState({ selection: [] })) },
@@ -150,6 +161,16 @@ export function TopBar({ onHelp }: { onHelp: () => void }) {
       <div className="seg">
         <button className="ibtn" title="Flip Horizontal" disabled={!hasSel} onClick={() => flip('h')}>{I.flipH}</button>
         <button className="ibtn" title="Flip Vertical" disabled={!hasSel} onClick={() => flip('v')}>{I.flipV}</button>
+      </div>
+      <div className="seg">
+        <button className="ibtn" title="Add (union)" disabled={sel < 2} onClick={() => booleanOp('union')}>{I.union}</button>
+        <button className="ibtn" title="Subtract (front objects cut the back one)" disabled={sel < 2} onClick={() => booleanOp('subtract')}>{I.subtract}</button>
+        <button className="ibtn" title="Intersect" disabled={sel < 2} onClick={() => booleanOp('intersect')}>{I.intersect}</button>
+        <button className="ibtn" title="Exclude (xor)" disabled={sel < 2} onClick={() => booleanOp('xor')}>{I.xor}</button>
+      </div>
+      <div className="seg">
+        <button className="ibtn" title="Group (Ctrl+G)" disabled={sel < 2} onClick={groupSelected}>{I.group}</button>
+        <button className="ibtn" title="Ungroup (Shift+Ctrl+G)" disabled={!hasSel} onClick={ungroupSelected}>{I.ungroup}</button>
       </div>
       <Popover button={I.alignL} title="Align">
         {() => (

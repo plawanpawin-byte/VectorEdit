@@ -19,6 +19,9 @@ export function ContextBar() {
   const stroke = useStore((s) => s.stroke);
   const strokeWidth = useStore((s) => s.strokeWidth);
   const artboard = useStore((s) => s.artboard);
+  const tool = useStore((s) => s.tool);
+  const sides = useStore((s) => s.sides);
+  const starPoints = useStore((s) => s.starPoints);
   const sel = shapes.filter((s) => selection.includes(s.id));
   const box = unionBox(sel.map(bbox));
 
@@ -74,6 +77,12 @@ export function ContextBar() {
         <input type="color" value={stroke ?? '#000000'} onChange={(e) => setColor('stroke', e.target.value)} />
       </label>
       <NumField label="" value={strokeWidth} suffix="pt" min={0} step={0.5} onCommit={(v) => setState({ strokeWidth: v })} />
+      {tool === 'polygon' && (
+        <NumField label="Sides" value={sides} min={3} onCommit={(v) => setState({ sides: Math.max(3, Math.min(60, Math.round(v))) })} />
+      )}
+      {tool === 'star' && (
+        <NumField label="Points" value={starPoints} min={3} onCommit={(v) => setState({ starPoints: Math.max(3, Math.min(60, Math.round(v))) })} />
+      )}
       {box && (
         <>
           <i className="vr" />

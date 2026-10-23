@@ -5,12 +5,18 @@ import { SwapArrows, toolIcons } from './Icons';
 const TOOLS: { id: Tool; label: string; key: string; gap?: boolean }[] = [
   { id: 'select', label: 'Selection Tool', key: 'V' },
   { id: 'direct', label: 'Direct Selection Tool', key: 'A' },
+  { id: 'rotate', label: 'Rotate Tool', key: 'R' },
   { id: 'pen', label: 'Pen Tool', key: 'P', gap: true },
+  { id: 'pencil', label: 'Pencil Tool', key: 'N' },
   { id: 'text', label: 'Type Tool', key: 'T' },
   { id: 'line', label: 'Line Segment Tool', key: '\\' },
-  { id: 'rect', label: 'Rectangle Tool', key: 'M' },
+  { id: 'rect', label: 'Rectangle Tool', key: 'M', gap: true },
+  { id: 'rrect', label: 'Rounded Rectangle Tool', key: 'U' },
   { id: 'ellipse', label: 'Ellipse Tool', key: 'L' },
-  { id: 'hand', label: 'Hand Tool', key: 'H', gap: true },
+  { id: 'polygon', label: 'Polygon Tool', key: 'Y' },
+  { id: 'star', label: 'Star Tool', key: 'S' },
+  { id: 'eyedropper', label: 'Eyedropper Tool', key: 'I', gap: true },
+  { id: 'hand', label: 'Hand Tool', key: 'H' },
   { id: 'zoom', label: 'Zoom Tool', key: 'Z' },
 ];
 

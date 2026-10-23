@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Box, Pt, Shape } from '../types';
-import { bbox, boxesIntersect, hitTest, pathD, scaleAbout, translate, unionBox } from '../geometry';
+import { bbox, boxesIntersect, hitTest, pathD, rotateShape, scaleAbout, smoothStroke, toPath, translate, unionBox } from '../geometry';
 import {
   commit,
   endLive,
+  expandToGroups,
   fitArtboard,
   getState,
   live,
@@ -12,6 +13,7 @@ import {
   penDragLast,
   penDropLast,
   penFinish,
+  setColor,
   setState,
   setTool,
   snapV,
@@ -28,7 +30,9 @@ type Drag =
   | { k: 'move'; start: XY; orig: Map<string, Shape>; before: Shape[] }
   | { k: 'resize'; h: string; box: Box; orig: Map<string, Shape>; before: Shape[] }
   | { k: 'marquee'; start: XY; base: string[] }
-  | { k: 'create'; kind: 'rect' | 'ellipse' | 'line'; start: XY; id: string; before: Shape[] }
+  | { k: 'create'; kind: 'rect' | 'rrect' | 'ellipse' | 'polygon' | 'star' | 'line'; start: XY; id: string; before: Shape[] }
+  | { k: 'pencil'; raw: XY[] }
+  | { k: 'rotate'; center: XY; startAngle: number; orig: Map<string, Shape>; before: Shape[] }
   | { k: 'anchor'; id: string; i: number; part: 'p' | 'out' | 'in'; before: Shape[] }
   | { k: 'pen' };
 
@@ -75,6 +79,7 @@ export function Canvas() {
   const space = useRef(false);
   const [marquee, setMarquee] = useState<Box | null>(null);
   const [panning, setPanning] = useState(false);
+  const [pencil, setPencil] = useState<XY[] | null>(null);
 
   const shapes = useStore((s) => s.shapes);
   const selection = useStore((s) => s.selection);
@@ -210,14 +215,52 @@ export function Canvas() {
       return;
     }
 
-    if (st.tool === 'rect' || st.tool === 'ellipse' || st.tool === 'line') {
+    if (st.tool === 'eyedropper') {
+      for (let i = st.shapes.length - 1; i >= 0; i--) {
+        const src = st.shapes[i];
+        if (hitTest(src, p.x, p.y, tol)) {
+          setState({ strokeWidth: src.strokeWidth });
+          setColor('fill', src.fill);
+          setColor('stroke', src.stroke);
+          break;
+        }
+      }
+      return;
+    }
+
+    if (st.tool === 'pencil') {
+      penFinish(false);
+      setPencil([p]);
+      drag.current = { k: 'pencil', raw: [p] };
+      return;
+    }
+
+    if (st.tool === 'rotate') {
+      const sel = st.shapes.filter((s) => st.selection.includes(s.id) && !s.locked && s.kind !== 'text');
+      const box = unionBox(sel.map(bbox));
+      if (!box) return;
+      const center = { x: box.x + box.w / 2, y: box.y + box.h / 2 };
+      drag.current = {
+        k: 'rotate',
+        center,
+        startAngle: Math.atan2(p.y - center.y, p.x - center.x),
+        orig: new Map(sel.map((s) => [s.id, s])),
+        before: st.shapes,
+      };
+      return;
+    }
+
+    if (['rect', 'rrect', 'ellipse', 'polygon', 'star', 'line'].includes(st.tool)) {
       const before = st.shapes;
+      const tool = st.tool as 'rect' | 'rrect' | 'ellipse' | 'polygon' | 'star' | 'line';
       const shape =
-        st.tool === 'line'
+        tool === 'line'
           ? makeShape('line', { pts: [{ x: p.x, y: p.y, hx: 0, hy: 0 }, { x: p.x, y: p.y, hx: 0, hy: 0 }] })
-          : makeShape(st.tool, { x: p.x, y: p.y });
+          : tool === 'rrect'
+            ? makeShape('rect', { x: p.x, y: p.y, radius: 16 })
+            : makeShape(tool, { x: p.x, y: p.y });
       live([...before, shape], [shape.id]);
-      drag.current = { k: 'create', kind: st.tool, start: p, id: shape.id, before };
+      drag.current = { k: 'create', kind: tool, start: p, id: shape.id, before };
       return;
     }
 
@@ -246,11 +289,18 @@ export function Canvas() {
         break;
       }
     }
+    if (hit && st.tool === 'direct' && hit.kind !== 'path' && hit.kind !== 'line' && hit.kind !== 'text') {
+      // editing nodes needs real curves: convert the parametric shape first
+      const conv = toPath(hit);
+      commit(st.shapes.map((s) => (s.id === hit!.id ? conv : s)), { selection: [hit.id] });
+      return;
+    }
     if (hit) {
       let sel = st.selection;
-      if (e.shiftKey) sel = sel.includes(hit.id) ? sel.filter((i) => i !== hit!.id) : [...sel, hit.id];
-      else if (!sel.includes(hit.id)) sel = [hit.id];
-      setState({ selection: sel });
+      const members = expandToGroups([hit.id], st.shapes);
+      if (e.shiftKey) sel = sel.includes(hit.id) ? sel.filter((i) => !members.includes(i)) : [...sel, ...members];
+      else if (!sel.includes(hit.id)) sel = members;
+      setState({ selection: Array.from(new Set(sel)) });
       const moving = st.shapes.filter((s) => sel.includes(s.id) && !s.locked);
       drag.current = { k: 'move', start: p, orig: new Map(moving.map((s) => [s.id, s])), before: st.shapes };
     } else {
@@ -300,6 +350,16 @@ export function Canvas() {
         sy = Math.sign(sy || 1) * m;
       }
       live(st.shapes.map((s) => (d.orig.has(s.id) ? scaleAbout(d.orig.get(s.id)!, sx, sy, ax, ay) : s)));
+    } else if (d.k === 'pencil') {
+      const last = d.raw[d.raw.length - 1];
+      if (Math.hypot(p.x - last.x, p.y - last.y) > 2 / st.zoom) {
+        d.raw.push(p);
+        setPencil(d.raw.slice());
+      }
+    } else if (d.k === 'rotate') {
+      let deg = ((Math.atan2(p.y - d.center.y, p.x - d.center.x) - d.startAngle) * 180) / Math.PI;
+      if (e.shiftKey) deg = Math.round(deg / 15) * 15;
+      live(st.shapes.map((s) => (d.orig.has(s.id) ? rotateShape(d.orig.get(s.id)!, deg, d.center.x, d.center.y) : s)));
     } else if (d.k === 'create') {
       let x1 = p.x;
       let y1 = p.y;
@@ -359,7 +419,15 @@ export function Canvas() {
     setPanning(false);
     if (!d) return;
     const st = getState();
-    if (d.k === 'move' || d.k === 'resize' || d.k === 'anchor') endLive(d.before);
+    if (d.k === 'move' || d.k === 'resize' || d.k === 'anchor' || d.k === 'rotate') endLive(d.before);
+    if (d.k === 'pencil') {
+      setPencil(null);
+      if (d.raw.length > 2) {
+        const pts = smoothStroke(d.raw, 1.5 / st.zoom);
+        const shape = makeShape('path', { pts, closed: false, fill: null, stroke: st.stroke ?? '#1c1c1c' });
+        commit([...st.shapes, shape], { selection: [shape.id] });
+      }
+    }
     if (d.k === 'create') {
       const made = st.shapes.find((s) => s.id === d.id);
       const b = made ? bbox(made) : null;
@@ -414,7 +482,7 @@ export function Canvas() {
             const b = bbox(s);
             return (
               <g key={s.id} pointerEvents="none">
-                {s.kind === 'path' || s.kind === 'line' ? (
+                {s.kind === 'path' || s.kind === 'line' || s.kind === 'polygon' || s.kind === 'star' ? (
                   <path d={pathD(s)} fill="none" stroke="#2d8cf0" strokeWidth={1.5 * k} />
                 ) : (
                   <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="none" stroke="#2d8cf0" strokeWidth={1.5 * k} />
@@ -496,6 +564,10 @@ export function Canvas() {
                 <rect key={i} x={pt.x - 3 * k} y={pt.y - 3 * k} width={6 * k} height={6 * k} fill={i === 0 ? '#fff' : '#2d8cf0'} stroke="#2d8cf0" strokeWidth={k} />
               ))}
             </g>
+          )}
+
+          {pencil && pencil.length > 1 && (
+            <path d={`M${pencil.map((q) => `${q.x} ${q.y}`).join('L')}`} fill="none" stroke="#2d8cf0" strokeWidth={1.5 * k} strokeLinejoin="round" pointerEvents="none" />
           )}
 
           {marquee && (

@@ -6,6 +6,8 @@ import {
   duplicateSelected,
   fitArtboard,
   getState,
+  groupSelected,
+  MODE_TOOLS,
   newDocument,
   penCancel,
   penFinish,
@@ -14,6 +16,7 @@ import {
   setState,
   setTool,
   swapColors,
+  ungroupSelected,
   undo,
   updateSelected,
   useStore,
@@ -40,6 +43,12 @@ const TOOL_KEYS: Record<string, Tool> = {
   t: 'text',
   h: 'hand',
   z: 'zoom',
+  n: 'pencil',
+  u: 'rrect',
+  y: 'polygon',
+  s: 'star',
+  r: 'rotate',
+  i: 'eyedropper',
 };
 
 function useShortcuts() {
@@ -66,6 +75,7 @@ function useShortcuts() {
           ']': () => arrange(e.shiftKey ? 'front' : 'forward'),
           '[': () => arrange(e.shiftKey ? 'back' : 'backward'),
           n: newDocument,
+          g: () => (e.shiftKey ? ungroupSelected() : groupSelected()),
           ...(isDesktop() ? {} : { s: () => saveDoc(e.shiftKey), o: openDoc }),
         };
         const fn = map[key];
@@ -106,7 +116,7 @@ function useShortcuts() {
       if (key === 'x') return setState({ colorTarget: st.colorTarget === 'fill' ? 'stroke' : 'fill' });
       if (key === 'd') return resetColors();
       const tool = TOOL_KEYS[key];
-      if (tool) setTool(tool);
+      if (tool && MODE_TOOLS[st.mode].includes(tool)) setTool(tool);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

@@ -10,6 +10,12 @@ const HINTS: Record<string, string> = {
   ellipse: '**Drag** to draw an ellipse. **Shift** constrains to a circle.',
   line: '**Drag** to draw a line. **Shift** snaps to 45°.',
   text: '**Click** on the page to place text, then type in the Appearance panel.',
+  pencil: '**Drag** to draw freehand. The stroke is simplified into smooth curves.',
+  rrect: '**Drag** to draw a rounded rectangle. Change the corner radius in Appearance.',
+  polygon: '**Drag** to draw a polygon. Change the number of sides in the context bar or Appearance.',
+  star: '**Drag** to draw a star. Change points and inner radius in Appearance.',
+  rotate: '**Drag** around the selection to rotate it. **Shift** snaps to 15°.',
+  eyedropper: '**Click** an object to copy its fill and stroke to the selection and to new objects.',
   hand: '**Drag** to pan. **Space** gives the Hand tool from any tool.',
   zoom: '**Click** to zoom in. **Alt-click** to zoom out. **Ctrl+wheel** zooms at the cursor.',
 };

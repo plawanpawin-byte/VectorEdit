@@ -24,6 +24,17 @@ export const toolIcons: Record<Tool, ReactNode> = {
   hand: svg(
     <path d="M7 10V5.2a1.1 1.1 0 012.2 0V9m0-4.3a1.1 1.1 0 012.2 0V9m0-3a1.1 1.1 0 012.2 0v4.6c0 3-1.7 5-4.3 5-2 0-3.1-.9-4.3-2.7L3.8 11a1.1 1.1 0 011.8-1.2L7 11.5" />,
   ),
+  pencil: svg(<path d="M4 16l1.2-3.8L13.6 3.8a1.6 1.6 0 012.3 0l.3.3a1.6 1.6 0 010 2.3L7.8 14.8zM11.8 5.6l2.6 2.6" />),
+  rrect: svg(<rect x="3.5" y="5" width="13" height="10" rx="3.5" />),
+  polygon: svg(<path d="M10 3.2l5.6 4.1-2.1 6.6H6.5L4.4 7.3z" />),
+  star: svg(<path d="M10 3l2.1 4.7 5 .5-3.8 3.4 1.1 5-4.4-2.6-4.4 2.6 1.1-5-3.8-3.4 5-.5z" />),
+  rotate: svg(
+    <>
+      <path d="M15.5 10a5.5 5.5 0 11-1.9-4.2" />
+      <path d="M14.2 2.8v3.3h-3.3" />
+    </>,
+  ),
+  eyedropper: svg(<path d="M12.6 3.4a2 2 0 012.8 2.8l-1.4 1.4-2.8-2.8zM10.4 5.6L4 12l-.5 3.5L7 15l6.4-6.4M4.8 12.8l2.4 2.4" />),
   zoom: svg(
     <>
       <circle cx="8.5" cy="8.5" r="4.8" />
@@ -87,7 +98,7 @@ const ui = (children: ReactNode, size = 18) => (
   </svg>
 );
 
-export const I = {
+export const I: Record<string, React.ReactNode> = {
   vector: ui(<><path d="M3 14C5 5 12 4 15 6" /><rect x="1.5" y="12.5" width="3" height="3" fill="currentColor" /><rect x="13.5" y="4.5" width="3" height="3" fill="currentColor" /></>, 14),
   layout: ui(<><rect x="2.5" y="2.5" width="13" height="13" /><path d="M2.5 6.5h13M7 6.5v9" /></>, 14),
   draw: ui(<path d="M3 15l1-3.5L12.5 3 15 5.5 6.5 14z M11 4.5l2.5 2.5" />, 14),
@@ -114,3 +125,10 @@ export const I = {
   close: ui(<path d="M5 5l8 8M13 5l-8 8" />, 12),
   plusRect: ui(<><rect x="2.5" y="2.5" width="13" height="13" /><path d="M9 6v6M6 9h6" /></>, 16),
 };
+
+I.union = ui(<path d="M3 3h8v4h4v8H7v-4H3z" />);
+I.subtract = ui(<><path d="M3 3h8v4H7v4H3z" /><path d="M7 7h8v8H7z" strokeDasharray="1.8 1.6" opacity=".6" /></>);
+I.intersect = ui(<><path d="M3 3h8v8H3z" opacity=".5" /><path d="M7 7h8v8H7z" opacity=".5" /><path d="M7 7h4v4H7z" fill="currentColor" /></>);
+I.xor = ui(<><path d="M3 3h8v4H7v4H3z" /><path d="M15 15H7v-4h4V7h4z" /></>);
+I.group = ui(<><rect x="2.5" y="2.5" width="13" height="13" strokeDasharray="2 1.6" /><rect x="5" y="5" width="4" height="4" /><rect x="9" y="9" width="4" height="4" /></>);
+I.ungroup = ui(<><rect x="2.5" y="2.5" width="5.5" height="5.5" /><rect x="10" y="10" width="5.5" height="5.5" /></>);
