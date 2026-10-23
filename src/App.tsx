@@ -20,6 +20,7 @@ import {
   undo,
   updateSelected,
   useStore,
+  leaveStartPage,
   zoomAt,
   zoomTo,
 } from './store';
@@ -43,6 +44,7 @@ import { StatusBar } from './components/StatusBar';
 import { MenuBar } from './components/MenuBar';
 import { FloatingTools } from './components/FloatingTools';
 import { NewDocument } from './components/NewDocument';
+import { StartPage } from './components/StartPage';
 import { importFiles, importFilesDialog, kindOf, looksLikeSvg, reportImport } from './importer';
 import { PathBrushesPanel, QuickFxPanel, StylesPanel } from './components/StylePanels';
 import { Toolbar } from './components/Toolbar';
@@ -71,12 +73,14 @@ function usePasteImages() {
       }
       if (files.length) {
         e.preventDefault();
+        leaveStartPage();
         void importFiles(files).then(reportImport);
         return;
       }
       const text = data.getData('text/plain');
       if (text && looksLikeSvg(text)) {
         e.preventDefault();
+        leaveStartPage();
         void importFiles([new File([text], 'Pasted.svg', { type: 'image/svg+xml' })]).then(reportImport);
       }
     };
@@ -104,6 +108,7 @@ function usePasteImages() {
       const at = canvas && e.clientX >= canvas.left && e.clientX <= canvas.right && e.clientY >= canvas.top && e.clientY <= canvas.bottom
         ? { x: (e.clientX - canvas.left - st.panX) / st.zoom, y: (e.clientY - canvas.top - st.panY) / st.zoom }
         : undefined;
+      leaveStartPage();
       void importFiles(images, at).then(reportImport);
     };
     const onUnload = (e: BeforeUnloadEvent) => {
@@ -472,6 +477,7 @@ export function App() {
       <StatusBar />
       <RasterDialog />
       <NewDocument />
+      <StartPage />
       {help && <Help onClose={() => setHelp(false)} />}
     </div>
   );

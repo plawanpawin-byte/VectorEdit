@@ -2,7 +2,7 @@ import { parseDoc, serializeDoc } from './document';
 import { download } from './components/exporter';
 import { preloadRasters } from './raster/cache';
 import { translate } from './geometry';
-import { activeBoard, commit, confirmDiscard, getState, loadDocument, makeShape, markClean, setState } from './store';
+import { activeBoard, commit, confirmDiscard, getState, loadDocument, makeShape, markClean, notify, setState } from './store';
 import { importSvg } from './svgimport';
 import { normalizeShape } from './shape';
 import type { Shape } from './types';
@@ -14,6 +14,8 @@ interface DesktopApi {
   setTitle(title: string): void;
   onMenu(handler: (channel: string) => void): () => void;
   takePendingFile(): Promise<{ path: string; text: string } | null>;
+  recentFiles(): Promise<{ path: string; name: string; dir: string }[]>;
+  openRecent(path: string): Promise<{ path: string; text: string } | null>;
   onOpenFile(handler: (file: { path: string; text: string }) => void): () => void;
 }
 
@@ -57,6 +59,14 @@ export async function openDoc() {
   } catch (e) {
     alert(`Could not open the file.\n${(e as Error).message}`);
   }
+}
+
+/** Open one of the recently used files listed on the start page (desktop only). */
+export async function openRecent(file: string) {
+  if (!window.desktop || !confirmDiscard()) return;
+  const r = await window.desktop.openRecent(file);
+  if (!r) return notify('That file is no longer available.');
+  await load(r.text, r.path).catch((e) => alert(`Could not open the file.\n${(e as Error).message}`));
 }
 
 export async function saveDoc(saveAs = false) {

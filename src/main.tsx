@@ -7,7 +7,7 @@ import * as registry from './tools/registry';
 import * as docfile from './document';
 import * as exporter from './components/exporter';
 import * as rasterLayer from './raster/layer';
-import { newDocument, openNewDocument } from './store';
+import { newDocument, openStartPage } from './store';
 import './styles.css';
 
 async function main() {
@@ -15,10 +15,10 @@ async function main() {
   if (new URLSearchParams(location.search).has('e2e')) (window as unknown as { __ve: unknown }).__ve = { store, registry, docfile, exporter, rasterLayer };
   const restored = await restoreAutosave();
   startAutosave();
-  // a fresh launch starts from an empty page and the New Document dialog; ?e2e keeps the sample page for automated tests
-  if (!restored && !new URLSearchParams(location.search).has('e2e')) {
-    newDocument();
-    openNewDocument();
+  // a fresh launch shows the start page; without restored work it sits over an empty page. ?e2e keeps the sample page for automated tests
+  if (!new URLSearchParams(location.search).has('e2e')) {
+    if (!restored) newDocument();
+    openStartPage();
   }
   createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>

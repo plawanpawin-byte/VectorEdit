@@ -33,6 +33,8 @@ export interface State {
   rulers: boolean;
   /** the New Document dialog is open */
   newDocOpen: boolean;
+  /** the start page (New / Open / recent files) covers the editor */
+  startOpen: boolean;
   /** a short message shown in the status bar for a few seconds */
   notice: string | null;
   /** undo depth at the last save or load; the document has unsaved changes when it differs */
@@ -130,6 +132,7 @@ let state: State = {
   colorTarget: 'fill',
   rulers: false,
   newDocOpen: false,
+  startOpen: false,
   notice: null,
   cleanMark: 0,
   grid: false,
@@ -489,6 +492,7 @@ export function newDocument(size: { w?: number; h?: number; name?: string } = {}
     editingText: null,
     nodeSel: [],
     newDocOpen: false,
+    startOpen: false,
     cleanMark: 0,
   });
   fitArtboard();
@@ -512,6 +516,14 @@ export const confirmDiscard = () => !isDirty() || window.confirm('This document 
 /** Show the New Document dialog (page size presets). */
 export const openNewDocument = () => setState({ newDocOpen: true });
 
+/** Show the start page (New / Open / recent files) over the editor. */
+export const openStartPage = () => setState({ startOpen: true });
+
+/** Hide the start page when the user starts working on something (dropping or pasting a picture). */
+export const leaveStartPage = () => {
+  if (getState().startOpen) setState({ startOpen: false });
+};
+
 export function loadDocument(raw: unknown[], boards: Artboard[], filePath: string | null, extra: { guides?: Guide[]; slices?: Slice[]; snapshots?: Snapshot[] } = {}) {
   const shapes = raw.map(normalizeShape).filter((x): x is Shape => x !== null);
   if (!boards.length) boards = [{ id: 'a1', name: 'Page 1', x: 0, y: 0, w: 800, h: 600 }];
@@ -525,6 +537,7 @@ export function loadDocument(raw: unknown[], boards: Artboard[], filePath: strin
     slices: extra.slices ?? [],
     activeSlice: null,
     snapshots: extra.snapshots ?? [],
+    startOpen: false,
     selection: [],
     past: [],
     future: [],

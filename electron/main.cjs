@@ -78,9 +78,29 @@ function guardClose() {
 const vedit = (argv) => argv.find((a) => /\.vedit$/i.test(a) && !a.startsWith('-'));
 let pendingFile = vedit(process.argv.slice(1));
 
+// recently used documents, kept in the user data folder and shown on the start page
+const RECENT_MAX = 8;
+const recentStore = () => path.join(app.getPath('userData'), 'recent.json');
+async function readRecent() {
+  try {
+    return JSON.parse(await fs.readFile(recentStore(), 'utf8'));
+  } catch {
+    return [];
+  }
+}
+async function writeRecent(list) {
+  await fs.mkdir(path.dirname(recentStore()), { recursive: true });
+  await fs.writeFile(recentStore(), JSON.stringify(list), 'utf8');
+}
+async function remember(file) {
+  const list = [file, ...(await readRecent()).filter((f) => f !== file)].slice(0, RECENT_MAX);
+  await writeRecent(list).catch(() => {});
+}
+
 async function openPath(file) {
   try {
     const text = await fs.readFile(file, 'utf8');
+    await remember(file);
     win?.webContents.send('open-file', { path: file, text });
   } catch (err) {
     dialog.showErrorBox('Could not open the file', String(err && err.message ? err.message : err));
@@ -118,7 +138,9 @@ const FILTERS = [{ name: 'VectorEdit document', extensions: ['vedit'] }];
 ipcMain.handle('file:open', async () => {
   const r = await dialog.showOpenDialog(win, { filters: FILTERS, properties: ['openFile'] });
   if (r.canceled || !r.filePaths[0]) return null;
-  return { path: r.filePaths[0], text: await fs.readFile(r.filePaths[0], 'utf8') };
+  const text = await fs.readFile(r.filePaths[0], 'utf8');
+  await remember(r.filePaths[0]);
+  return { path: r.filePaths[0], text };
 });
 
 ipcMain.handle('file:save', async (_e, { path: target, text, saveAs }) => {
@@ -129,6 +151,7 @@ ipcMain.handle('file:save', async (_e, { path: target, text, saveAs }) => {
     dest = r.filePath;
   }
   await fs.writeFile(dest, text, 'utf8');
+  await remember(dest);
   return { path: dest };
 });
 
@@ -145,9 +168,40 @@ ipcMain.handle('file:pending', async () => {
   pendingFile = null;
   if (!file) return null;
   try {
-    return { path: file, text: await fs.readFile(file, 'utf8') };
+    const text = await fs.readFile(file, 'utf8');
+    await remember(file);
+    return { path: file, text };
   } catch (err) {
     dialog.showErrorBox('Could not open the file', String(err && err.message ? err.message : err));
+    return null;
+  }
+});
+
+// the start page lists only files that still exist; missing ones are dropped from the list
+ipcMain.handle('recent:list', async () => {
+  const list = await readRecent();
+  const alive = [];
+  for (const f of list) {
+    try {
+      await fs.access(f);
+      alive.push(f);
+    } catch {
+      // gone from disk
+    }
+  }
+  if (alive.length !== list.length) await writeRecent(alive).catch(() => {});
+  return alive.map((f) => ({ path: f, name: path.basename(f), dir: path.dirname(f) }));
+});
+
+// only paths already in the recent list can be opened this way, so the page cannot read arbitrary files
+ipcMain.handle('recent:open', async (_e, file) => {
+  if (!(await readRecent()).includes(file)) return null;
+  try {
+    const text = await fs.readFile(file, 'utf8');
+    await remember(file);
+    return { path: file, text };
+  } catch {
+    await writeRecent((await readRecent()).filter((f) => f !== file)).catch(() => {});
     return null;
   }
 });

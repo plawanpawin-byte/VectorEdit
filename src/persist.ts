@@ -85,8 +85,8 @@ export async function restoreAutosave(): Promise<boolean> {
     const d = parseDoc(raw);
     await preloadRasters(d.shapes.map(normalizeShape).filter((x): x is Shape => x !== null));
     loadDocument(d.shapes, d.artboards, null, { guides: d.guides, slices: d.slices, snapshots: d.snapshots });
-    // the canvas refits once it knows its size
-    setState({ viewport: { w: 0, h: 0 } });
+    // the canvas refits once it knows its size; the restored work has no file yet, so it counts as unsaved
+    setState({ viewport: { w: 0, h: 0 }, cleanMark: -1 });
     return true;
   } catch {
     return false;
