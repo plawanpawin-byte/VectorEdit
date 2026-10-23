@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BRUSH_PRESETS, Stroke, parseColour, presetById } from '../raster/brush';
 import { makeCanvas } from '../raster/cache';
 import { applyRasterDialog, cancelRasterDialog, openRasterOp, setRasterPreview, updateRasterParams } from '../raster/dialog';
 import { commitPixels, targetLayer, workingCanvas } from '../raster/layer';
+import { loadMacros, playMacro, saveMacros, startRecording, stopRecording, type PixelMacro } from '../raster/macro';
 import { RASTER_OPS, rasterOp } from '../raster/ops';
 import { deselect, featherSelection, growSelection, invertSelection, selectAll, selectionFor, smoothSelection } from '../raster/selection';
 import { getState, setState, useStore } from '../store';
@@ -202,6 +203,83 @@ export function RasterDialog() {
         <button className="btn ghost" onClick={cancelRasterDialog}>Cancel</button>
         <button className="btn primary" onClick={applyRasterDialog}>Apply</button>
       </footer>
+    </div>
+  );
+}
+
+/* ---------- macros ---------- */
+
+export function MacroPanel() {
+  const recording = useStore((s) => s.macroRecording);
+  const count = useStore((s) => s.macroSteps);
+  const [macros, setMacros] = useState<PixelMacro[]>(loadMacros);
+  const [msg, setMsg] = useState('');
+  const persist = (list: PixelMacro[]) => (setMacros(list), saveMacros(list));
+
+  const stop = () => {
+    const steps = stopRecording();
+    if (!steps.length) return setMsg('Nothing was recorded. Apply a filter or adjustment while recording.');
+    const name = window.prompt('Name this macro', 'Macro ' + (macros.length + 1));
+    if (name) persist([...macros, { id: 'pm' + Date.now(), name, steps }]);
+  };
+  const play = async (m: PixelMacro) => {
+    const n = await playMacro(m.steps);
+    setMsg(n ? `Applied ${n} step${n === 1 ? '' : 's'} as one undo step.` : '');
+  };
+  const exportAll = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(macros, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vectoredit-macros.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const importAll = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const raw = JSON.parse(await file.text());
+        const incoming = (Array.isArray(raw) ? raw : []).filter((m) => m && typeof m.name === 'string' && Array.isArray(m.steps));
+        persist([...macros, ...incoming.map((m: PixelMacro, i: number) => ({ id: 'pm' + Date.now() + i, name: m.name, steps: m.steps }))]);
+        setMsg(`Imported ${incoming.length} macro(s).`);
+      } catch {
+        setMsg('That file is not a macro file.');
+      }
+    };
+    input.click();
+  };
+
+  return (
+    <div className="panel-body">
+      <p className="hint">Record a sequence of filters and adjustments, then replay it on any pixel layer in one undo step.</p>
+      <div className="pad row">
+        {recording ? (
+          <button className="btn primary" onClick={stop}>● Stop ({count})</button>
+        ) : (
+          <button className="btn" onClick={startRecording}>● Record</button>
+        )}
+        <div className="grow" />
+        <button className="mini wide" onClick={importAll}>Import</button>
+        <button className="mini wide" disabled={!macros.length} onClick={exportAll}>Export</button>
+      </div>
+      {msg && <p className="hint">{msg}</p>}
+      <div className="slice-list">
+        {macros.map((m) => (
+          <div key={m.id} className="slice">
+            <div className="slice-head">
+              <b className="grow">{m.name}</b>
+              <em className="dim">{m.steps.length} steps</em>
+              <button className="mini wide" onClick={() => void play(m)}>Play</button>
+              <button className="mini" onClick={() => persist(macros.filter((x) => x.id !== m.id))}>×</button>
+            </div>
+            <div className="dim">{m.steps.map((s) => rasterOp(s.op)?.name ?? s.op).join(' → ')}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

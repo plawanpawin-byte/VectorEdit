@@ -3,6 +3,7 @@ import type { Shape } from '../types';
 import { cloneCanvas } from './cache';
 import { commitPixels, previewCanvas, targetLayer, workingCanvas } from './layer';
 import { applyOp, defaultOpParams, rasterOp } from './ops';
+import { recordStep } from './macro';
 import { selectionFor } from './selection';
 
 /** Live-preview session of a filter or adjustment on one layer. */
@@ -86,6 +87,7 @@ export function applyRasterDialog() {
   ctx.putImageData(img, 0, 0);
   setState({ shapes: s.before, rasterDialog: null });
   session = null;
+  recordStep(d.opId, d.params);
   commitPixels(s.layerId, canvas, s.before);
 }
 

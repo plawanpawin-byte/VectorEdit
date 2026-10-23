@@ -28,6 +28,7 @@ import { TopBar, doExport } from './components/TopBar';
 import { AssetsPanel, PagesPanel } from './components/PagesPanel';
 import { ScriptPanel } from './components/ScriptPanel';
 import { SlicesPanel } from './components/SlicesPanel';
+import { MacroPanel } from './components/PixelPanels';
 import { AdjustmentsPanel, BrushPanel, FiltersPanel, RasterDialog, SelectionPanel } from './components/PixelPanels';
 import { CharacterPanel, ParagraphPanel, TextStylesPanel } from './components/TextPanels';
 import { isDesktop, openDoc, saveDoc } from './fileio';
@@ -284,6 +285,7 @@ export function App() {
                     { id: 'adjust', label: 'Adjust', body: <AdjustmentsPanel /> },
                     { id: 'filters', label: 'Filters', body: <FiltersPanel /> },
                     { id: 'selection', label: 'Selection', body: <SelectionPanel /> },
+                    { id: 'macros', label: 'Macros', body: <MacroPanel /> },
                   ]
                 : [
                     { id: 'stroke', label: 'Stroke', body: <StrokePanel /> },

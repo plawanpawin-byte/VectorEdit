@@ -50,6 +50,8 @@ export interface State {
   /** pixel selection of the layer being edited (not saved, not undoable) */
   pixelSel: PixelSel | null;
   rasterDialog: import('./raster/dialog').RasterDialogState | null;
+  macroRecording: boolean;
+  macroSteps: number;
   pbrush: import('./raster/brush').BrushParams & { preset: string };
   pixel: { tolerance: number; contiguous: boolean; selectMode: 'replace' | 'add' | 'subtract' | 'intersect'; strength: number; fillMode: 'fill' | 'gradient' };
 }
@@ -128,6 +130,8 @@ let state: State = {
   contour: { steps: 3, join: 'round' },
   pixelSel: null,
   rasterDialog: null,
+  macroRecording: false,
+  macroSteps: 0,
   pbrush: { preset: 'round', size: 24, hardness: 0.85, opacity: 1, flow: 1, spacing: 0.12, roundness: 1, angle: 0, texture: 'none', jitter: 0 },
   pixel: { tolerance: 32, contiguous: true, selectMode: 'replace', strength: 0.5, fillMode: 'fill' },
 };
