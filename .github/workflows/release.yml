@@ -32,8 +32,8 @@ jobs:
         with:
           name: VectorEdit-windows
           path: |
-            release/VectorEdit-Setup-*.exe
-            release/VectorEdit-Portable-*.exe
+            release/vectorDesign-Setup-*.exe
+            release/vectorDesign-Portable-*.exe
           if-no-files-found: error
       - name: Attach to the GitHub release
         if: startsWith(github.ref, 'refs/tags/v') || inputs.tag != ''
@@ -43,5 +43,5 @@ jobs:
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: |
-            release/VectorEdit-Setup-*.exe
-            release/VectorEdit-Portable-*.exe
+            release/vectorDesign-Setup-*.exe
+            release/vectorDesign-Portable-*.exe
