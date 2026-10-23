@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { Artboard, Box, Doc, Guide, Pt, Shape, ShapeKind, Snapshot, Tool, Workspace } from './types';
-import { bbox, rotateShape, scaleAbout, toPath, translate, unionBox } from './geometry';
+import { bbox, rotateShape, scaleAbout, shearShape, toPath, translate, unionBox } from './geometry';
 import { type BoolOp, booleanPieces, canBoolean } from './boolean';
 import { blankShape, normalizeShape } from './shape';
 import { defaultParams, shapeDef } from './shapes';
@@ -40,6 +40,7 @@ export interface State {
   nodeSel: { id: string; i: number }[];
   brush: { size: number; profile: 'taper' | 'uniform' | 'calligraphic'; taper: number };
   gradientType: 'linear' | 'radial';
+  table: { rows: number; cols: number };
 }
 
 let counter = 0;
@@ -110,6 +111,7 @@ let state: State = {
   nodeSel: [],
   brush: { size: 12, profile: 'taper', taper: 0.7 },
   gradientType: 'linear',
+  table: { rows: 4, cols: 3 },
 };
 
 const listeners = new Set<() => void>();
@@ -483,6 +485,13 @@ export function rotateSelection(deg: number) {
   const cx = box.x + box.w / 2;
   const cy = box.y + box.h / 2;
   updateSelected((s) => rotateShape(s, deg, cx, cy));
+}
+
+export function shearSelection(deg: number) {
+  const box = selectionBox();
+  if (!box || !deg) return;
+  const oy = box.y + box.h / 2;
+  updateSelected((s) => shearShape(s, deg, box.x + box.w / 2, oy));
 }
 
 export function updateRadius(r: number) {

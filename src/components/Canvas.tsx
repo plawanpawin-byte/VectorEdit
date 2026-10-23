@@ -9,6 +9,7 @@ import type { Session } from '../tools/types';
 import { ShapeEl } from './ShapeEl';
 import { blankShape } from '../shape';
 import { layoutText } from '../textlayout';
+import { placeFiles } from '../images';
 
 const HANDLE_CURSOR: Record<string, string> = {
   nw: 'nwse-resize',
@@ -216,6 +217,13 @@ export function Canvas() {
       onPointerUp={onUp}
       onDoubleClick={(e) => toolDef(getState().tool)?.dblclick?.(ctxFor(e))}
       onContextMenu={(e) => e.preventDefault()}
+      onDragOver={(e) => e.dataTransfer.types.includes('Files') && e.preventDefault()}
+      onDrop={(e) => {
+        const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+        if (!files.length) return;
+        e.preventDefault();
+        void placeFiles(files, ctxFor(e).raw);
+      }}
     >
       <svg width="100%" height="100%" style={{ display: 'block' }}>
         <g transform={`translate(${panX} ${panY}) scale(${zoom})`}>

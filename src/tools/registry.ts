@@ -2,6 +2,7 @@ import type { Tool, Workspace } from '../types';
 import { penFinish, setState, getState } from '../store';
 import { artboardTool } from './artboard';
 import { brushTool, penTool, pencilTool } from './draw';
+import { frameEllipseTool, frameRectTool, imageTool, tableTool } from './layout';
 import { knifeTool, scissorsTool } from './edit';
 import { eyedropperTool, fillTool, rotateTool } from './paint';
 import { cornerTool, nodeTool, selectTool } from './select';
@@ -31,6 +32,10 @@ export const TOOLS: ToolDef[] = [
   fillTool,
   eyedropperTool,
   artboardTool,
+  imageTool,
+  frameRectTool,
+  frameEllipseTool,
+  tableTool,
   handTool,
   zoomTool,
   measureTool,

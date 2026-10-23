@@ -27,6 +27,26 @@ export const toolIcon: Record<string, ReactNode> = {
       <rect x="6.5" y="6.5" width="7" height="7" fill="currentColor" stroke="none" opacity=".35" />
     </>,
   ),
+  image: svg(
+    <>
+      <rect x="3.5" y="4.5" width="13" height="11" />
+      <circle cx="7.5" cy="8.5" r="1.4" />
+      <path d="M3.5 14l4-3.5 3 2.5 2.5-2 3 3" />
+    </>,
+  ),
+  table: svg(<path d="M3.5 4.5h13v11h-13zM3.5 8.5h13M3.5 12h13M8 4.5v11M12.5 4.5v11" />),
+  frameRect: svg(
+    <>
+      <rect x="3.5" y="4.5" width="13" height="11" />
+      <path d="M3.5 4.5l13 11M16.5 4.5l-13 11" opacity=".6" />
+    </>,
+  ),
+  frameEllipse: svg(
+    <>
+      <ellipse cx="10" cy="10" rx="6.5" ry="5.5" />
+      <path d="M5.5 6l9 8M14.5 6l-9 8" opacity=".6" />
+    </>,
+  ),
   rotate: svg(
     <>
       <path d="M16 10.5a6 6 0 11-2-4.5" />

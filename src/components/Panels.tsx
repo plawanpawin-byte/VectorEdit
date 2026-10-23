@@ -8,6 +8,8 @@ import {
   deleteSnapshot,
   historyJump,
   restoreSnapshot,
+  rotateSelection,
+  shearSelection,
   takeSnapshot,
   live,
   makeShape,
@@ -22,6 +24,7 @@ import {
 import { Duplicate, Eye, I, Lock, Trash } from './Icons';
 import { NumField, Section } from './Fields';
 import { ShapeEl } from './ShapeEl';
+import { chooseImageInto } from '../images';
 import { shapeDef, defaultParams } from '../shapes';
 import type { Effect, Shape } from '../types';
 
@@ -324,6 +327,18 @@ export function Appearance() {
         </Section>
       )}
 
+      {(one.src || one.frame) && sel.length === 1 && (
+        <Section title="Image">
+          <div className="row">
+            <button className="mini wide" onClick={() => void chooseImageInto(one.id)}>
+              {one.src ? 'Replace…' : 'Choose image…'}
+            </button>
+            {one.src && <button className="mini wide" onClick={() => set({ src: '' })}>Remove</button>}
+          </div>
+          <Seg value={one.fit ?? 'fill'} options={[['fill', 'Fill'], ['fit', 'Fit']]} onChange={(fit) => set({ fit })} />
+        </Section>
+      )}
+
       <Section
         title="Effects"
         right={
@@ -488,7 +503,10 @@ export function TransformPanel() {
         <NumField label="W" value={box?.w ?? null} suffix="px" min={0.01} disabled={!box} onCommit={(w) => box && setTransform(box, { w })} />
         <NumField label="Y" value={box?.y ?? null} suffix="px" disabled={!box} onCommit={(y) => box && setTransform(box, { y })} />
         <NumField label="H" value={box?.h ?? null} suffix="px" min={0.01} disabled={!box} onCommit={(h) => box && setTransform(box, { h })} />
+        <NumField label="R" value={0} suffix="°" disabled={!box} onCommit={(deg) => rotateSelection(deg)} />
+        <NumField label="S" value={0} suffix="°" disabled={!box} onCommit={(deg) => shearSelection(Math.max(-80, Math.min(80, deg)))} />
       </div>
+      <p className="hint tight">R rotates and S shears the selection by the amount you type.</p>
     </div>
   );
 }

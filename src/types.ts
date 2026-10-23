@@ -18,6 +18,10 @@ export type BaseTool =
   | 'ellipse'
   | 'rotate'
   | 'eyedropper'
+  | 'image'
+  | 'table'
+  | 'frame-rect'
+  | 'frame-ellipse'
   | 'hand'
   | 'zoom';
 
@@ -102,6 +106,12 @@ export interface Shape {
   frameW: number;
   /** id of a path shape the text runs along, or null */
   pathId: string | null;
+  /** image shown inside the shape (a data URL), or empty */
+  src: string;
+  /** how the image fills the shape: cover ('fill') or contain ('fit') */
+  fit: 'fill' | 'fit';
+  /** picture frame: shows a placeholder until an image is placed */
+  frame: boolean;
   fill: string | null;
   gradient: Gradient | null;
   stroke: string | null;

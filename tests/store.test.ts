@@ -189,3 +189,34 @@ describe('artboards, guides and snapshots', () => {
     expect(getState().shapes).toHaveLength(2);
   });
 });
+
+describe('layout helpers', () => {
+  it('builds a table as a group of cells and text', async () => {
+    const { tableShapes } = await import('../src/tools/layout');
+    const cells = tableShapes(0, 0, 300, 120, 4, 3, 'gt');
+    expect(cells.filter((s) => s.kind === 'rect')).toHaveLength(12);
+    expect(cells.filter((s) => s.kind === 'text')).toHaveLength(12);
+    expect(cells.every((s) => s.group === 'gt')).toBe(true);
+    expect(cells.find((s) => s.name === 'Text 1,2')!.text).toBe('Column 2');
+  });
+
+  it('places an image into the selected empty frame', async () => {
+    const { placeImage } = await import('../src/images');
+    reset();
+    const frame = makeShape('rect', { x: 0, y: 0, w: 100, h: 100, frame: true });
+    commit([frame], { selection: [frame.id] });
+    placeImage({ src: 'data:image/png;base64,AAAA', w: 10, h: 10 });
+    expect(getState().shapes).toHaveLength(1);
+    expect(getState().shapes[0].src).toContain('data:image/png');
+  });
+
+  it('places an image as a new rectangle when no frame is selected', async () => {
+    const { placeImage } = await import('../src/images');
+    reset();
+    placeImage({ src: 'data:image/png;base64,AAAA', w: 4000, h: 1000 }, { x: 400, y: 300 });
+    const s = getState().shapes[0];
+    expect(s.src).not.toBe('');
+    expect(s.w).toBeLessThanOrEqual(800 * 0.8 + 1);
+    expect(s.w / s.h).toBeCloseTo(4, 0);
+  });
+});

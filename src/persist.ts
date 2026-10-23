@@ -1,13 +1,83 @@
 import { parseDoc, serializeDoc } from './document';
 import { getState, loadDocument, setState } from './store';
 
-export const AUTOSAVE_KEY = 'vectoredit:autosave:v2';
-const LEGACY_KEY = 'vectoredit:autosave:v1';
+const DB = 'vectoredit';
+const STORE = 'kv';
+const KEY = 'autosave:v2';
+const LEGACY_KEYS = ['vectoredit:autosave:v2', 'vectoredit:autosave:v1'];
+
+/* Autosave lives in IndexedDB so documents with images fit; localStorage is the fallback. */
+
+function openDb(): Promise<IDBDatabase | null> {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(DB, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function idbGet(): Promise<string | null> {
+  const db = await openDb();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const r = db.transaction(STORE).objectStore(STORE).get(KEY);
+      r.onsuccess = () => resolve(typeof r.result === 'string' ? r.result : null);
+      r.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function idbSet(value: string): Promise<boolean> {
+  const db = await openDb();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(value, KEY);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+      tx.onabort = () => resolve(false);
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+async function idbClear() {
+  const db = await openDb();
+  if (!db) return;
+  try {
+    db.transaction(STORE, 'readwrite').objectStore(STORE).delete(KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function localGet(): string | null {
+  try {
+    for (const k of LEGACY_KEYS) {
+      const v = localStorage.getItem(k);
+      if (v) return v;
+    }
+  } catch {
+    /* storage unavailable */
+  }
+  return null;
+}
 
 /** Restore the last autosaved document, if any. Never throws. */
-export function restoreAutosave(): boolean {
+export async function restoreAutosave(): Promise<boolean> {
   try {
-    const raw = localStorage.getItem(AUTOSAVE_KEY) ?? localStorage.getItem(LEGACY_KEY);
+    const raw = (await idbGet()) ?? localGet();
     if (!raw) return false;
     const d = parseDoc(raw);
     loadDocument(d.shapes, d.artboards, null, { guides: d.guides, snapshots: d.snapshots });
@@ -19,17 +89,17 @@ export function restoreAutosave(): boolean {
   }
 }
 
-export function clearAutosave() {
+export async function clearAutosave() {
+  await idbClear();
   try {
-    localStorage.removeItem(AUTOSAVE_KEY);
-    localStorage.removeItem(LEGACY_KEY);
+    for (const k of LEGACY_KEYS) localStorage.removeItem(k);
   } catch {
     /* storage unavailable */
   }
 }
 
 /** Save the document shortly after it changes. Returns an unsubscribe function. */
-export function startAutosave(delay = 600): () => void {
+export function startAutosave(delay = 700): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let last = getState();
   const tick = setInterval(() => {
@@ -37,9 +107,11 @@ export function startAutosave(delay = 600): () => void {
     if (s.shapes === last.shapes && s.artboards === last.artboards && s.guides === last.guides && s.snapshots === last.snapshots) return;
     last = s;
     clearTimeout(timer);
-    timer = setTimeout(() => {
+    timer = setTimeout(async () => {
+      const text = serializeDoc(getState());
+      if (await idbSet(text)) return;
       try {
-        localStorage.setItem(AUTOSAVE_KEY, serializeDoc(getState()));
+        localStorage.setItem(LEGACY_KEYS[0], text);
       } catch {
         /* quota exceeded or storage unavailable: keep working without autosave */
       }

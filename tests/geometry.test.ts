@@ -98,3 +98,13 @@ describe('normalizeShape', () => {
     expect(normalizeShape({ kind: 'rect' })).toBeNull();
   });
 });
+
+describe('shear', () => {
+  it('moves points horizontally in proportion to their distance from the pivot', async () => {
+    const { shearShape } = await import('../src/geometry');
+    const r = shearShape(blankShape('r', 'rect', { x: 0, y: 0, w: 100, h: 100, fill: '#000' }), 45, 50, 50);
+    const b = bbox(r);
+    expect(b.w).toBeCloseTo(200, 0); // top edge shifts left by 50, bottom edge right by 50
+    expect(b.h).toBeCloseTo(100, 0);
+  });
+});

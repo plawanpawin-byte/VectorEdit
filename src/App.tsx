@@ -28,6 +28,7 @@ import { TopBar, doExport } from './components/TopBar';
 import { AssetsPanel, PagesPanel } from './components/PagesPanel';
 import { CharacterPanel, ParagraphPanel, TextStylesPanel } from './components/TextPanels';
 import { isDesktop, openDoc, saveDoc } from './fileio';
+import { placeFiles } from './images';
 import { RulerH, RulerV, RULER } from './components/Rulers';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
@@ -35,6 +36,20 @@ import { Toolbar } from './components/Toolbar';
 import { TOOLS, activateTool, toolDef, toolInWorkspace } from './tools/registry';
 
 const TOOL_KEYS = new Map(TOOLS.filter((t) => t.key).map((t) => [t.key!, t.id]));
+
+function usePasteImages() {
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      if (/INPUT|TEXTAREA/.test((e.target as HTMLElement)?.tagName)) return;
+      const files = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith('image/'));
+      if (!files.length) return;
+      e.preventDefault();
+      void placeFiles(files);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, []);
+}
 
 function useShortcuts() {
   useEffect(() => {
@@ -189,6 +204,7 @@ function useDesktopBridge() {
 
 export function App() {
   useShortcuts();
+  usePasteImages();
   useDesktopBridge();
   const rulers = useStore((s) => s.rulers);
   const zoom = useStore((s) => s.zoom);

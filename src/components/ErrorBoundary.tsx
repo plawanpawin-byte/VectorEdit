@@ -23,8 +23,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
           <button onClick={() => location.reload()}>Reload</button>
           <button
             onClick={() => {
-              clearAutosave();
-              location.reload();
+              void clearAutosave().then(() => location.reload());
             }}
           >
             Discard autosave and reload

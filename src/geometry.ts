@@ -352,3 +352,22 @@ export function smoothStroke(raw: { x: number; y: number }[], eps: number) {
     return { x: p.x, y: p.y, hx: end ? 0 : (next.x - prev.x) / 6, hy: end ? 0 : (next.y - prev.y) / 6 };
   });
 }
+
+/** Shear horizontally by `deg` about (ox, oy): x moves in proportion to the distance from oy. */
+export function shearShape(s: Shape, deg: number, ox: number, oy: number): Shape {
+  if (s.kind === 'text') return s;
+  const k = Math.tan((deg * Math.PI) / 180);
+  const p = toPath(s);
+  const sh = (q: Pt): Pt => {
+    const o: Pt = { x: q.x + (q.y - oy) * k, y: q.y, hx: q.hx + q.hy * k, hy: q.hy };
+    if (q.ix !== undefined || q.iy !== undefined) {
+      const ix = q.ix ?? 0;
+      const iy = q.iy ?? 0;
+      o.ix = ix + iy * k;
+      o.iy = iy;
+    }
+    return o;
+  };
+  void ox;
+  return { ...p, gradient: mapGradient(p.gradient, (v) => ({ x: v.x + (v.y - oy) * k, y: v.y })), pts: p.pts.map(sh), extra: (p.extra ?? []).map((r) => r.map(sh)) };
+}

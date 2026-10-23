@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { Effect, Shape } from '../types';
-import { pathD, toPath } from '../geometry';
+import { bbox as bboxOf, pathD, toPath } from '../geometry';
 import { layoutText } from '../textlayout';
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
@@ -38,6 +38,45 @@ function Filter({ id, effects }: { id: string; effects: Effect[] }) {
     <filter id={id} x="-60%" y="-60%" width="220%" height="220%" colorInterpolationFilters="sRGB">
       {nodes}
     </filter>
+  );
+}
+
+/** Clip an image to the shape's outline, or draw the picture-frame placeholder. */
+function withImage(s: Shape, body: React.ReactNode, common: Record<string, unknown>): React.ReactNode {
+  if (s.kind === 'text') return body;
+  const d = pathD(toPath(s));
+  const box = bboxOf(s);
+  const cid = `clip-${s.id}`;
+  if (!s.src) {
+    return (
+      <>
+        {body}
+        <g opacity={s.opacity} pointerEvents="none" stroke="#9a9a9a" strokeWidth={1} fill="none">
+          <defs>
+            <clipPath id={cid}>
+              <path d={d} />
+            </clipPath>
+          </defs>
+          <g clipPath={`url(#${cid})`}>
+            <line x1={box.x} y1={box.y} x2={box.x + box.w} y2={box.y + box.h} />
+            <line x1={box.x + box.w} y1={box.y} x2={box.x} y2={box.y + box.h} />
+          </g>
+        </g>
+      </>
+    );
+  }
+  return (
+    <>
+      <defs>
+        <clipPath id={cid}>
+          <path d={d} />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${cid})`} opacity={s.opacity} style={common.style as React.CSSProperties}>
+        <image href={s.src} x={box.x} y={box.y} width={box.w} height={box.h} preserveAspectRatio={s.fit === 'fit' ? 'xMidYMid meet' : 'xMidYMid slice'} />
+      </g>
+      {s.stroke ? <path d={d} fill="none" stroke={s.stroke} strokeWidth={s.strokeWidth} strokeLinejoin="round" /> : null}
+    </>
   );
 }
 
@@ -120,6 +159,8 @@ export function ShapeEl({ shape: s, all }: { shape: Shape; all?: Shape[] }) {
       );
     }
   }
+
+  if (s.src || s.frame) body = withImage(s, body, common);
 
   const needsDefs = !!g || fx.length > 0;
   if (!needsDefs) return <>{body}</>;
