@@ -10,7 +10,7 @@ It runs as a **Windows desktop app** and in any modern **web browser**. Everythi
 | ![Vector workspace: shapes, layers and colour](docs/screenshots/tools/vector.png) | ![Pixel workspace: a photo imported as a layer](docs/screenshots/tools/pixel.png) |
 | **Vector** tools, shapes, layers and colour | **Pixel** layers, brushes and filters on an imported photo |
 | ![Layout workspace: pages and page thumbnails](docs/screenshots/tools/layout.png) | ![Typography workspace: text tools](docs/screenshots/tools/typography.png) |
-| **Layout** pages and page thumbnails for multi-page documents | **Typography** text tools and text panels |
+| **Layout** pages and page thumbnails for multi-page documents | **Typography**: a headline, subhead, wrapped justified paragraph and pull quote, with the Character panel set to the selected headline (font, size, weight, tracking, leading) |
 | ![Slice workspace: export slices](docs/screenshots/tools/slice.png) | |
 | **Slice** tool for exporting parts of a design at chosen sizes | |
 
