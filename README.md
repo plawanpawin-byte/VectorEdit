@@ -64,6 +64,7 @@ EditCurser is the first of a growing family of free, open-source creative tools,
 | --- | --- |
 | **Windows app** | Open the repository's **Releases** page and download `lunaticDesign-Setup-<version>.exe` (installer) or `lunaticDesign-Portable-<version>.exe` (no install, just run it). The app is not code-signed, so Windows SmartScreen warns the first time: *More info → Run anyway*. |
 | **In the browser** | When the maintainer has published the web version, open the repository's GitHub Pages address. Nothing to install; your work stays in that browser. |
+| **Connect AI agents (MCP)** | After installing the Windows app, run this in PowerShell once, then restart Claude Code, Codex or Antigravity: `$exe = (Get-ChildItem "$env:LOCALAPPDATA\Programs" -Filter "Lunatic Design.exe" -Recurse -EA 0 \| Select-Object -First 1).FullName; & $exe --install-mcp`. Details in [docs/mcp-tutorial.md](docs/mcp-tutorial.md). |
 
 ## Your files and privacy
 
