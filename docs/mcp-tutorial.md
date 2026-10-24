@@ -24,6 +24,14 @@ Open PowerShell and paste this line exactly (the `&` and the quotes matter):
 
 If you use Command Prompt (cmd) instead, leave out the `&`: `"C:\Program Files\Lunatic Design\Lunatic Design.exe" --install-mcp`.
 
+**Claude Code only:** you can also register the server with one `claude mcp add` line, using the same path (the `--mcp` flag starts the server):
+
+```
+claude mcp add lunatic-design -- "$env:LOCALAPPDATA\Programs\Lunatic Design\Lunatic Design.exe" --mcp
+```
+
+This does not touch Codex or Antigravity. Use the `--install-mcp` command above to set up all three.
+
 If you installed for your user only, the path is instead `%LOCALAPPDATA%\Programs\Lunatic Design\Lunatic Design.exe`. If you are not sure, right-click the Lunatic Design shortcut on the desktop, choose **Open file location**, and copy the full path of the `.exe` from the address bar.
 
 You should see something like this:
