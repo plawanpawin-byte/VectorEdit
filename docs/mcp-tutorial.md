@@ -4,35 +4,23 @@ This takes about five minutes, once. After that, your AI agent can work on the d
 
 ## What you need
 
-- Lunatic Design **installed** (the Setup file, `lunaticDesign-Setup-0.4.1.exe`). The portable file works too, but move it once and keep it in the same place: the agent remembers where it is.
+- Lunatic Design **installed** (the Setup file, `lunaticDesign-Setup-0.4.2.exe`). The portable file cannot be connected to agents, because it runs from a temporary copy.
 - At least one of: **Claude Code**, **Codex** or **Antigravity**, already installed on this computer.
 - Windows PowerShell or Command Prompt (press the Start button, type `powershell`, press Enter).
 
 ## Step 1: Install Lunatic Design
 
-1. Download `lunaticDesign-Setup-0.4.1.exe` from the Releases page.
+1. Download `lunaticDesign-Setup-0.4.2.exe` from the Releases page.
 2. Run it and finish the installer. It creates the folder **Documents\Lunatic Design**, where your documents are saved by default.
 3. Open Lunatic Design once from the Start menu, then close it.
 
 ## Step 2: Run the setup command once
 
-Open PowerShell and paste this line exactly (the `&` and the quotes matter):
+Open PowerShell and paste this one line. It finds the app by itself, so you do not need to know where it was installed:
 
 ```
-& "C:\Program Files\Lunatic Design\Lunatic Design.exe" --install-mcp
+$exe = (Get-ChildItem "$env:LOCALAPPDATA\Programs" -Filter "Lunatic Design.exe" -Recurse -EA 0 | Select-Object -First 1).FullName; & $exe --install-mcp
 ```
-
-If you use Command Prompt (cmd) instead, leave out the `&`: `"C:\Program Files\Lunatic Design\Lunatic Design.exe" --install-mcp`.
-
-**Claude Code only:** you can also register the server with one `claude mcp add` line, using the same path (the `--mcp` flag starts the server):
-
-```
-claude mcp add lunatic-design -- "$env:LOCALAPPDATA\Programs\Lunatic Design\Lunatic Design.exe" --mcp
-```
-
-This does not touch Codex or Antigravity. Use the `--install-mcp` command above to set up all three.
-
-If you installed for your user only, the path is instead `%LOCALAPPDATA%\Programs\Lunatic Design\Lunatic Design.exe`. If you are not sure, right-click the Lunatic Design shortcut on the desktop, choose **Open file location**, and copy the full path of the `.exe` from the address bar.
 
 You should see something like this:
 
