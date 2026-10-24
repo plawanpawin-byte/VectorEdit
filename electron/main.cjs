@@ -6,6 +6,10 @@ const { startBridge } = require('./bridge.cjs');
 // the user data folder (recent files, agent bridge) is named after the app, in development and when installed
 app.setName('Lunatic Design');
 
+// an agent that starts the server the old way (the app itself, without Node mode) must not open a window; it exits at once
+const AGENT_LAUNCH = process.argv.some((a) => a.endsWith('mcp-server.cjs') || a === '--mcp');
+if (AGENT_LAUNCH && !process.env.ELECTRON_RUN_AS_NODE) app.exit(0);
+
 // `Lunatic Design.exe --mcp` is the MCP server an AI agent starts: no window, no single-instance lock
 const MCP_MODE = process.argv.includes('--mcp');
 if (MCP_MODE) {
