@@ -1,18 +1,52 @@
+<div align="center">
+
+<img src="public/logo.png" alt="lunaticDesign logo" width="120" />
+
 # lunaticDesign
 
-A free, open-source vector, pixel and layout editor with a dense, dark, panel-driven workspace in the style of professional design tools.
-It runs as a **Windows desktop app** and in any modern **web browser**. Everything (UI, tools, state) is original code: React, TypeScript and plain CSS, no UI kit.
+**A free, open-source vector, pixel and layout editor.**
 
-## What's inside
+Vector shapes, photo editing, multi-page layouts, typography and slices in one dense, dark workspace.
+Runs as a Windows app and in the browser. Nothing is uploaded: your work stays on your computer.
 
-| | |
-| --- | --- |
-| ![Vector workspace: shapes, layers and colour](docs/screenshots/tools/vector.png) | ![Pixel workspace: a photo imported as a layer](docs/screenshots/tools/pixel.png) |
-| **Vector** tools, shapes, layers and colour | **Pixel** layers, brushes and filters on an imported photo |
-| ![Layout workspace: pages and page thumbnails](docs/screenshots/tools/layout.png) | ![Typography workspace: text tools](docs/screenshots/tools/typography.png) |
-| **Layout** pages and page thumbnails for multi-page documents | **Typography**: a headline, subhead, wrapped justified paragraph and pull quote, with the Character panel set to the selected headline (font, size, weight, tracking, leading) |
-| ![Slice workspace: export slices](docs/screenshots/tools/slice.png) | |
-| **Slice** tool for exporting parts of a design at chosen sizes | |
+[![Download for Windows](https://img.shields.io/badge/Download-Windows%20app-3b82f6?style=for-the-badge)](https://github.com/plawanpawin-byte/VectorEdit/releases/latest)
+&nbsp;
+[![License: MIT](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](LICENSE)
+
+![Platforms](https://img.shields.io/badge/platforms-Windows%20%C2%B7%20browser-64748b?style=flat-square)
+![Built with](https://img.shields.io/badge/built%20with-React%20%C2%B7%20TypeScript%20%C2%B7%20Electron-64748b?style=flat-square)
+
+</div>
+
+## A look around
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/tools/vector.png" alt="Vector workspace" /><br/><b>Vector</b> &mdash; shapes, layers, colour and an Affinity-style toolbox</td>
+    <td width="50%"><img src="docs/screenshots/tools/pixel.png" alt="Pixel workspace" /><br/><b>Pixel</b> &mdash; a photo imported as a layer, with brushes and filters</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/tools/typography.png" alt="Typography workspace" /><br/><b>Typography</b> &mdash; headline, paragraph and pull quote, with the Character panel</td>
+    <td><img src="docs/screenshots/tools/layout.png" alt="Layout workspace" /><br/><b>Layout</b> &mdash; pages and page thumbnails for multi-page documents</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/tools/slice.png" alt="Slice workspace" /><br/><b>Slice</b> &mdash; export parts of a design at chosen sizes</td>
+    <td><img src="docs/screenshots/start-page.png" alt="Start page" /><br/><b>Start page</b> &mdash; new document, open, recent files</td>
+  </tr>
+</table>
+
+## Made in lunaticDesign
+
+<p align="center">
+  <img src="docs/screenshots/made/mona-lisa.png" alt="Mona Lisa, framed and captioned in lunaticDesign" width="340" /><br/>
+  <sub>The public-domain <i>Mona Lisa</i> by Leonardo da Vinci, framed and captioned in lunaticDesign and exported as PNG.</sub>
+</p>
+
+## Apps in this family
+
+| App | What it is for | Status |
+| --- | --- | --- |
+| **lunaticDesign** | Vector illustration, photo editing and page layout | Version 0.3, in active development |
 
 ## Get it
 
