@@ -73,6 +73,30 @@ export function exportPng(shapes: Shape[], board: Artboard, scale = 2) {
   img.src = url;
 }
 
+/** Render the page to a PNG and hand it back as base64; nothing is written to disk. Used by the agent bridge. */
+export function renderPngBase64(shapes: Shape[], board: Artboard, scale = 1): Promise<{ data: string; width: number; height: number }> {
+  const k = safeScale(board.w, board.h, scale);
+  const url = URL.createObjectURL(new Blob([toSvg(shapes, board, false)], { type: 'image/svg+xml' }));
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.floor(board.w * k));
+      c.height = Math.max(1, Math.floor(board.h * k));
+      const ctx = c.getContext('2d');
+      URL.revokeObjectURL(url);
+      if (!ctx) return reject(new Error('The page is too large for this computer to render.'));
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      resolve({ data: c.toDataURL('image/png').split(',')[1], width: c.width, height: c.height });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('The page could not be drawn.'));
+    };
+    img.src = url;
+  });
+}
+
 /** The artboard as pixels (white page), scaled down so its longest side is at most `maxSize`. */
 export function renderBoardPixels(shapes: Shape[], board: Artboard, maxSize = 480): Promise<ImageData> {
   const k = Math.min(1, maxSize / Math.max(board.w, board.h));

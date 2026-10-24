@@ -27,6 +27,7 @@ interface DesktopApi {
   recentFiles(): Promise<{ path: string; name: string; dir: string }[]>;
   openRecent(path: string): Promise<{ path: string; text: string } | null>;
   removeRecent(path: string): Promise<void>;
+  agentInfo(): Promise<{ command: string; args: string[]; workFolder: string; running: boolean }>;
   onOpenFile(handler: (file: { path: string; text: string }) => void): () => void;
 }
 

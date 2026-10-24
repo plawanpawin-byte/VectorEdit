@@ -47,9 +47,9 @@ Runs as a Windows app and in the browser. Nothing is uploaded: your work stays o
   </tr>
 </table>
 
-## The lunatic apps
+## EditCurser
 
-lunaticDesign is the first of a growing family of free, open-source creative tools, each able to stand on its own.
+EditCurser is the first of a growing family of free, open-source creative tools, each able to stand on its own.
 
 | | App | What it&rsquo;s for | Code |
 | --- | --- | --- | --- |
@@ -69,6 +69,31 @@ lunaticDesign has **no accounts, no server and no sync**. Nothing you create is 
 - Documents are `.vedit` files that you save where you choose; export to PNG, SVG, PDF or slices.
 - An automatic recovery copy of the page you are working on is kept **only on your own computer** (inside the browser profile or the desktop app's data folder). Every person who installs the app starts with an empty page and never sees anyone else's work.
 - The start page lists the files you recently opened or saved (desktop app, stored on your computer). Use **Discard unsaved work** on the start page to delete the recovery copy.
+
+## Works offline
+
+Nothing is fetched from the internet. The app, its fonts and tools all come with the installer, so it works with no network at all. Documents, recent files and exports are kept on your computer. The first time the app starts it creates a folder named **Lunatic Design** in your Documents folder, and Open, Save and Export use it by default.
+
+## Working with AI agents (MCP)
+
+EditCurser can be driven by an AI agent through the [Model Context Protocol](https://modelcontextprotocol.io): Claude, Codex and Antigravity can read the open document, add and change shapes and text, undo, look at the result as a picture, and save or open documents in the Lunatic Design folder.
+
+1. Open the app and keep it running.
+2. Choose **Window → Connect AI agents…** in the app. It shows the exact command to paste for each agent.
+
+The agent starts the app's MCP server (`Lunatic Design.exe --mcp`), which talks to the running window over a private connection on this computer. The connection needs a secret token, accepts only requests from this computer, and is removed when the app closes. Agents can only write inside the Lunatic Design folder, and they ask before replacing unsaved work.
+
+| Tool | What it does |
+| --- | --- |
+| `get_status`, `get_document` | Read the pages, the shapes and their ids |
+| `new_document`, `add_shape`, `add_shapes`, `update_shape`, `delete_shapes`, `select_shapes` | Build and change the design |
+| `undo`, `redo` | Step back or forward |
+| `render_page`, `screenshot` | See the page or the whole window as a picture |
+| `list_documents`, `save_document`, `open_document` | Work with files in the Lunatic Design folder |
+
+## Themes
+
+Window → Theme switches between **Lunatic** (the default, taken from the logo), **Classic dark** and **Light**. The choice is remembered on this computer.
 
 ## Starting, opening and importing
 

@@ -823,3 +823,12 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']), select, te
 .brand img { width: 26px; height: 26px; border-radius: 6px; display: block; }
 .start-name { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .start-dir { max-width: 55%; color: #8c8c8c; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Connect AI agents window */
+.modal.agents { width: min(640px, calc(100vw - 32px)); }
+.agents-body { padding: 14px 18px 4px; display: grid; gap: 4px; }
+.agents-body p { margin: 0 0 6px; line-height: 1.5; font-size: 13px; }
+.agents-body code { font-size: 12px; word-break: break-all; }
+.agents-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.agents-row h4 { margin: 0; font-size: 13px; }
+.agents-body pre { margin: 4px 0 8px; padding: 10px 12px; background: #161616; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; line-height: 1.45; overflow: auto; white-space: pre-wrap; word-break: break-all; user-select: text; }

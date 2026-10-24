@@ -14,6 +14,7 @@ import {
   flip,
   getState,
   groupSelected,
+  openAgents,
   openNewDocument,
   redo,
   rotateSelection,
@@ -35,6 +36,7 @@ import { targetLayer } from '../raster/layer';
 import { deselect, featherSelection, growSelection, invertSelection, selectAll as selectAllPixels, smoothSelection } from '../raster/selection';
 import { divideSelected, joinSelected, reverseSelected, separateSelected, setAll, smoothSelected } from '../objectcmds';
 import { doExport, runPdf } from './TopBar';
+import { THEMES, setTheme } from '../theme';
 
 interface Item {
   label: string;
@@ -68,6 +70,7 @@ export function MenuBar({ onHelp }: { onHelp: () => void }) {
   const grid = useStore((s) => s.grid);
   const snap = useStore((s) => s.snap);
   const workspace = useStore((s) => s.workspace);
+  const theme = useStore((s) => s.theme);
 
   useEffect(() => {
     if (!open) return;
@@ -170,6 +173,10 @@ export function MenuBar({ onHelp }: { onHelp: () => void }) {
     ['Window', [
       { label: 'Studios', head: true },
       ...WORKSPACES.map((w) => ({ label: w.label, checked: workspace === w.id, action: () => setWorkspace(w.id) })),
+      { label: 'Theme', head: true },
+      ...THEMES.map((t) => ({ label: t.label, checked: theme === t.id, action: () => setTheme(t.id) })),
+      { label: 'AI agents', head: true },
+      { label: 'Connect AI agents…', action: openAgents },
     ]],
     ['Help', [
       { label: 'Keyboard Shortcuts', shortcut: 'F1', action: onHelp },

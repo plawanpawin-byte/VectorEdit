@@ -8,9 +8,14 @@ import * as docfile from './document';
 import * as exporter from './components/exporter';
 import * as rasterLayer from './raster/layer';
 import { newDocument, openStartPage } from './store';
+import { installAgentApi } from './agentapi';
 import './styles.css';
+import './themes.css';
+import { initTheme } from './theme';
 
 async function main() {
+  initTheme();
+  installAgentApi();
   // automated tests drive the app through this handle; it only exists with ?e2e in the address
   if (new URLSearchParams(location.search).has('e2e')) (window as unknown as { __ve: unknown }).__ve = { store, registry, docfile, exporter, rasterLayer };
   const restored = await restoreAutosave();

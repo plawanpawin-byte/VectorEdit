@@ -55,7 +55,7 @@
   },
   "build": {
     "appId": "com.plawanpawin.vectoredit",
-    "productName": "lunaticDesign",
+    "productName": "Lunatic Design",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -110,10 +110,14 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "perMachine": false,
-      "artifactName": "lunaticDesign-Setup-${version}.${ext}"
+      "artifactName": "lunaticDesign-Setup-${version}.${ext}",
+      "shortcutName": "Lunatic Design",
+      "uninstallDisplayName": "Lunatic Design",
+      "include": "build/installer.nsh"
     },
     "portable": {
       "artifactName": "lunaticDesign-Portable-${version}.${ext}"
     }
-  }
+  },
+  "productName": "Lunatic Design"
 }

@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('desktop', {
   setTitle: (title) => ipcRenderer.send('title', title),
   takePendingFile: () => ipcRenderer.invoke('file:pending'),
   recentFiles: () => ipcRenderer.invoke('recent:list'),
+  agentInfo: () => ipcRenderer.invoke('agent:info'),
   openRecent: (file) => ipcRenderer.invoke('recent:open', file),
   removeRecent: (file) => ipcRenderer.invoke('recent:remove', file),
   onOpenFile: (handler) => {

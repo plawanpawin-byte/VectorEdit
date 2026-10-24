@@ -35,6 +35,10 @@ export interface State {
   newDocOpen: boolean;
   /** the start page (New / Open / recent files) covers the editor */
   startOpen: boolean;
+  /** the "Connect AI agents" window is open */
+  agentsOpen: boolean;
+  /** colour theme of the whole interface */
+  theme: ThemeId;
   /** a short message shown in the status bar for a few seconds */
   notice: string | null;
   /** undo depth at the last save or load; the document has unsaved changes when it differs */
@@ -73,6 +77,19 @@ export interface State {
   macroSteps: number;
   pbrush: import('./raster/brush').BrushParams & { preset: string };
   pixel: { tolerance: number; contiguous: boolean; selectMode: 'replace' | 'add' | 'subtract' | 'intersect'; strength: number; fillMode: 'fill' | 'gradient' };
+}
+
+export type ThemeId = 'lunatic' | 'classic' | 'light';
+export const THEME_KEY = 'lunatic:theme';
+/** The saved theme of this user, or the default one. */
+function loadTheme(): ThemeId {
+  try {
+    const t = localStorage.getItem(THEME_KEY);
+    if (t === 'classic' || t === 'light' || t === 'lunatic') return t;
+  } catch {
+    // storage unavailable: use the default
+  }
+  return 'lunatic';
 }
 
 let counter = 0;
@@ -133,6 +150,8 @@ let state: State = {
   rulers: false,
   newDocOpen: false,
   startOpen: false,
+  agentsOpen: false,
+  theme: loadTheme(),
   notice: null,
   cleanMark: 0,
   grid: false,
@@ -515,6 +534,9 @@ export const confirmDiscard = () => !isDirty() || window.confirm('This document 
 
 /** Show the New Document dialog (page size presets). */
 export const openNewDocument = () => setState({ newDocOpen: true });
+
+/** Show the window that explains how to connect AI agents through MCP. */
+export const openAgents = () => setState({ agentsOpen: true });
 
 /** Show the start page (New / Open / recent files) over the editor. */
 export const openStartPage = () => setState({ startOpen: true });

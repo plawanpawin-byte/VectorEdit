@@ -1,9 +1,31 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { startBridge } = require('./bridge.cjs');
+
+// the user data folder (recent files, agent bridge) is named after the app, in development and when installed
+app.setName('Lunatic Design');
+
+// `Lunatic Design.exe --mcp` is the MCP server an AI agent starts: no window, no single-instance lock
+const MCP_MODE = process.argv.includes('--mcp');
+if (MCP_MODE) {
+  app.disableHardwareAcceleration();
+  require('./mcp-server.cjs').runStdio();
+}
+let bridge = null;
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 let win = null;
+
+/** Documents/Lunatic Design: the default place for opening, saving and exporting. Works offline; nothing is fetched. */
+const workFolder = () => path.join(app.getPath('documents'), 'Lunatic Design');
+async function ensureWorkFolder() {
+  try {
+    await fs.mkdir(workFolder(), { recursive: true });
+  } catch {
+    // Documents may be read-only or redirected; the dialogs then open where the OS decides
+  }
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -11,7 +33,7 @@ function createWindow() {
     height: 900,
     minWidth: 960,
     minHeight: 600,
-    backgroundColor: '#222222',
+    backgroundColor: '#0d1a1d',
     title: 'lunaticDesign',
     // The renderer draws its own menu bar; the native one stays (hidden) so its accelerators keep working.
     autoHideMenuBar: process.platform !== 'darwin',
@@ -152,7 +174,7 @@ async function readEntry(file) {
 }
 
 ipcMain.handle('file:open', async () => {
-  const r = await dialog.showOpenDialog(win, { filters: OPEN_FILTERS, properties: ['openFile', 'multiSelections'] });
+  const r = await dialog.showOpenDialog(win, { defaultPath: workFolder(), filters: OPEN_FILTERS, properties: ['openFile', 'multiSelections'] });
   if (r.canceled || !r.filePaths.length) return null;
   return Promise.all(r.filePaths.map(readEntry));
 });
@@ -160,7 +182,7 @@ ipcMain.handle('file:open', async () => {
 ipcMain.handle('file:save', async (_e, { path: target, text, saveAs }) => {
   let dest = target;
   if (!dest || saveAs) {
-    const r = await dialog.showSaveDialog(win, { filters: FILTERS, defaultPath: dest ?? 'Untitled.vedit' });
+    const r = await dialog.showSaveDialog(win, { filters: FILTERS, defaultPath: dest ?? path.join(workFolder(), 'Untitled.vedit') });
     if (r.canceled || !r.filePath) return null;
     dest = r.filePath;
   }
@@ -170,7 +192,7 @@ ipcMain.handle('file:save', async (_e, { path: target, text, saveAs }) => {
 });
 
 ipcMain.handle('file:export', async (_e, { name, ext, data }) => {
-  const r = await dialog.showSaveDialog(win, { defaultPath: name, filters: [{ name: ext.toUpperCase(), extensions: [ext] }] });
+  const r = await dialog.showSaveDialog(win, { defaultPath: path.join(workFolder(), name), filters: [{ name: ext.toUpperCase(), extensions: [ext] }] });
   if (r.canceled || !r.filePath) return null;
   await fs.writeFile(r.filePath, Buffer.from(data));
   return { path: r.filePath };
@@ -226,8 +248,20 @@ ipcMain.handle('recent:open', async (_e, file) => {
 
 ipcMain.on('title', (_e, title) => win?.setTitle(title));
 
+// what the "Connect AI agents" window shows: how to start the MCP server
+ipcMain.handle('agent:info', () => ({
+  command: app.getPath('exe'),
+  args: app.isPackaged ? ['--mcp'] : [app.getAppPath(), '--mcp'],
+  workFolder: workFolder(),
+  running: !!bridge,
+}));
+
+app.on('before-quit', () => void bridge?.close());
+
 // one editor window: opening a second .vedit file hands it to the running one
-if (!app.requestSingleInstanceLock()) {
+if (MCP_MODE) {
+  // nothing to set up: the MCP server talks to the already running editor
+} else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', (_e, argv) => {
@@ -245,9 +279,17 @@ app.on('open-file', (e, file) => {
   else pendingFile = file;
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  if (MCP_MODE) return;
+  await ensureWorkFolder();
   buildMenu();
   createWindow();
+  // lets AI agents (through the MCP server) read and edit the open document; private to this computer
+  try {
+    bridge = await startBridge({ getWindow: () => win, userDataDir: app.getPath('userData'), workFolder, onFile: (f) => void remember(f) });
+  } catch (err) {
+    console.error('Agent bridge did not start:', err);
+  }
   app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && createWindow());
 });
 app.on('window-all-closed', () => process.platform !== 'darwin' && app.quit());

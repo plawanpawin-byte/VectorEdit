@@ -45,6 +45,7 @@ import { MenuBar } from './components/MenuBar';
 import { FloatingTools } from './components/FloatingTools';
 import { NewDocument } from './components/NewDocument';
 import { StartPage } from './components/StartPage';
+import { AgentsDialog } from './components/AgentsDialog';
 import { importFiles, importFilesDialog, kindOf, looksLikeSvg, reportImport } from './importer';
 import { PathBrushesPanel, QuickFxPanel, StylesPanel } from './components/StylePanels';
 import { Toolbar } from './components/Toolbar';
@@ -478,6 +479,7 @@ export function App() {
       <RasterDialog />
       <NewDocument />
       <StartPage />
+      <AgentsDialog />
       {help && <Help onClose={() => setHelp(false)} />}
     </div>
   );
