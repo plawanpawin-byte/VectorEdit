@@ -38,12 +38,15 @@ Runs as a Windows app and in the browser. Nothing is uploaded: your work stays o
 
 <table>
   <tr>
-    <td width="50%" align="center"><img src="docs/screenshots/made/tide.png" alt="Tide: a moonlit sea made of layered wave paths" /><br/><b>Tide</b> &mdash; six wave paths and a glowing moon</td>
-    <td width="50%" align="center"><img src="docs/screenshots/made/gem.png" alt="Facets: a gem built from six gradient facets" /><br/><b>Facets</b> &mdash; a gem built from six gradient paths</td>
+    <td width="50%" align="center"><img src="docs/screenshots/made/crab.png" alt="A round badge with a crab wearing glasses above waves" /><br/><b>Crab</b> &mdash; a friendly crab in a round badge, above layered waves</td>
+    <td width="50%" align="center"><img src="docs/screenshots/made/earth-sun.webp" alt="A blue planet beside a glowing orange sun" /><br/><b>Earth and sun</b> &mdash; a glowing planet beside a bright sun</td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/made/geometry.png" alt="Cog and rings with the lunaticDesign name" /><br/><b>Geometry</b> &mdash; a parametric cog with glow and rings</td>
-    <td align="center"><img src="docs/screenshots/made/type.png" alt="Type specimen poster" /><br/><b>Type</b> &mdash; a specimen with a justified text frame</td>
+    <td align="center"><img src="docs/screenshots/made/sunset.png" alt="Sun setting behind mountains and pine trees" /><br/><b>Sunset</b> &mdash; a sun behind layered mountains and pine trees</td>
+    <td align="center"><img src="docs/screenshots/made/boat.png" alt="A fishing boat on calm waves with a buoy line" /><br/><b>Fishing boat</b> &mdash; a boat on calm waves with a buoy line</td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2"><img src="docs/screenshots/made/iceberg.png" alt="A steamship at night beside an iceberg under a full moon" width="50%" /><br/><b>Iceberg</b> &mdash; a steamship at night beside an iceberg under a full moon</td>
   </tr>
 </table>
 
