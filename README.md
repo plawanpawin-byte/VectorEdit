@@ -3,6 +3,14 @@
 A free, open-source vector, pixel and layout editor with a dense, dark, panel-driven workspace in the style of professional design tools.
 It runs as a **Windows desktop app** and in any modern **web browser**. Everything (UI, tools, state) is original code: React, TypeScript and plain CSS, no UI kit.
 
+## Screenshots
+
+| Start page | Editor | Made in vectorDesign |
+| --- | --- | --- |
+| ![Start page](docs/screenshots/start-page.png) | ![Editor](docs/screenshots/editor.png) | ![Mona Lisa, framed and captioned in vectorDesign](docs/screenshots/mona-lisa-vectordesign.png) |
+
+The last image is the public-domain *Mona Lisa* by Leonardo da Vinci, framed and captioned with vectorDesign and exported as PNG.
+
 ## Get it
 
 | How | Steps |
