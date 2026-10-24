@@ -19,7 +19,9 @@ let bridge = null;
 async function runInstallMcp() {
   const { installMcp } = require('./install-mcp.cjs');
   // the same command the agents start: the packaged app, or electron with this folder in development
-  const entry = app.isPackaged ? { command: app.getPath('exe'), args: ['--mcp'] } : { command: app.getPath('exe'), args: [app.getAppPath(), '--mcp'] };
+  // the portable build runs from a temporary copy; electron-builder names the file the user actually started
+  const exe = process.env.PORTABLE_EXECUTABLE_FILE || app.getPath('exe');
+  const entry = app.isPackaged ? { command: exe, args: ['--mcp'] } : { command: exe, args: [app.getAppPath(), '--mcp'] };
   const report = await installMcp({ home: app.getPath('home'), entry });
   const lines = [
     'Lunatic Design: connecting AI agents',
@@ -273,7 +275,7 @@ ipcMain.on('title', (_e, title) => win?.setTitle(title));
 
 // what the "Connect AI agents" window shows: how to start the MCP server
 ipcMain.handle('agent:info', () => ({
-  command: app.getPath('exe'),
+  command: process.env.PORTABLE_EXECUTABLE_FILE || app.getPath('exe'),
   args: app.isPackaged ? ['--mcp'] : [app.getAppPath(), '--mcp'],
   workFolder: workFolder(),
   running: !!bridge,

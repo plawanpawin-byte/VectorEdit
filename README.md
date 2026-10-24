@@ -78,7 +78,7 @@ Nothing is fetched from the internet. The app, its fonts and tools all come with
 
 Lunatic Design can be driven by AI agents through the [Model Context Protocol](https://modelcontextprotocol.io). After one setup command, **Claude Code**, **Codex** and **Antigravity** can read the open document, add and change shapes and text, undo, look at the result as a picture, and save or open documents in the Lunatic Design folder.
 
-**Setup, once, in a terminal:**
+**Setup, once, in a terminal** (step by step with screenshots: [docs/mcp-tutorial.md](docs/mcp-tutorial.md)):
 
 ```bash
 "C:\Program Files\Lunatic Design\Lunatic Design.exe" --install-mcp

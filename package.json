@@ -1,6 +1,6 @@
 {
   "name": "vectoredit",
-  "version": "0.1.0",
+  "version": "0.4.1",
   "description": "lunaticDesign: open-source vector, pixel and layout editor for the desktop and the browser",
   "main": "electron/main.cjs",
   "scripts": {
