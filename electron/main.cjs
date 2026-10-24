@@ -12,7 +12,30 @@ if (MCP_MODE) {
   app.disableHardwareAcceleration();
   require('./mcp-server.cjs').runStdio();
 }
+// `Lunatic Design.exe --install-mcp`: add the MCP server to Claude Code, Codex and Antigravity, then exit
+const INSTALL_MODE = process.argv.includes('--install-mcp');
 let bridge = null;
+
+async function runInstallMcp() {
+  const { installMcp } = require('./install-mcp.cjs');
+  // the same command the agents start: the packaged app, or electron with this folder in development
+  const entry = app.isPackaged ? { command: app.getPath('exe'), args: ['--mcp'] } : { command: app.getPath('exe'), args: [app.getAppPath(), '--mcp'] };
+  const report = await installMcp({ home: app.getPath('home'), entry });
+  const lines = [
+    'Lunatic Design: connecting AI agents',
+    ...report.map((r) => (r.status === 'written' ? `  ${r.agent}: written to ${r.file}` : r.status === 'skipped' ? `  ${r.agent}: skipped (${r.reason})` : `  ${r.agent}: NOT written (${r.reason}) ${r.file}`)),
+    'Restart Claude Code, Codex or Antigravity, then ask it to use the lunatic-design tools.',
+  ];
+  const text = lines.join('\n') + '\n';
+  process.stdout.write(text);
+  try {
+    await fs.writeFile(path.join(app.getPath('userData'), 'install-mcp.log'), text, 'utf8');
+  } catch {
+    // the log is a convenience; the printed result is what matters
+  }
+  const failed = report.some((r) => r.status === 'failed');
+  app.exit(failed ? 1 : 0);
+}
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 let win = null;
@@ -259,8 +282,8 @@ ipcMain.handle('agent:info', () => ({
 app.on('before-quit', () => void bridge?.close());
 
 // one editor window: opening a second .vedit file hands it to the running one
-if (MCP_MODE) {
-  // nothing to set up: the MCP server talks to the already running editor
+if (MCP_MODE || INSTALL_MODE) {
+  // nothing to set up: the MCP server talks to the already running editor, and the installer only writes config files
 } else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -280,6 +303,7 @@ app.on('open-file', (e, file) => {
 });
 
 app.whenReady().then(async () => {
+  if (INSTALL_MODE) return runInstallMcp();
   if (MCP_MODE) return;
   await ensureWorkFolder();
   buildMenu();

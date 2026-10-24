@@ -1,7 +1,6 @@
 import { getState, setState, THEME_KEY, type ThemeId } from './store';
 
 export const THEMES: { id: ThemeId; label: string }[] = [
-  { id: 'lunatic', label: 'Lunatic' },
   { id: 'classic', label: 'Dark' },
   { id: 'light', label: 'Light' },
 ];

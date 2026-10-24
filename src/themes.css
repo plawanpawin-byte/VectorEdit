@@ -3,65 +3,6 @@
   Each block redefines the colour variables and then the few surfaces that carry their own colours.
 */
 
-/* ---------- Lunatic: deep teal taken from the logo ---------- */
-:root[data-theme='lunatic'] {
-  --ui-0: #091416;
-  --ui-1: #0d1a1d;
-  --ui-2: #12262a;
-  --ui-3: #1a3338;
-  --ui-4: #254349;
-  --line: #050d0f;
-  --line-soft: #214047;
-  --text: #e6f4f1;
-  --text-dim: #a4c4bf;
-  --text-faint: #6c908b;
-  --brand: #14b8a6;
-  --brand-hi: #5eead4;
-  --sel: #38bdf8;
-  --sel-soft: rgba(56, 189, 248, 0.2);
-  color-scheme: dark;
-}
-[data-theme='lunatic'] body { background: var(--ui-1); }
-[data-theme='lunatic'] .menubar { background: #091416; border-bottom-color: #050d0f; }
-[data-theme='lunatic'] .topbar { background: #0f2024; }
-[data-theme='lunatic'] .modes { background: #091416; }
-[data-theme='lunatic'] .contextbar { background: #17302f; }
-[data-theme='lunatic'] .doc-tabs,
-[data-theme='lunatic'] .ruler,
-[data-theme='lunatic'] .corner { background: #17302f; }
-[data-theme='lunatic'] .dock,
-[data-theme='lunatic'] .leftdock { background: #0d1a1d; border-left-color: #050d0f; }
-[data-theme='lunatic'] .dock-group,
-[data-theme='lunatic'] .layer-foot,
-[data-theme='lunatic'] .dock-tabs { background: #17302f; }
-[data-theme='lunatic'] .dock-tabs { border-bottom-color: #0d1a1d; }
-[data-theme='lunatic'] .dock-tabs button.on,
-[data-theme='lunatic'] .layer-list { background: #0d1a1d; }
-[data-theme='lunatic'] .layer-foot { border-top-color: #0d1a1d; }
-[data-theme='lunatic'] .flyout,
-[data-theme='lunatic'] .pop-panel { background: #12262a; border-color: #050d0f; }
-[data-theme='lunatic'] .tool.on { background: #14403f; box-shadow: inset 0 0 0 1px #2dd4bf; }
-[data-theme='lunatic'] .ibtn.on,
-[data-theme='lunatic'] .segpick button.on,
-[data-theme='lunatic'] .flyout button.on,
-[data-theme='lunatic'] .tgl.on,
-[data-theme='lunatic'] .preset-grid button.on { background: #0f4a46; border-color: #0f4a46; color: var(--brand-hi); }
-[data-theme='lunatic'] .preset-list > button.on,
-[data-theme='lunatic'] .newdoc-presets button.on,
-[data-theme='lunatic'] .newdoc-orient button.on { background: #0f4a46; }
-[data-theme='lunatic'] .float-tools button.on { background: #0d1a1d; box-shadow: inset 0 0 0 1px #2dd4bf; }
-[data-theme='lunatic'] .float-grip,
-[data-theme='lunatic'] .float-tools button:hover { background: #254349; }
-[data-theme='lunatic'] *::-webkit-scrollbar-thumb { background: #2f565d; }
-[data-theme='lunatic'] .modal { background: #12262a; }
-[data-theme='lunatic'] .agents-body pre { background: #091416; }
-[data-theme='lunatic'] .startpage { background: radial-gradient(1200px 700px at 50% 30%, #12383a 0%, #0b1a1d 55%, #070f11 100%); }
-[data-theme='lunatic'] .start-actions .start-primary { background: #14b8a6; border-color: #14b8a6; color: #04211f; font-weight: 600; }
-[data-theme='lunatic'] .start-actions button { border-color: #2f565d; }
-[data-theme='lunatic'] .start-recent li:hover { background: #17302f; }
-[data-theme='lunatic'] .start-recent li .start-remove:hover { background: #254349; }
-[data-theme='lunatic'] .start-logo { box-shadow: 0 10px 40px rgba(20, 184, 166, 0.25); }
-
 /* ---------- Light ---------- */
 :root[data-theme='light'] {
   --ui-0: #ffffff;
@@ -74,8 +15,8 @@
   --text: #1b2127;
   --text-dim: #46505a;
   --text-faint: #77818b;
-  --brand: #0f766e;
-  --brand-hi: #0d9488;
+  --brand: #1d4ed8;
+  --brand-hi: #2563eb;
   --sel: #2563eb;
   --sel-soft: rgba(37, 99, 235, 0.16);
   color-scheme: light;
@@ -100,16 +41,16 @@
 [data-theme='light'] .layer-foot { border-top-color: #c3cad2; }
 [data-theme='light'] .flyout,
 [data-theme='light'] .pop-panel { background: #ffffff; border-color: #c3cad2; }
-[data-theme='light'] .tool.on { background: #d7ebe9; color: #0f766e; box-shadow: inset 0 0 0 1px #0d9488; }
+[data-theme='light'] .tool.on { background: #dbe7fb; color: #1d4ed8; box-shadow: inset 0 0 0 1px #2563eb; }
 [data-theme='light'] .ibtn.on,
 [data-theme='light'] .segpick button.on,
 [data-theme='light'] .flyout button.on,
 [data-theme='light'] .tgl.on,
-[data-theme='light'] .preset-grid button.on { background: #cfe9e6; border-color: #9dd2cd; color: #0f766e; }
+[data-theme='light'] .preset-grid button.on { background: #dbe7fb; border-color: #a9c4f2; color: #1d4ed8; }
 [data-theme='light'] .preset-list > button.on,
 [data-theme='light'] .newdoc-presets button.on,
-[data-theme='light'] .newdoc-orient button.on { background: #cfe9e6; }
-[data-theme='light'] .float-tools button.on { background: #d7ebe9; box-shadow: inset 0 0 0 1px #0d9488; }
+[data-theme='light'] .newdoc-orient button.on { background: #dbe7fb; }
+[data-theme='light'] .float-tools button.on { background: #dbe7fb; box-shadow: inset 0 0 0 1px #2563eb; }
 [data-theme='light'] .float-grip,
 [data-theme='light'] .float-tools button:hover { background: #d3d8de; }
 [data-theme='light'] *::-webkit-scrollbar-thumb { background: #b7bec7; }
@@ -120,7 +61,7 @@
 [data-theme='light'] .start-tag { color: #46505a; }
 [data-theme='light'] .start-hint { color: #66707a; }
 [data-theme='light'] .start-actions button { border-color: #aeb6bf; color: #1b2127; }
-[data-theme='light'] .start-actions .start-primary { background: #0f766e; border-color: #0f766e; color: #fff; }
+[data-theme='light'] .start-actions .start-primary { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
 [data-theme='light'] .start-recent h2 { color: #1b2127; }
 [data-theme='light'] .start-recent li .start-open { color: #1b2127; }
 [data-theme='light'] .start-recent li:hover { background: #e0e5ea; }
@@ -139,5 +80,5 @@
 [data-theme='light'] .contextbar .ibtn:hover .txtbtn { background: #cfd5dc; }
 [data-theme='light'] .dock-tabs button { color: #55606b; }
 [data-theme='light'] .dock-tabs button.on { color: #0f1419; }
-[data-theme='light'] .tool.on { color: #0f766e; }
+[data-theme='light'] .tool.on { color: #1d4ed8; }
 [data-theme='light'] .layer .thumb { background-color: #fff; }

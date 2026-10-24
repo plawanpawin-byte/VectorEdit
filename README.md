@@ -76,12 +76,17 @@ Nothing is fetched from the internet. The app, its fonts and tools all come with
 
 ## Working with AI agents (MCP)
 
-EditCurser can be driven by an AI agent through the [Model Context Protocol](https://modelcontextprotocol.io): Claude, Codex and Antigravity can read the open document, add and change shapes and text, undo, look at the result as a picture, and save or open documents in the Lunatic Design folder.
+Lunatic Design can be driven by AI agents through the [Model Context Protocol](https://modelcontextprotocol.io). After one setup command, **Claude Code**, **Codex** and **Antigravity** can read the open document, add and change shapes and text, undo, look at the result as a picture, and save or open documents in the Lunatic Design folder.
 
-1. Open the app and keep it running.
-2. Choose **Window → Connect AI agents…** in the app. It shows the exact command to paste for each agent.
+**Setup, once, in a terminal:**
 
-The agent starts the app's MCP server (`Lunatic Design.exe --mcp`), which talks to the running window over a private connection on this computer. The connection needs a secret token, accepts only requests from this computer, and is removed when the app closes. Agents can only write inside the Lunatic Design folder, and they ask before replacing unsaved work.
+```bash
+"C:\Program Files\Lunatic Design\Lunatic Design.exe" --install-mcp
+```
+
+It adds the server to each agent's configuration, merging with what is already there (other servers stay), and keeps a `.bak` copy of any file it changes. The result is written to `install-mcp.log` in the app's data folder. Then restart the agents. The app's **Window → Connect AI agents…** window shows the same command with a copy button.
+
+Keep Lunatic Design open while an agent works. The agent starts the app's MCP server (`Lunatic Design.exe --mcp`), which talks to the running window over a private connection on this computer. The connection needs a secret token, accepts only requests from this computer, and is removed when the app closes. Agents can only write inside the Lunatic Design folder, and they ask before replacing unsaved work.
 
 | Tool | What it does |
 | --- | --- |
@@ -93,7 +98,7 @@ The agent starts the app's MCP server (`Lunatic Design.exe --mcp`), which talks 
 
 ## Themes
 
-Window → Theme switches between **Lunatic** (the default, taken from the logo), **Classic dark** and **Light**. The choice is remembered on this computer.
+Window → Theme switches between **Dark** (the default) and **Light**. The choice is remembered on this computer.
 
 ## Starting, opening and importing
 

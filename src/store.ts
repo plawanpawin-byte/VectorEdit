@@ -79,13 +79,13 @@ export interface State {
   pixel: { tolerance: number; contiguous: boolean; selectMode: 'replace' | 'add' | 'subtract' | 'intersect'; strength: number; fillMode: 'fill' | 'gradient' };
 }
 
-export type ThemeId = 'lunatic' | 'classic' | 'light';
+export type ThemeId = 'classic' | 'light';
 export const THEME_KEY = 'lunatic:theme';
 /** The saved theme of this user, or the default one. */
 function loadTheme(): ThemeId {
   try {
     const t = localStorage.getItem(THEME_KEY);
-    if (t === 'classic' || t === 'light' || t === 'lunatic') return t;
+    if (t === 'classic' || t === 'light') return t;
   } catch {
     // storage unavailable: use the default
   }
