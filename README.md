@@ -39,8 +39,8 @@ Runs as a Windows app and in the browser. Nothing is uploaded: your work stays o
 
 <table>
   <tr>
-    <td width="50%" align="center"><img src="docs/screenshots/made/dusk.png" alt="DUSK poster: a sunset over layered mountains" /><br/><b>Dusk</b> &mdash; gradient sky, glowing sun, layered mountains</td>
-    <td width="50%" align="center"><img src="docs/screenshots/made/neon.png" alt="NEON poster: synthwave sun and grid" /><br/><b>Neon</b> &mdash; glowing type over a synthwave grid</td>
+    <td width="50%" align="center"><img src="docs/screenshots/made/tide.png" alt="Tide: a moonlit sea made of layered wave paths" /><br/><b>Tide</b> &mdash; six wave paths and a glowing moon</td>
+    <td width="50%" align="center"><img src="docs/screenshots/made/gem.png" alt="Facets: a gem built from six gradient facets" /><br/><b>Facets</b> &mdash; a gem built from six gradient paths</td>
   </tr>
   <tr>
     <td align="center"><img src="docs/screenshots/made/geometry.png" alt="Cog and rings with the lunaticDesign name" /><br/><b>Geometry</b> &mdash; a parametric cog with glow and rings</td>
