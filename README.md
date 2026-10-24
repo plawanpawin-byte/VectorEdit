@@ -37,10 +37,16 @@ Runs as a Windows app and in the browser. Nothing is uploaded: your work stays o
 
 ## Made in lunaticDesign
 
-<p align="center">
-  <img src="docs/screenshots/made/mona-lisa.png" alt="Mona Lisa, framed and captioned in lunaticDesign" width="340" /><br/>
-  <sub>The public-domain <i>Mona Lisa</i> by Leonardo da Vinci, framed and captioned in lunaticDesign and exported as PNG.</sub>
-</p>
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="docs/screenshots/made/dusk.png" alt="DUSK poster: a sunset over layered mountains" /><br/><b>Dusk</b> &mdash; gradient sky, glowing sun, layered mountains</td>
+    <td width="50%" align="center"><img src="docs/screenshots/made/neon.png" alt="NEON poster: synthwave sun and grid" /><br/><b>Neon</b> &mdash; glowing type over a synthwave grid</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/made/geometry.png" alt="Cog and rings with the lunaticDesign name" /><br/><b>Geometry</b> &mdash; a parametric cog with glow and rings</td>
+    <td align="center"><img src="docs/screenshots/made/type.png" alt="Type specimen poster" /><br/><b>Type</b> &mdash; a specimen with a justified text frame</td>
+  </tr>
+</table>
 
 ## Apps in this family
 
