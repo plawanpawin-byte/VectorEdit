@@ -365,7 +365,7 @@ function useDesktopBridge() {
   }, []);
   useEffect(() => {
     const name = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled';
-    window.desktop?.setTitle(`${name} - vectorDesign`);
+    window.desktop?.setTitle(`${name} - lunaticDesign`);
   }, [filePath]);
 }
 

@@ -32,8 +32,8 @@ jobs:
         with:
           name: VectorEdit-windows
           path: |
-            release/vectorDesign-Setup-*.exe
-            release/vectorDesign-Portable-*.exe
+            release/lunaticDesign-Setup-*.exe
+            release/lunaticDesign-Portable-*.exe
           if-no-files-found: error
       - name: Attach to the GitHub release
         if: startsWith(github.ref, 'refs/tags/v') || inputs.tag != ''
@@ -43,5 +43,5 @@ jobs:
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: |
-            release/vectorDesign-Setup-*.exe
-            release/vectorDesign-Portable-*.exe
+            release/lunaticDesign-Setup-*.exe
+            release/lunaticDesign-Portable-*.exe

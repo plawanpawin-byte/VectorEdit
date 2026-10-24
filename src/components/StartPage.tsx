@@ -42,7 +42,7 @@ export function StartPage() {
     <div className="startpage" role="dialog" aria-label="Start">
       <div className="start-inner">
         <img className="start-logo" src="./logo.png" alt="" />
-        <h1>vectorDesign</h1>
+        <h1>lunaticDesign</h1>
         <p className="start-tag">Create a new document or open an existing file.</p>
         <div className="start-actions">
           <button className="start-primary" onClick={openNewDocument}>

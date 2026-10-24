@@ -1,7 +1,7 @@
 {
   "name": "vectoredit",
   "version": "0.1.0",
-  "description": "vectorDesign: open-source vector, pixel and layout editor for the desktop and the browser",
+  "description": "lunaticDesign: open-source vector, pixel and layout editor for the desktop and the browser",
   "main": "electron/main.cjs",
   "scripts": {
     "test": "vitest run",
@@ -55,7 +55,7 @@
   },
   "build": {
     "appId": "com.plawanpawin.vectoredit",
-    "productName": "vectorDesign",
+    "productName": "lunaticDesign",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -99,21 +99,21 @@
     "fileAssociations": [
       {
         "ext": "vedit",
-        "name": "vectorDesign document",
+        "name": "lunaticDesign document",
         "role": "Editor"
       }
     ],
-    "artifactName": "vectorDesign-${version}-${os}-${arch}.${ext}",
+    "artifactName": "lunaticDesign-${version}-${os}-${arch}.${ext}",
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "perMachine": false,
-      "artifactName": "vectorDesign-Setup-${version}.${ext}"
+      "artifactName": "lunaticDesign-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "vectorDesign-Portable-${version}.${ext}"
+      "artifactName": "lunaticDesign-Portable-${version}.${ext}"
     }
   }
 }

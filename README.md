@@ -1,4 +1,4 @@
-# vectorDesign
+# lunaticDesign
 
 A free, open-source vector, pixel and layout editor with a dense, dark, panel-driven workspace in the style of professional design tools.
 It runs as a **Windows desktop app** and in any modern **web browser**. Everything (UI, tools, state) is original code: React, TypeScript and plain CSS, no UI kit.
@@ -18,13 +18,13 @@ It runs as a **Windows desktop app** and in any modern **web browser**. Everythi
 
 | How | Steps |
 | --- | --- |
-| **Windows app** | Open the repository's **Releases** page and download `vectorDesign-Setup-<version>.exe` (installer) or `vectorDesign-Portable-<version>.exe` (no install, just run it). The app is not code-signed, so Windows SmartScreen warns the first time: *More info → Run anyway*. |
+| **Windows app** | Open the repository's **Releases** page and download `lunaticDesign-Setup-<version>.exe` (installer) or `lunaticDesign-Portable-<version>.exe` (no install, just run it). The app is not code-signed, so Windows SmartScreen warns the first time: *More info → Run anyway*. |
 | **In the browser** | When the maintainer has published the web version, open the repository's GitHub Pages address. Nothing to install; your work stays in that browser. |
 | **From source** | `npm install`, then `npm run dev` (browser) or `npm run electron:start` (desktop). See below. |
 
 ## Your files and privacy
 
-vectorDesign has **no accounts, no server and no sync**. Nothing you create is uploaded anywhere, and nobody else can see it.
+lunaticDesign has **no accounts, no server and no sync**. Nothing you create is uploaded anywhere, and nobody else can see it.
 
 - Documents are `.vedit` files that you save where you choose; export to PNG, SVG, PDF or slices.
 - An automatic recovery copy of the page you are working on is kept **only on your own computer** (inside the browser profile or the desktop app's data folder). Every person who installs the app starts with an empty page and never sees anyone else's work.
@@ -54,8 +54,8 @@ Installers for Windows are best built on Windows, macOS ones on macOS.
 
 ### Windows installer without building it yourself
 
-The **Build Windows app** workflow builds the installer (`vectorDesign-Setup-<version>.exe`) and a portable
-`vectorDesign-Portable-<version>.exe` on GitHub's Windows runners. Run it from the repository's *Actions* tab
+The **Build Windows app** workflow builds the installer (`lunaticDesign-Setup-<version>.exe`) and a portable
+`lunaticDesign-Portable-<version>.exe` on GitHub's Windows runners. Run it from the repository's *Actions* tab
 (*Build Windows app* → *Run workflow*) and download the files from the run's *Artifacts*. Pushing a tag
 such as `v0.1.0`, or running the workflow with a *tag* value, also publishes both files on the repository's Releases page. The installer is not code-signed, so Windows
 SmartScreen shows a warning the first time (*More info → Run anyway*).
@@ -87,7 +87,7 @@ Also: PDF export (vector for plain shapes, image fallback), SVG import, colour s
 
 ## Limitations
 
-vectorDesign is a young project and does **not** have everything Affinity has. See [docs/COVERAGE.md](docs/COVERAGE.md) for a feature-by-feature checklist. Missing today: AI features, filter layers and live masks for pixel layers, custom brush response curves, vector PDF for text and gradients, CMYK, free-form mesh-point gradients (a colour-grid mesh fill exists), and Affinity file-format import. Master pages repeat content but have no page numbering or spreads yet. Text styles are stored per browser. Scripts are not sandboxed, so only run code you trust.
+lunaticDesign is a young project and does **not** have everything Affinity has. See [docs/COVERAGE.md](docs/COVERAGE.md) for a feature-by-feature checklist. Missing today: AI features, filter layers and live masks for pixel layers, custom brush response curves, vector PDF for text and gradients, CMYK, free-form mesh-point gradients (a colour-grid mesh fill exists), and Affinity file-format import. Master pages repeat content but have no page numbering or spreads yet. Text styles are stored per browser. Scripts are not sandboxed, so only run code you trust.
 
 ## Layout
 
@@ -108,4 +108,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed (see [LICENSE](LICENSE)).
 
 ## Disclaimer
 
-vectorDesign is an independent open-source project. It is not affiliated with, endorsed by or derived from Affinity, Canva or Serif. All code, icons and assets are original.
+lunaticDesign is an independent open-source project. It is not affiliated with, endorsed by or derived from Affinity, Canva or Serif. All code, icons and assets are original.

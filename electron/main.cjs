@@ -12,7 +12,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     backgroundColor: '#222222',
-    title: 'vectorDesign',
+    title: 'lunaticDesign',
     // The renderer draws its own menu bar; the native one stays (hidden) so its accelerators keep working.
     autoHideMenuBar: process.platform !== 'darwin',
     webPreferences: {
@@ -133,7 +133,7 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-const FILTERS = [{ name: 'vectorDesign document', extensions: ['vedit'] }];
+const FILTERS = [{ name: 'lunaticDesign document', extensions: ['vedit'] }];
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif', 'ico', 'svg'];
 // Open accepts documents and pictures; the first filter is the one shown by default
 const OPEN_FILTERS = [

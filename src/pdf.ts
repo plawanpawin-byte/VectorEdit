@@ -25,7 +25,7 @@ const isVector = (p: PdfPage): p is PdfVectorPage => 'content' in p;
 const enc = new TextEncoder();
 const PT = 0.75;
 
-export function buildPdf(pages: PdfPage[], title = 'vectorDesign export'): Uint8Array {
+export function buildPdf(pages: PdfPage[], title = 'lunaticDesign export'): Uint8Array {
   const chunks: Uint8Array[] = [];
   const offsets: number[] = [];
   let length = 0;
@@ -45,7 +45,7 @@ export function buildPdf(pages: PdfPage[], title = 'vectorDesign export'): Uint8
   const kids = pages.map((_, i) => `${4 + i * 3} 0 R`).join(' ');
   obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
   obj(2, `<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`);
-  obj(3, `<< /Title (${title.replace(/[()\\]/g, '')}) /Producer (vectorDesign) >>`);
+  obj(3, `<< /Title (${title.replace(/[()\\]/g, '')}) /Producer (lunaticDesign) >>`);
   pages.forEach((p, i) => {
     const page = 4 + i * 3;
     const w = +(p.width * PT).toFixed(2);

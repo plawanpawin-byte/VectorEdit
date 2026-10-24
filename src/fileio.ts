@@ -55,7 +55,7 @@ export async function openFiles(files: File[]) {
   const docs = files.filter((f) => f.name.toLowerCase().endsWith('.vedit'));
   if (docs.length === 1 && files.length === 1) return load(await docs[0].text(), null).catch((e) => alert(`Could not open the file.\n${(e as Error).message}`));
   const pictures = files.filter((f) => kindOf(f.name, f.type) !== 'other');
-  if (!pictures.length) return alert('Choose a vectorDesign document, or a PNG, JPG, GIF, WebP, BMP, AVIF, ICO or SVG image.');
+  if (!pictures.length) return alert('Choose a lunaticDesign document, or a PNG, JPG, GIF, WebP, BMP, AVIF, ICO or SVG image.');
   const size = await pageSizeFor(pictures[0]);
   newDocument({ ...size, name: pictures[0].name.replace(/\.[^.]+$/, '') || 'Page 1' });
   await importFiles(pictures).then(reportImport);
