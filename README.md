@@ -17,6 +17,15 @@ Runs as a Windows app and in the browser. Nothing is uploaded: your work stays o
 
 </div>
 
+## Two apps, one family
+
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="public/logo.png" alt="lunaticDesign logo" width="96" /><br/><b>lunaticDesign</b><br/>A free, open-source vector, pixel and layout editor.<br/><sub>Design: shapes, pages, type and slices.</sub><br/><br/><a href="https://github.com/plawanpawin-byte/VectorEdit/releases/latest"><img src="https://img.shields.io/badge/Open-lunaticDesign-3b82f6?style=flat-square" alt="Open lunaticDesign" /></a></td>
+    <td width="50%" align="center"><img src="public/photodesign-logo.webp" alt="PhotoDesign logo" width="96" /><br/><b>PhotoDesign</b><br/>A free, open-source photo editor.<br/><sub>Photos: layers, adjustments, filters and brushes.</sub><br/><br/><a href="https://github.com/plawanpawin-byte/photodesign"><img src="https://img.shields.io/badge/Open-PhotoDesign-3b82f6?style=flat-square" alt="Open PhotoDesign" /></a></td>
+  </tr>
+</table>
+
 ## A look around
 
 <table>
