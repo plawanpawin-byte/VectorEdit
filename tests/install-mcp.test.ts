@@ -93,3 +93,25 @@ describe('installMcp', () => {
     expect(fs.readFileSync(path.join(home, '.claude.json'), 'utf8')).toBe('{ broken');
   });
 });
+
+describe('server entry with env', () => {
+  const withEnv = { ...entry, env: { ELECTRON_RUN_AS_NODE: '1' } };
+
+  it('writes the env block for JSON agents', () => {
+    const out = JSON.parse(mergeJson('', withEnv));
+    expect(out.mcpServers['lunatic-design'].env).toEqual({ ELECTRON_RUN_AS_NODE: '1' });
+  });
+
+  it('writes the env table for Codex and replaces it on a second run', () => {
+    const once = mergeToml('', withEnv);
+    expect(once).toContain('[mcp_servers.lunatic-design.env]\nELECTRON_RUN_AS_NODE = "1"');
+    const twice = mergeToml(once + '\n[model]\nname = "x"\n', withEnv);
+    expect(twice.match(/\[mcp_servers\.lunatic-design\.env\]/g)).toHaveLength(1);
+    expect(twice).toContain('[model]');
+  });
+
+  it('leaves env out when the entry has none', () => {
+    expect(JSON.parse(mergeJson('', entry)).mcpServers['lunatic-design']).not.toHaveProperty('env');
+    expect(mergeToml('', entry)).not.toContain('.env]');
+  });
+});

@@ -16,12 +16,27 @@ if (MCP_MODE) {
 const INSTALL_MODE = process.argv.includes('--install-mcp');
 let bridge = null;
 
+// how an agent starts the server: this app's own Electron binary in Node mode running mcp-server.cjs.
+// A GUI exe gets no usable stdin/stdout when an agent starts it, so the server runs as a plain script instead.
+function mcpEntry() {
+  return {
+    command: app.isPackaged ? app.getPath('exe') : process.execPath,
+    args: [path.join(__dirname, 'mcp-server.cjs')],
+    env: { ELECTRON_RUN_AS_NODE: '1' },
+  };
+}
+
 async function runInstallMcp() {
   const { installMcp } = require('./install-mcp.cjs');
-  // the same command the agents start: the packaged app, or electron with this folder in development
-  // the portable build runs from a temporary copy; electron-builder names the file the user actually started
-  const exe = process.env.PORTABLE_EXECUTABLE_FILE || app.getPath('exe');
-  const entry = app.isPackaged ? { command: exe, args: ['--mcp'] } : { command: exe, args: [app.getAppPath(), '--mcp'] };
+  // the portable build runs from a temporary copy, so an agent config pointing into it would break on the next start
+  if (process.env.PORTABLE_EXECUTABLE_FILE) {
+    const text = 'Lunatic Design: the portable build cannot be connected to agents. Install with lunaticDesign-Setup and run this again.\n';
+    process.stdout.write(text);
+    await fs.writeFile(path.join(app.getPath('userData'), 'install-mcp.log'), text, 'utf8').catch(() => {});
+    app.exit(1);
+    return;
+  }
+  const entry = mcpEntry();
   const report = await installMcp({ home: app.getPath('home'), entry });
   const lines = [
     'Lunatic Design: connecting AI agents',
@@ -275,8 +290,7 @@ ipcMain.on('title', (_e, title) => win?.setTitle(title));
 
 // what the "Connect AI agents" window shows: how to start the MCP server
 ipcMain.handle('agent:info', () => ({
-  command: process.env.PORTABLE_EXECUTABLE_FILE || app.getPath('exe'),
-  args: app.isPackaged ? ['--mcp'] : [app.getAppPath(), '--mcp'],
+  ...mcpEntry(),
   workFolder: workFolder(),
   running: !!bridge,
 }));

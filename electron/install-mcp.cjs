@@ -17,7 +17,7 @@ function targets(home) {
   ];
 }
 
-/** Merge the server into a JSON config: { mcpServers: { lunatic-design: {command, args} } }. */
+/** Merge the server into a JSON config: { mcpServers: { lunatic-design: {command, args, env} } }. */
 function mergeJson(text, entry) {
   let doc = {};
   if (text && text.trim()) {
@@ -25,7 +25,12 @@ function mergeJson(text, entry) {
     if (!doc || typeof doc !== 'object' || Array.isArray(doc)) throw new Error('the file is not a JSON object');
   }
   const servers = doc.mcpServers && typeof doc.mcpServers === 'object' ? doc.mcpServers : {};
-  return JSON.stringify({ ...doc, mcpServers: { ...servers, [NAME]: { command: entry.command, args: entry.args } } }, null, 2) + '\n';
+  return JSON.stringify({ ...doc, mcpServers: { ...servers, [NAME]: serverJson(entry) } }, null, 2) + '\n';
+}
+
+/** The server entry as an agent reads it; env is left out when there is none. */
+function serverJson(entry) {
+  return entry.env ? { command: entry.command, args: entry.args, env: entry.env } : { command: entry.command, args: entry.args };
 }
 
 const tomlString = (s) => `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
@@ -33,13 +38,16 @@ const tomlString = (s) => `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\
 /** Replace (or add) the [mcp_servers.lunatic-design] table in a Codex config.toml, leaving every other line alone. */
 function mergeToml(text, entry) {
   const header = `[mcp_servers.${NAME}]`;
-  const block = [header, `command = ${tomlString(entry.command)}`, `args = [${entry.args.map(tomlString).join(', ')}]`].join('\n') + '\n';
+  const envHeader = `[mcp_servers.${NAME}.env]`;
+  const blockLines = [header, `command = ${tomlString(entry.command)}`, `args = [${entry.args.map(tomlString).join(', ')}]`];
+  if (entry.env) blockLines.push('', envHeader, ...Object.entries(entry.env).map(([k, v]) => `${k} = ${tomlString(v)}`));
+  const block = blockLines.join('\n') + '\n';
   const lines = (text || '').split(/\r?\n/);
   const out = [];
   let skipping = false;
   for (const line of lines) {
     const t = line.trim();
-    if (t.startsWith('[')) skipping = t === header;
+    if (t.startsWith('[')) skipping = t === header || t === envHeader;
     if (!skipping) out.push(line);
   }
   const kept = out.join('\n').replace(/\s+$/, '');
