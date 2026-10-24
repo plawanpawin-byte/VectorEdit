@@ -89,7 +89,7 @@ function loadTheme(): ThemeId {
   } catch {
     // storage unavailable: use the default
   }
-  return 'lunatic';
+  return 'classic';
 }
 
 let counter = 0;
