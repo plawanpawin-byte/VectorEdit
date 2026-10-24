@@ -184,6 +184,7 @@ function createHandler(call = callBridge) {
 function runStdio(input = process.stdin, output = process.stdout) {
   const handle = createHandler();
   let buffer = '';
+  const pending = new Set();
   input.setEncoding('utf8');
   input.on('data', (chunk) => {
     buffer += chunk;
@@ -199,10 +200,13 @@ function runStdio(input = process.stdin, output = process.stdout) {
         output.write(JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }) + '\n');
         continue;
       }
-      void handle(msg).then((res) => res && output.write(JSON.stringify(res) + '\n'));
+      const job = handle(msg).then((res) => res && output.write(JSON.stringify(res) + '\n'));
+      pending.add(job);
+      void job.finally(() => pending.delete(job));
     }
   });
-  input.on('end', () => process.exit(0));
+  // a client that closes stdin right after its last request still gets the answers
+  input.on('end', () => void Promise.allSettled(pending).then(() => process.exit(0)));
 }
 
 module.exports = { TOOLS, createHandler, runStdio, discoveryFile, readBridge, callBridge };
