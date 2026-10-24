@@ -16,11 +16,13 @@ This takes about five minutes, once. After that, your AI agent can work on the d
 
 ## Step 2: Run the setup command once
 
-Open PowerShell and paste this line exactly (the quotes matter):
+Open PowerShell and paste this line exactly (the `&` and the quotes matter):
 
 ```
-"C:\Program Files\Lunatic Design\Lunatic Design.exe" --install-mcp
+& "C:\Program Files\Lunatic Design\Lunatic Design.exe" --install-mcp
 ```
+
+If you use Command Prompt (cmd) instead, leave out the `&`: `"C:\Program Files\Lunatic Design\Lunatic Design.exe" --install-mcp`.
 
 If you installed for your user only, the path is instead `%LOCALAPPDATA%\Programs\Lunatic Design\Lunatic Design.exe`. If you are not sure, right-click the Lunatic Design shortcut on the desktop, choose **Open file location**, and copy the full path of the `.exe` from the address bar.
 

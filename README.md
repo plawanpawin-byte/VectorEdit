@@ -81,7 +81,7 @@ Lunatic Design can be driven by AI agents through the [Model Context Protocol](h
 **Setup, once, in a terminal** (step by step with screenshots: [docs/mcp-tutorial.md](docs/mcp-tutorial.md)):
 
 ```bash
-"C:\Program Files\Lunatic Design\Lunatic Design.exe" --install-mcp
+& "C:\Program Files\Lunatic Design\Lunatic Design.exe" --install-mcp
 ```
 
 It adds the server to each agent's configuration, merging with what is already there (other servers stay), and keeps a `.bak` copy of any file it changes. The result is written to `install-mcp.log` in the app's data folder. Then restart the agents. The app's **Window → Connect AI agents…** window shows the same command with a copy button.

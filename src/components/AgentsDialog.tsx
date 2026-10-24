@@ -9,9 +9,9 @@ interface AgentInfo {
   running: boolean;
 }
 
-/** The one command to run once in a terminal, for the app that is open. */
+/** The one command to run once in PowerShell, for the app that is open. PowerShell needs `&` before a quoted path. */
 function installCommand(a: AgentInfo) {
-  const exe = a.command.includes(' ') ? `"${a.command}"` : a.command;
+  const exe = a.command.includes(' ') ? `& "${a.command}"` : a.command;
   return `${exe} --install-mcp`;
 }
 
